@@ -1,0 +1,42 @@
+name: Market Hours Sentiment Sync
+
+on:
+  schedule:
+    # Runs every 15 minutes from 03:30 UTC to 10:15 UTC (9:00 AM to 3:45 PM IST) Monday-Friday
+    - cron: '*/15 3-10 * * 1-5'
+  workflow_dispatch:
+
+jobs:
+  update-sentiment:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: |
+          cd stock_alert_bot/Option
+          pip install -r requirements.txt
+
+      - name: Create service-account.json
+        run: echo '${{ secrets.FIREBASE_SERVICE_ACCOUNT }}' > stock_alert_bot/service-account.json
+
+      - name: Run Sentiment Analysis
+        env:
+          PYTHONPATH: ${{ github.workspace }}/stock_alert_bot/Option
+          ANGEL_API_KEY: ${{ secrets.ANGEL_API_KEY }}
+          ANGEL_CLIENT_CODE: ${{ secrets.ANGEL_CLIENT_CODE }}
+          ANGEL_PIN: ${{ secrets.ANGEL_PIN }}
+          ANGEL_TOTP_SECRET: ${{ secrets.ANGEL_TOTP_SECRET }}
+          DHAN_API_KEY: ${{ secrets.DHAN_API_KEY }}
+          DHAN_ACCESS_TOKEN: ${{ secrets.DHAN_ACCESS_TOKEN }}
+          SYMBOL: "NIFTY"
+        run: |
+          cd stock_alert_bot/Option
+          # We run a single cycle of the scheduler logic to sync to Firestore
+          python -c "from step8_scheduler import SYMBOL, EXPIRY, NSE_RETRIES, NSE_BACKOFF; from step1_fetch import get_option_chain; from step2_parse import parse_option_chain; from step7_dashboard import build_dashboard; from utils.firebase_sync import sync_to_firestore; raw = get_option_chain(SYMBOL, retries=NSE_RETRIES, backoff=NSE_BACKOFF); df_curr, spot_curr = parse_option_chain(raw, expiry=EXPIRY); dashboard = build_dashboard(df_curr, df_curr, spot_curr); sync_to_firestore('option_sentiment', SYMBOL, dashboard)"

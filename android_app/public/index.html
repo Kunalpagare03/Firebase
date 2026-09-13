@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stock Analysis Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #f8f9fa; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+        .card { margin-bottom: 15px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .nav-tabs { background: white; position: sticky; top: 0; z-index: 1000; }
+        .score-badge { font-size: 1.2rem; font-weight: bold; }
+        .recommendation { font-weight: bold; color: #0d6efd; }
+    </style>
+</head>
+<body>
+
+<nav class="navbar navbar-dark bg-primary mb-3">
+    <div class="container-fluid">
+        <span class="navbar-brand mb-0 h1">Stock Analysis</span>
+    </div>
+</nav>
+
+<div class="container">
+    <ul class="nav nav-pills nav-fill mb-3" id="pills-tab" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="pills-stocks-tab" data-bs-toggle="pill" data-bs-target="#pills-stocks" type="button" role="tab">Stock Scans</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="pills-options-tab" data-bs-toggle="pill" data-bs-target="#pills-options" type="button" role="tab">Options</button>
+        </li>
+    </ul>
+
+    <div class="tab-content" id="pills-tabContent">
+        <!-- Stock Scans Tab -->
+        <div class="tab-pane fade show active" id="pills-stocks" role="tabpanel">
+            <div id="stock-list">
+                <div class="text-center py-5">
+                    <div class="spinner-border text-primary" role="status"></div>
+                    <p>Loading latest scans...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Options Tab -->
+        <div class="tab-pane fade" id="pills-options" role="tabpanel">
+            <div id="option-sentiment">
+                <div class="text-center py-5">
+                    <div class="spinner-border text-primary" role="status"></div>
+                    <p>Loading market sentiment...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Firebase SDKs -->
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getFirestore, doc, getDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+    // Your web app's Firebase configuration
+    const firebaseConfig = {
+        apiKey: "AIzaSyDMEUmFGSJBjGrz7fpDN46OiZlSJ6NTsjE",
+        authDomain: "kunal-analysis.firebaseapp.com",
+        projectId: "kunal-analysis",
+        storageBucket: "kunal-analysis.firebasestorage.app",
+        messagingSenderId: "328297105533",
+        appId: "1:328297105533:web:3ed3d8d5aa3ec677b88914",
+        measurementId: "G-91D760DWX5"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    // Listen for Stock Scans
+    onSnapshot(doc(db, "stock_scans", "latest"), (doc) => {
+        const data = doc.data();
+        if (data && data.results) {
+            const list = document.getElementById('stock-list');
+            list.innerHTML = '';
+            data.results.forEach(stock => {
+                const card = `
+                    <div class="card">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between">
+                                <h5 class="card-title">${stock.symbol}</h5>
+                                <span class="badge bg-success score-badge">${stock.score}</span>
+                            </div>
+                            <p class="mb-1 text-muted">RSI: ${stock.rsi14} | Pattern: ${stock.pattern}</p>
+                            <p class="mb-2 recommendation">${stock.recommendation}</p>
+                            <div class="row text-center border-top pt-2">
+                                <div class="col"><strong>Entry</strong><br>${stock.entry}</div>
+                                <div class="col"><strong>Target</strong><br>${stock.target_2pct}</div>
+                                <div class="col"><strong>Stop</strong><br>${stock.stop_loss}</div>
+                            </div>
+                        </div>
+                    </div>`;
+                list.innerHTML += card;
+            });
+        }
+    });
+
+    // Listen for Option Sentiment
+    onSnapshot(doc(db, "option_sentiment", "NIFTY"), (doc) => {
+        const data = doc.data();
+        if (data) {
+            const div = document.getElementById('option-sentiment');
+            div.innerHTML = `
+                <div class="card bg-dark text-white">
+                    <div class="card-body text-center">
+                        <h2 class="card-title">${data.combined_sentiment_read}</h2>
+                        <p class="card-text">NIFTY Spot: ${data.spot_price}</p>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-body">
+                        <p><strong>PCR (OI):</strong> ${data.pcr_oi}</p>
+                        <p><strong>PCR (Vol):</strong> ${data.pcr_volume}</p>
+                        <p><strong>Max Pain:</strong> ${data.max_pain}</p>
+                        <p><strong>Buildup:</strong> ${data.oi_buildup_overall}</p>
+                        <p class="border-top pt-2"><strong>Votes:</strong> Bullish ${data.votes.bullish} | Bearish ${data.votes.bearish}</p>
+                    </div>
+                </div>`;
+        }
+    });
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

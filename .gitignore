@@ -1,0 +1,6 @@
+service-account.json
+serviceAccountKey.json
+*.apk
+.gradle/
+build/
+local.properties

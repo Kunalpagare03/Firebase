@@ -1,0 +1,13 @@
+{
+  "symbol": "NIFTY",
+  "supported_symbols": ["NIFTY", "BANKNIFTY", "FINNIFTY", "SENSEX"],
+  "refresh_minutes": 5,
+  "log_file": "sentiment_log.csv",
+  "use_live_api": true,
+  "data_source": "dhan",
+  "dhan_option_chain_url": "https://api.dhan.co/v2/option-chain",
+  "nse_retry_count": 3,
+  "nse_retry_backoff_seconds": 2,
+  "trend_analysis_interval_minutes": 5,
+  "enable_order_execution": false
+}

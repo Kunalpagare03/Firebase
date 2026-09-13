@@ -1,0 +1,400 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Option Chain Trend — NIFTY</title>
+    <style>
+      :root{font-family:Georgia,'Times New Roman',serif;color:#17212b;background:#e8eef0}
+      *{box-sizing:border-box}
+      body{max-width:1440px;margin:0 auto;padding:28px;background:radial-gradient(circle at 15% 0%,#d9f1eb 0,#e8eef0 38%,#f5efe4 100%);min-height:100vh}
+      h2{font-size:clamp(1.8rem,4vw,3rem);letter-spacing:0;margin:0 0 6px;color:#123b4a}
+      h4{font-size:1.15rem;letter-spacing:0;margin:0 0 10px;color:#285466}
+      .card,.chart-wrap{border:1px solid #c5d3d5;padding:18px;border-radius:8px;margin-bottom:14px;background:rgba(255,255,255,.88);box-shadow:0 8px 24px rgba(31,57,64,.08)}
+      .muted{color:#587078;font-size:0.92em}
+      .error{color:#a12622;font-weight:600}
+      .metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-bottom:10px}
+      .metrics>div{padding:10px 12px;background:#f1f6f4;border-left:4px solid #64a99b;border-radius:4px}
+      .headline{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:16px 18px;border:1px solid #83aab0;border-radius:8px;background:#153f4c;color:#fff;margin:10px 0 14px;font-weight:800;font-size:1.2rem;box-shadow:0 8px 20px rgba(21,63,76,.2)}
+      .signal-badge{padding:9px 15px;border-radius:5px;background:#69777b;color:#fff;min-width:140px;text-align:center}
+      .signal-bullish{background:#1d8f5a;color:#fff}
+      .signal-bearish{background:#b32727;color:#fff}
+      .signal-neutral{background:#69777b;color:#fff}
+      #tradeAction{display:inline-block;padding:7px 10px;border-radius:4px;background:#e9eef0;color:#17343d;font-weight:800}
+      .alert-bullish{background:#d9f2e5!important;color:#12613b!important}
+      .alert-bearish{background:#f9dede!important;color:#8f2020!important}
+      .alert-wait{background:#f4ead0!important;color:#755519!important}
+      canvas{width:100%;height:320px;display:block;background:#fbfcfd;border-radius:5px;border:1px solid #c9d9d9}
+      table{border-collapse:collapse;width:100%;font-size:0.95rem}
+      th,td{padding:6px;border-bottom:1px solid #eee;text-align:left}
+      h2,h4{margin:0 0 10px}
+      .timeframe-controls{display:flex;gap:6px;margin:0 0 8px}
+      .timeframe{border:1px solid #b9c9cd;background:#fff;color:#31525d;border-radius:4px;padding:6px 11px;font:inherit;font-size:.88rem;cursor:pointer}
+      .timeframe.active{background:#153f4c;color:#fff;border-color:#153f4c}
+      .symbol-controls{display:flex;align-items:center;gap:8px;margin:0 0 12px;color:#31525d;font-weight:700}
+      .symbol-controls select{border:1px solid #b9c9cd;border-radius:4px;background:#fff;color:#31525d;padding:7px 10px;font:inherit;font-weight:700}
+      @media (max-width: 700px){body{padding:14px 9px} .headline{font-size:1rem;padding:12px} .signal-badge{min-width:96px;padding:7px 10px} table{font-size:0.8rem} canvas{height:150px}.card,.chart-wrap{padding:13px}}
+    </style>
+  </head>
+  <body>
+    <h2>Live Option Chain Market Analysis</h2>
+    <div class="symbol-controls" role="group" aria-label="Instrument">
+      <label for="symbolSelect">Instrument</label>
+      <select id="symbolSelect">
+        <option value="NIFTY">NIFTY 50</option>
+        <option value="BANKNIFTY">BANKNIFTY</option>
+        <option value="FINNIFTY">FINNIFTY</option>
+        <option value="SENSEX">SENSEX</option>
+      </select>
+    </div>
+    <div class="muted" id="source">Waiting for live data...</div>
+    <div class="muted" id="marketStatus">Market status: waiting</div>
+    <div class="headline">
+      <span>Directional signal</span>
+      <span id="finalSignalBadge" class="signal-badge signal-neutral">-</span>
+    </div>
+    <div class="card">
+      <strong>Action alert:</strong> <span id="tradeAction" class="alert-wait">WAIT / NO TRADE</span><br />
+      <span class="muted">Trigger: <span id="tradeTrigger">Waiting for confirmation</span></span><br />
+      <span class="muted" id="tradeNote">No confirmed trade setup.</span>
+      <div class="muted" id="technicalConfirmations">Technical confirmations: waiting</div>
+    </div>
+    <div class="card">
+      <div class="metrics">
+        <div><strong>Spot:</strong> <span id="spot">-</span></div>
+        <div><strong>Max pain:</strong> <span id="maxPain">-</span></div>
+        <div><strong>PCR (OI):</strong> <span id="pcrOi">-</span></div>
+        <div><strong>PCR (volume):</strong> <span id="pcrVolume">-</span></div>
+        <div><strong>Final signal:</strong> <span id="finalSignal" style="font-weight:800;">-</span></div>
+      </div>
+      <div><strong>Market read:</strong> <span id="trend">-</span></div>
+      <div><strong>Chart structure:</strong> <span id="priceStructure">-</span></div>
+      <div><strong>Support:</strong> <span id="support">-</span> <strong>Resistance:</strong> <span id="resistance">-</span></div>
+      <div class="muted" id="buildup">OI buildup: -</div>
+      <div><strong>OI trend:</strong> <span id="oiTrend">-</span></div>
+      <div><strong>OI directional read:</strong> <span id="oiRead">-</span></div>
+      <div class="muted" id="oiAnalysis">OI building analysis: -</div>
+      <div><strong>Flow:</strong> <span id="flowTrend">-</span></div>
+      <div class="muted" id="flowDetail">Volume/OI changes: -</div>
+      <div><strong>Manipulation risk:</strong> <span id="manipulationRisk">-</span></div>
+      <div class="muted" id="manipulationNote">Manipulation note: -</div>
+      <div><strong>Trend using price + OI buildup:</strong> <span id="trendAnalysis">-</span></div>
+      <div class="error" id="flowAlert"></div>
+      <div class="error" id="error"></div>
+    </div>
+
+    <div class="card">
+      <h4>Price Action</h4>
+      <div class="metrics">
+        <div><strong>Close:</strong> <span id="close">-</span></div>
+        <div><strong>Daily change:</strong> <span id="change">-</span></div>
+        <div><strong>20-session SMA:</strong> <span id="sma20">-</span></div>
+        <div><strong>Read:</strong> <span id="priceRead">-</span></div>
+        <div><strong>Intraday read:</strong> <span id="intradayRead">-</span> (<span id="intradayChange">-</span>%)</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h4>ATM Greeks</h4>
+      <div class="metrics">
+        <div><strong>Strike:</strong> <span id="greekStrike">-</span></div>
+        <div><strong>Call delta:</strong> <span id="callDelta">-</span></div>
+        <div><strong>Put delta:</strong> <span id="putDelta">-</span></div>
+        <div><strong>Gamma:</strong> <span id="gamma">-</span></div>
+        <div><strong>Vega / 1%:</strong> <span id="vega">-</span></div>
+        <div><strong>Trend:</strong> <span id="greekTrend">-</span></div>
+        <div><strong>Read:</strong> <span id="greekRead">-</span></div>
+      </div>
+    </div>
+
+    <div class="chart-wrap">
+      <h4>Live 5-minute candlestick chart</h4>
+      <div class="timeframe-controls" role="group" aria-label="Chart timeframe">
+        <button type="button" class="timeframe active" data-minutes="5">5m</button>
+        <button type="button" class="timeframe" data-minutes="15">15m</button>
+        <button type="button" class="timeframe" data-minutes="30">30m</button>
+        <button type="button" class="timeframe" data-minutes="60">1h</button>
+      </div>
+      <div class="muted" id="chartPattern">Pattern: waiting for candles</div>
+      <canvas id="liveChart" width="1200" height="320"></canvas>
+    </div>
+
+    <div class="card">
+      <h4>Top strikes by total OI</h4>
+      <table id="topTable"><thead><tr><th>Strike</th><th>Call OI</th><th>Put OI</th><th>Total OI</th><th>Call OI build</th><th>Put OI build</th><th>OI side</th></tr></thead><tbody></tbody></table>
+    </div>
+
+    <script>
+      const chartStorageKey = 'nifty-live-5m-series';
+      let liveSeries = [];
+      try {
+        const saved = JSON.parse(localStorage.getItem(chartStorageKey) || '[]');
+          const cutoff = Date.now() - (5 * 24 * 60 * 60 * 1000);
+        liveSeries = Array.isArray(saved) ? saved.filter(sample => sample.time >= cutoff && sample.value) : [];
+      } catch (_) {
+        liveSeries = [];
+      }
+      let selectedTimeframeMinutes = 5;
+      const symbolSelect = document.getElementById('symbolSelect');
+      symbolSelect.value = new URLSearchParams(window.location.search).get('symbol') || 'NIFTY';
+      const chartCanvas = document.getElementById('liveChart');
+      const chartCtx = chartCanvas.getContext('2d');
+
+      function buildCandles(samples, timeframeMinutes){
+        const candleMs = timeframeMinutes * 60 * 1000;
+        const buckets = new Map();
+        samples.forEach(sample => {
+          const bucket = Math.floor(sample.time / candleMs) * candleMs;
+          if (!buckets.has(bucket)) buckets.set(bucket, []);
+          buckets.get(bucket).push(sample.value);
+        });
+        return [...buckets.entries()].sort((a, b) => a[0] - b[0]).map(([time, values]) => ({
+          time,
+          open: values[0],
+          high: Math.max(...values),
+          low: Math.min(...values),
+          close: values[values.length - 1]
+        }));
+      }
+
+      function identifyChartPattern(candles){
+        if (candles.length < 2) return 'waiting for 2 completed candles';
+        const previous = candles[candles.length - 2];
+        const latest = candles[candles.length - 1];
+        const latestRange = Math.max(latest.high - latest.low, 0.01);
+        const latestBody = Math.abs(latest.close - latest.open);
+        const upperWick = latest.high - Math.max(latest.open, latest.close);
+        const lowerWick = Math.min(latest.open, latest.close) - latest.low;
+
+        if (latestBody <= latestRange * 0.1) return 'Doji: indecision';
+        if (latest.close > latest.open && previous.close < previous.open && latest.open <= previous.close && latest.close >= previous.open) {
+          return 'Bullish engulfing';
+        }
+        if (latest.close < latest.open && previous.close > previous.open && latest.open >= previous.close && latest.close <= previous.open) {
+          return 'Bearish engulfing';
+        }
+        if (lowerWick >= latestBody * 2 && upperWick <= latestBody) return 'Hammer: possible bullish reversal';
+        if (upperWick >= latestBody * 2 && lowerWick <= latestBody) return 'Shooting star: possible bearish reversal';
+        if (latest.close > previous.close) return 'Higher close: short-term bullish pressure';
+        if (latest.close < previous.close) return 'Lower close: short-term bearish pressure';
+        return 'Range-bound candle';
+      }
+
+      function drawLiveChart(structure = {}, timeframeMinutes = selectedTimeframeMinutes){
+        const samples = liveSeries.length ? liveSeries : [{ time: Date.now(), value: 23800 }];
+        const values = samples.map(sample => sample.value);
+        const candles = buildCandles(samples, timeframeMinutes);
+        const label = timeframeMinutes === 60 ? '1-hour' : `${timeframeMinutes}-minute`;
+        document.querySelector('.chart-wrap h4').textContent = `Live ${label} candlestick chart`;
+        document.getElementById('chartPattern').textContent = `Pattern: ${identifyChartPattern(candles)} | ${label} candles`;
+        const range = Math.max(Math.max(...values) - Math.min(...values), 1);
+        const min = Math.min(...values) - range * 0.12;
+        const max = Math.max(...values) + range * 0.12;
+        const width = chartCanvas.width;
+        const height = chartCanvas.height;
+        const left = 8;
+        const right = 76;
+        const top = 12;
+        const bottom = 30;
+        const plotWidth = width - left - right;
+        const plotHeight = height - top - bottom;
+        const toY = value => top + (max - value) / Math.max(max - min, 1) * plotHeight;
+        chartCtx.clearRect(0, 0, width, height);
+        chartCtx.fillStyle = '#fbfcfd';
+        chartCtx.fillRect(0, 0, width, height);
+
+        chartCtx.strokeStyle = '#e6eaed';
+        chartCtx.lineWidth = 1;
+        chartCtx.font = '12px sans-serif';
+        chartCtx.fillStyle = '#52616b';
+        for (let i = 0; i <= 5; i++) {
+          const y = top + (plotHeight / 5) * i;
+          chartCtx.beginPath();
+          chartCtx.moveTo(left, y);
+          chartCtx.lineTo(left + plotWidth, y);
+          chartCtx.stroke();
+          const price = max - (range * 1.12 / 5) * i;
+          chartCtx.fillText(price.toFixed(2), width - right + 8, y + 4);
+        }
+        for (let i = 0; i <= 6; i++) {
+          const x = left + (plotWidth / 6) * i;
+          chartCtx.beginPath();
+          chartCtx.moveTo(x, top);
+          chartCtx.lineTo(x, top + plotHeight);
+          chartCtx.stroke();
+          const candle = candles[Math.min(candles.length - 1, Math.floor((candles.length - 1) * i / 6))];
+          if (candle) {
+            chartCtx.fillText(new Date(candle.time).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'}), Math.max(left, x - 20), height - 8);
+          }
+        }
+
+        const candleWidth = Math.max(3, Math.min(18, plotWidth / Math.max(candles.length, 1) * 0.72));
+
+        candles.forEach((candle, idx) => {
+          const x = left + ((idx + 0.5) / Math.max(candles.length, 1)) * plotWidth - candleWidth / 2;
+          const yHigh = toY(candle.high);
+          const yLow = toY(candle.low);
+          const yOpen = toY(candle.open);
+          const yClose = toY(candle.close);
+          const isBull = candle.close >= candle.open;
+
+          chartCtx.strokeStyle = isBull ? '#1f9d61' : '#d9485f';
+          chartCtx.lineWidth = 2;
+          chartCtx.beginPath();
+          chartCtx.moveTo(x + candleWidth / 2, yHigh);
+          chartCtx.lineTo(x + candleWidth / 2, yLow);
+          chartCtx.stroke();
+
+          chartCtx.fillStyle = isBull ? '#1f9d61' : '#d9485f';
+          const bodyTop = Math.min(yOpen, yClose);
+          const bodyHeight = Math.max(Math.abs(yClose - yOpen), 2);
+          chartCtx.fillRect(x, bodyTop, candleWidth, bodyHeight);
+
+          if (Math.abs(yClose - yOpen) < 4) {
+            chartCtx.strokeStyle = isBull ? '#0c6b46' : '#a42c3d';
+            chartCtx.lineWidth = 3;
+            chartCtx.beginPath();
+            chartCtx.moveTo(x, bodyTop + bodyHeight / 2);
+            chartCtx.lineTo(x + candleWidth, bodyTop + bodyHeight / 2);
+            chartCtx.stroke();
+          }
+        });
+
+        const latest = values[values.length - 1];
+        const latestY = toY(latest);
+        chartCtx.setLineDash([4, 4]);
+        chartCtx.strokeStyle = '#16a085';
+        chartCtx.beginPath();
+        chartCtx.moveTo(left, latestY);
+        chartCtx.lineTo(left + plotWidth, latestY);
+        chartCtx.stroke();
+        chartCtx.setLineDash([]);
+        chartCtx.fillStyle = '#008f79';
+        chartCtx.fillRect(width - right + 2, latestY - 10, right - 8, 20);
+        chartCtx.fillStyle = '#fff';
+        chartCtx.fillText(Number(latest).toFixed(2), width - right + 8, latestY + 4);
+
+        if (candles.length > 3 && structure.trend && structure.trend !== 'Neutral') {
+          const first = candles[0].close;
+          const last = candles[candles.length - 1].close;
+          chartCtx.strokeStyle = structure.trend === 'Bearish' ? '#3978ff' : '#1f9d61';
+          chartCtx.lineWidth = 1.5;
+          chartCtx.beginPath();
+          chartCtx.moveTo(left, toY(first));
+          chartCtx.lineTo(left + plotWidth, toY(last));
+          chartCtx.stroke();
+        }
+      }
+
+      async function fetchTrend(){
+        try{
+          const r = await fetch(`/api/trend?symbol=${encodeURIComponent(symbolSelect.value)}&ts=${Date.now()}`, {
+            cache: 'no-store',
+            headers: { 'ngrok-skip-browser-warning': 'true' }
+          });
+          const j = await r.json();
+          if (!r.ok) throw new Error(j.error || 'Live data request failed');
+          const d = j.dashboard;
+          if (Array.isArray(j.spot_history) && j.spot_history.length) liveSeries = j.spot_history;
+          document.getElementById('error').textContent = '';
+          const liveTime = j.fetched_at || new Date().toLocaleTimeString();
+          const liveFeed = j.live_feed || {};
+          const liveLabel = liveFeed.connected ? `Angel One live (${liveFeed.tick_age_seconds}s)` : `Fallback (${liveFeed.error || 'Angel One tick unavailable'})`;
+          document.getElementById('source').textContent = `Chain: ${j.source} | Spot: ${j.spot_source || j.source} | ${liveLabel} | refreshed: ${liveTime}`;
+          const status = d.market_status || {};
+          document.getElementById('marketStatus').textContent = `Market status: ${status.is_open ? 'OPEN' : 'CLOSED'} | ${status.reason || ''} | ${status.local_time || ''}`;
+          const spotValue = Number(d.spot_price);
+          if (!Number.isNaN(spotValue)) {
+            liveSeries.push({ time: Date.now(), value: spotValue });
+            const cutoff = Date.now() - (5 * 24 * 60 * 60 * 1000);
+            while (liveSeries.length && liveSeries[0].time < cutoff) liveSeries.shift();
+            try { localStorage.setItem(chartStorageKey, JSON.stringify(liveSeries)); } catch (_) {}
+            drawLiveChart(d.price_structure || {}, selectedTimeframeMinutes);
+          }
+          document.getElementById('spot').textContent = d.spot_price;
+          document.getElementById('maxPain').textContent = d.max_pain;
+          document.getElementById('support').textContent = d.support_zones.join(', ');
+          document.getElementById('resistance').textContent = d.resistance_zones.join(', ');
+          document.getElementById('pcrOi').textContent = d.pcr_oi;
+          document.getElementById('pcrVolume').textContent = d.pcr_volume;
+          document.getElementById('buildup').textContent = `OI buildup: ${d.oi_buildup_overall}`;
+          document.getElementById('oiTrend').textContent = d.oi_trend || 'N/A';
+          document.getElementById('oiRead').textContent = d.oi_directional_read;
+          document.getElementById('oiAnalysis').textContent = d.oi_building_analysis;
+          const finalHeadline = d.decision_headline || d.single_direction || d.market_read || '-';
+          const finalSignalText = d.decision_signal || d.final_signal || d.market_read || d.trend_analysis || d.combined_sentiment_read || '-';
+          document.getElementById('trend').textContent = finalHeadline;
+          const structure = d.price_structure || {};
+          document.getElementById('priceStructure').textContent = structure.pattern ? `${structure.pattern} (${structure.trend || 'Neutral'})` : 'Waiting for previous candles';
+          document.getElementById('finalSignal').textContent = finalSignalText;
+          document.getElementById('manipulationRisk').textContent = d.manipulation_risk || 'Low';
+          document.getElementById('manipulationNote').textContent = `Manipulation note: ${d.manipulation_note || 'No special risk flagged.'}`;
+          const badge = document.getElementById('finalSignalBadge');
+          badge.textContent = finalSignalText;
+          badge.className = 'signal-badge signal-neutral';
+          if (finalSignalText && finalSignalText.toLowerCase().includes('bullish')) badge.className = 'signal-badge signal-bullish';
+          if (finalSignalText && finalSignalText.toLowerCase().includes('bearish')) badge.className = 'signal-badge signal-bearish';
+          document.getElementById('trendAnalysis').textContent = d.decision_note || `${finalHeadline} | every ${d.trend_analysis_interval_minutes} min`;
+          const alert = d.trade_alert || {};
+          document.getElementById('tradeAction').textContent = alert.action || 'WAIT / NO TRADE';
+          const actionElement = document.getElementById('tradeAction');
+          actionElement.className = alert.action && alert.action.includes('CALL') ? 'alert-bullish' : alert.action && alert.action.includes('PUT') ? 'alert-bearish' : 'alert-wait';
+          document.getElementById('tradeTrigger').textContent = alert.trigger || 'Waiting for confirmation';
+          document.getElementById('tradeNote').textContent = alert.note || 'No confirmed trade setup.';
+          const tech = alert.technical || {};
+          document.getElementById('technicalConfirmations').textContent = `RSI: ${tech.rsi ?? '-'} | MACD: ${tech.macd ?? '-'} | ${tech.trendline || '-'} | ${tech.candle || '-'}`;
+          document.getElementById('flowTrend').textContent = `${j.flow.trend} | Call vol ${j.flow.call_volume_change ?? '-'} | Put vol ${j.flow.put_volume_change ?? '-'}`;
+          document.getElementById('flowDetail').textContent = `Volume deltas: call ${j.flow.call_volume_change ?? '-'}, put ${j.flow.put_volume_change ?? '-'} | OI deltas: call ${j.flow.call_oi_change ?? '-'}, put ${j.flow.put_oi_change ?? '-'}`;
+          document.getElementById('flowAlert').textContent = j.flow.alert;
+          const p = j.price_action;
+          document.getElementById('close').textContent = p ? p.close : '-';
+          document.getElementById('change').textContent = p ? `${p.change} (${p.change_pct}%)` : '-';
+          document.getElementById('sma20').textContent = p ? p.sma20 : '-';
+          document.getElementById('priceRead').textContent = p ? p.reading : '-';
+          document.getElementById('intradayRead').textContent = d.intraday_price_read || '-';
+          document.getElementById('intradayChange').textContent = d.intraday_change_pct ?? '-';
+          const g = j.greeks;
+          document.getElementById('greekStrike').textContent = g && g.available ? `${g.strike} (${g.expiry})` : '-';
+          document.getElementById('callDelta').textContent = g && g.available ? g.call_delta : '-';
+          document.getElementById('putDelta').textContent = g && g.available ? g.put_delta : '-';
+          document.getElementById('gamma').textContent = g && g.available ? g.gamma : '-';
+          document.getElementById('vega').textContent = g && g.available ? g.vega_per_1pct : '-';
+          document.getElementById('greekTrend').textContent = g && g.available ? (g.trend || g.summary || g.reading) : '-';
+          document.getElementById('greekRead').textContent = g && g.available ? g.reading : (g ? g.reason : '-');
+
+          const tbody = document.querySelector('#topTable tbody');
+          tbody.innerHTML = '';
+          (d.top_strikes || []).forEach(r=>{
+            const tr = document.createElement('tr');
+            tr.innerHTML = `<td>${r.strike}</td><td>${r.call_oi}</td><td>${r.put_oi}</td><td>${r.total_oi}</td><td>${r.call_buildup || '-'} (${r.window_call_oi_change ?? 0})</td><td>${r.put_buildup || '-'} (${r.window_put_oi_change ?? 0})</td><td>${r.oi_side || '-'}</td>`;
+            tbody.appendChild(tr);
+          })
+        }catch(e){
+          document.getElementById('error').textContent = e.message;
+          document.getElementById('source').textContent = 'Live data unavailable';
+        }
+      }
+
+      document.querySelectorAll('.timeframe').forEach(button => {
+        button.addEventListener('click', () => {
+          selectedTimeframeMinutes = Number(button.dataset.minutes);
+          document.querySelectorAll('.timeframe').forEach(item => item.classList.remove('active'));
+          button.classList.add('active');
+          drawLiveChart();
+        });
+      });
+
+      symbolSelect.addEventListener('change', () => {
+        const url = new URL(window.location.href);
+        url.searchParams.set('symbol', symbolSelect.value);
+        window.history.replaceState({}, '', url);
+        liveSeries = [];
+        drawLiveChart();
+        fetchTrend();
+      });
+
+      fetchTrend();
+      setInterval(fetchTrend, 1000);
+    </script>
+  </body>
+</html>

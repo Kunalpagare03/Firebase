@@ -1,0 +1,15 @@
+scanners:
+  VCP Scanner:
+    url: "https://chartink.com/screener/chartians-vcp-scanner"
+    # Paste the decoded scan_clause from DevTools Payload here
+    scan_clause: "select open, high, low, close, volume, Close as 'indicatorstored1layerldb01209bf-ee19-496d-bb0e-43f03a10185e', filternumber({scan-link=scanlink:d00b2b5497220b6776765d074b1dc3ce}) as 'indicatorstored1layerldb01209bf-ee19-496d-bb0e-43f03a10185e-color' where symbol='THEMISMED'"
+
+analysis:
+  data_period: "6mo"
+  data_interval: "1d"
+  moving_average_window: 20
+  volatility_window: 20
+
+output:
+  filename_prefix: "analysis_report"
+  auto_open_browser: true

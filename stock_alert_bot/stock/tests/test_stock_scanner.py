@@ -81,7 +81,7 @@ def test_build_sectioned_report_groups_by_section_and_sector():
         "market_news": [{"headline": "Test news", "impact": "Positive"}],
     })
 
-    assert report["sections"]["intraday"][0]["symbol"] == "TCS.NS"
-    assert report["sector_sections"]["IT"]["count"] == 2
+    assert "intraday" not in report["sections"]
+    assert report["sections"]["swing"][0]["symbol"] == "TATAMOTORS.NS"
     assert report["stocks_by_sector"]["AUTO"][0]["symbol"] == "TATAMOTORS.NS"
     assert report["market_news"][0]["headline"] == "Test news"

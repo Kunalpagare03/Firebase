@@ -5,6 +5,7 @@ import sys
 import importlib.util
 import time
 import threading
+import subprocess
 from collections import defaultdict, deque
 from datetime import datetime
 from flask import Flask, jsonify, render_template, request, Response
@@ -15,11 +16,72 @@ if ROOT not in sys.path:
     sys.path.insert(0, ROOT)
 
 APP = Flask(__name__, template_folder=os.path.join(os.path.dirname(__file__), "templates"))
+WORKSPACE_ROOT = os.path.abspath(os.path.join(ROOT, ".."))
+STOCK_ROOT = os.path.join(WORKSPACE_ROOT, "stock")
+RUNNING_TASKS = {"stock": None, "option": None}
+
+
+def get_python_executable():
+    candidates = [
+        os.path.join(WORKSPACE_ROOT, ".venv", "Scripts", "python.exe"),
+        os.path.join(WORKSPACE_ROOT, ".venv", "Scripts", "python"),
+        sys.executable,
+    ]
+    for candidate in candidates:
+        if candidate and os.path.exists(candidate):
+            return candidate
+    return sys.executable
+
+
+def start_background_task(section):
+    if section == "stock":
+        cmd = [get_python_executable(), "live_stock_scanner.py"]
+        cwd = STOCK_ROOT
+    elif section == "option":
+        cmd = [get_python_executable(), os.path.join("scripts", "cloud_market_runner.py")]
+        cwd = ROOT
+    else:
+        raise ValueError(f"Unsupported section: {section}")
+
+    existing = RUNNING_TASKS.get(section)
+    if existing is not None and existing.poll() is None:
+        return {"status": "already_running", "section": section}
+
+    proc = subprocess.Popen(cmd, cwd=cwd)
+    RUNNING_TASKS[section] = proc
+    return {"status": "started", "section": section, "pid": proc.pid}
+
+def load_allowed_users():
+    """Return approved dashboard users.
+
+    Supported configuration:
+    - DASHBOARD_ALLOWED_USERS as a JSON object like {"admin":"kunalstock","user2":"pass2"}
+    - fallback to legacy single-user admin/kunalstock credentials
+    """
+    default_users = {"admin": "kunalstock"}
+
+    raw = os.environ.get("DASHBOARD_ALLOWED_USERS")
+    if raw:
+        try:
+            parsed = json.loads(raw)
+            if isinstance(parsed, dict):
+                return {str(key): str(value) for key, value in parsed.items() if str(key).strip()}
+        except Exception:
+            pass
+
+    username = os.environ.get("DASHBOARD_USERNAME")
+    password = os.environ.get("DASHBOARD_PASSWORD")
+    if username and password:
+        return {username: password}
+
+    return default_users
+
 
 def check_auth(username, password):
     """Check if a username password combination is valid."""
-    # Hardcoded for now, should ideally be in a config file or env var
-    return username == 'admin' and password == 'kunalstock'
+    allowed_users = load_allowed_users()
+    return allowed_users.get(username) == password
+
 
 def authenticate():
     """Sends a 401 response that enables basic auth."""
@@ -551,6 +613,16 @@ def _get_analysis(symbol="^NSEI"):
         )
     greeks = analyze_chain_greeks(df, spot, expiry=expiry)
     return _json_safe({"symbol": symbol, "source": source, "dashboard": dashboard, "price_action": price_action, "flow": flow, "greeks": greeks, "live_feed": get_live_status(symbol), "spot_source": "angel-one-live" if get_latest_spot(symbol) is not None else source, "spot_history": list(_chart_history[symbol])})
+
+
+@APP.route("/api/run/<section>", methods=["POST"])
+@requires_auth
+def api_run_section(section):
+    try:
+        result = start_background_task(section)
+        return jsonify(result)
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 500
 
 
 @APP.route("/api/trend")

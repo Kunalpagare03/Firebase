@@ -75,6 +75,31 @@ def log_to_csv(dashboard, timestamp):
         ])
 
 
+def _fetch_live_option_chain(symbol, retries, backoff):
+    configured_source = (cfg.get("data_source") or "dhan").lower()
+
+    if configured_source == "nse":
+        return get_option_chain(symbol, retries=retries, backoff=backoff), "nse"
+
+    if configured_source == "yfinance_mock":
+        from step1_fetch_dhan import generate_mock_option_chain
+        safe = symbol.replace("^", "").replace("/", "_")
+        out_path = os.path.join(PROJECT_ROOT, "data", f"option_chain_{safe}.json")
+        raw = generate_mock_option_chain(symbol, out_path=out_path)
+        return raw, "yfinance_mock"
+
+    dh_url = cfg.get("dhan_option_chain_url")
+    try:
+        raw = get_option_chain_dhan(symbol, url=dh_url, retries=retries, backoff=backoff)
+        return raw, "dhan"
+    except Exception as dhan_error:
+        try:
+            raw = get_option_chain(symbol, retries=retries, backoff=backoff)
+            return raw, "nse-fallback"
+        except Exception as nse_error:
+            raise RuntimeError(f"Dhan failed: {dhan_error}; NSE failed: {nse_error}") from nse_error
+
+
 def run_loop():
     df_prev = None
 
@@ -92,35 +117,13 @@ def run_loop():
                 print(f"Market not yet open ({reason}, {session['local_time']}); waiting.")
                 time.sleep(REFRESH_MINUTES * 60)
                 continue
-            if USE_LIVE_API and cfg.get("data_source") == "yfinance_mock":
-                # Use yfinance-based mock option-chain generator
-                from step1_fetch_dhan import generate_mock_option_chain
-                symbol = cfg.get("symbol", "^NSEI")
-                safe = symbol.replace("^", "").replace("/", "_")
-                out_path = os.path.join(PROJECT_ROOT, "data", f"option_chain_{safe}.json")
-                raw = generate_mock_option_chain(symbol, out_path=out_path)
-                # run analysis and log summary
-                try:
-                    from scripts.option_analysis import run as run_analysis
-                except Exception:
-                    # import by path if scripts not a module
-                    import importlib.util
-                    mod_path = os.path.join(os.path.dirname(__file__), "scripts", "option_analysis.py")
-                    spec = importlib.util.spec_from_file_location("option_analysis", mod_path)
-                    mod = importlib.util.module_from_spec(spec)
-                    spec.loader.exec_module(mod)
-                    run_analysis = mod.run
-                run_analysis(path=out_path)
-            elif USE_LIVE_API and cfg.get("data_source") == "dhan":
-                # Use Dhan API for option chain
-                dh_url = cfg.get("dhan_option_chain_url")
-                raw = get_option_chain_dhan(SYMBOL, url=dh_url, retries=NSE_RETRIES, backoff=NSE_BACKOFF)
-            elif USE_LIVE_API:
-                raw = get_option_chain(SYMBOL, retries=NSE_RETRIES, backoff=NSE_BACKOFF)
+            if USE_LIVE_API:
+                raw, source = _fetch_live_option_chain(SYMBOL, NSE_RETRIES, NSE_BACKOFF)
             else:
                 # Use mock loader from parse module to simulate live data
                 from step2_parse import load_mock_nse_response
                 raw = load_mock_nse_response()
+                source = "mock"
             df_curr, spot_curr = parse_option_chain(raw, expiry=EXPIRY)
 
             if df_prev is not None:

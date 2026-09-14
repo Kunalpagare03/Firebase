@@ -33,6 +33,11 @@
       .timeframe.active{background:#153f4c;color:#fff;border-color:#153f4c}
       .symbol-controls{display:flex;align-items:center;gap:8px;margin:0 0 12px;color:#31525d;font-weight:700}
       .symbol-controls select{border:1px solid #b9c9cd;border-radius:4px;background:#fff;color:#31525d;padding:7px 10px;font:inherit;font-weight:700}
+      .manual-controls{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:8px}
+      .run-button{border:0;border-radius:6px;padding:8px 14px;background:#153f4c;color:#fff;font:inherit;font-weight:700;cursor:pointer}
+      .run-button.secondary{background:#2f6d7a}
+      .run-button:disabled{opacity:.65;cursor:wait}
+      .run-status{color:#31525d;font-size:0.92rem}
       @media (max-width: 700px){body{padding:14px 9px} .headline{font-size:1rem;padding:12px} .signal-badge{min-width:96px;padding:7px 10px} table{font-size:0.8rem} canvas{height:150px}.card,.chart-wrap{padding:13px}}
     </style>
   </head>
@@ -49,6 +54,14 @@
     </div>
     <div class="muted" id="source">Waiting for live data...</div>
     <div class="muted" id="marketStatus">Market status: waiting</div>
+    <div class="card">
+      <h4>Manual run controls</h4>
+      <div class="manual-controls">
+        <button type="button" id="runStockBtn" class="run-button">Run Stock</button>
+        <button type="button" id="runOptionBtn" class="run-button secondary">Run Option</button>
+        <span id="runStatus" class="run-status">Ready</span>
+      </div>
+    </div>
     <div class="headline">
       <span>Directional signal</span>
       <span id="finalSignalBadge" class="signal-badge signal-neutral">-</span>
@@ -374,6 +387,33 @@
           document.getElementById('source').textContent = 'Live data unavailable';
         }
       }
+
+      const runStatus = document.getElementById('runStatus');
+
+      async function triggerRun(section){
+        const button = section === 'stock' ? document.getElementById('runStockBtn') : document.getElementById('runOptionBtn');
+        const originalText = button.textContent;
+        button.disabled = true;
+        runStatus.textContent = `Starting ${section}...`;
+        try {
+          const response = await fetch(`/api/run/${section}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            cache: 'no-store'
+          });
+          const payload = await response.json();
+          if (!response.ok) throw new Error(payload.error || `Failed to start ${section}`);
+          runStatus.textContent = payload.status === 'already_running' ? `${section} is already running` : `${section} started successfully`;
+        } catch (error) {
+          runStatus.textContent = `Error: ${error.message}`;
+        } finally {
+          button.disabled = false;
+          button.textContent = originalText;
+        }
+      }
+
+      document.getElementById('runStockBtn').addEventListener('click', () => triggerRun('stock'));
+      document.getElementById('runOptionBtn').addEventListener('click', () => triggerRun('option'));
 
       document.querySelectorAll('.timeframe').forEach(button => {
         button.addEventListener('click', () => {

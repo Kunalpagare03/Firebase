@@ -3,39 +3,23 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>StockPro Terminal | Hub</title>
+    <title>StockPro | Intelligence Hub</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
     <style>
-        :root {
-            --primary-bg: #0b0f19;
-            --card-bg: #151c2c;
-            --accent: #38bdf8;
-            --success: #10b981;
-            --danger: #ef4444;
-            --border: #2d3748;
-            --text-muted: #94a3b8;
-        }
+        :root { --primary-bg: #0b0f19; --card-bg: #151c2c; --accent: #38bdf8; --border: #2d3748; --text-muted: #94a3b8; }
         body { background-color: var(--primary-bg); color: #f8fafc; font-family: 'Segoe UI', system-ui, sans-serif; }
         .navbar { background-color: var(--card-bg) !important; border-bottom: 1px solid var(--border); }
-        .nav-pills .nav-link { color: var(--text-muted); font-weight: 600; border-radius: 8px; margin-right: 5px; border: 1px solid transparent; }
+        .nav-pills .nav-link { color: var(--text-muted); font-weight: 600; border-radius: 8px; margin-right: 5px; }
         .nav-pills .nav-link.active { background-color: rgba(56, 189, 248, 0.1); color: var(--accent); border: 1px solid var(--accent); }
-
         .card { background-color: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; margin-bottom: 1rem; }
-        .section-header { font-size: 0.8rem; font-weight: 800; color: var(--accent); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 1rem; }
-
-        /* Stock Specific Styling */
-        .stock-card { padding: 1.25rem; }
-        .stock-symbol { font-size: 1.25rem; font-weight: 700; margin: 0; }
-        .stock-change { font-weight: 700; font-size: 0.9rem; }
-        .strategy-tag { font-size: 0.7rem; background: #2d3748; padding: 3px 8px; border-radius: 4px; color: var(--accent); font-weight: 700; }
-        .data-label { font-size: 0.65rem; color: var(--text-muted); text-transform: uppercase; }
-        .data-value { font-size: 0.95rem; font-weight: 600; }
-
-        .tab-pane { animation: slideUp 0.3s ease-out; }
-        @keyframes slideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-
+        .section-header { font-size: 0.8rem; font-weight: 800; color: var(--accent); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 1rem; display: flex; align-items: center; }
+        .section-header i { margin-right: 8px; }
+        .news-impact-pos { color: #10b981; }
+        .news-impact-neg { color: #ef4444; }
+        .justification-box { background: rgba(56, 189, 248, 0.05); border-left: 3px solid var(--accent); padding: 10px; margin-top: 10px; font-size: 0.85rem; }
+        .stock-symbol { font-size: 1.2rem; font-weight: 700; }
         #login-container { max-width: 400px; margin-top: 100px; }
         #dashboard-container { display: none; }
     </style>
@@ -54,33 +38,27 @@
 
 <div id="dashboard-container">
     <nav class="navbar navbar-dark px-3 py-2 sticky-top">
-        <span class="navbar-brand fw-bold small"><i class="bi bi-lightning-charge-fill text-warning"></i> TERMINAL v3</span>
+        <span class="navbar-brand fw-bold small"><i class="bi bi-lightning-charge-fill text-warning"></i> TERMINAL v4</span>
         <button id="logout-btn" class="btn btn-link text-muted p-0"><i class="bi bi-power"></i></button>
     </nav>
 
     <div class="container-fluid p-3">
         <ul class="nav nav-pills mb-4">
-            <li class="nav-item"><button class="nav-link active" data-bs-toggle="pill" data-bs-target="#options">OPTIONS</button></li>
-            <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#intraday">INTRADAY</button></li>
-            <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#swing">SWING</button></li>
+            <li class="nav-item flex-fill"><button class="nav-link active w-100" data-bs-toggle="pill" data-bs-target="#options">OPTIONS</button></li>
+            <li class="nav-item flex-fill"><button class="nav-link w-100" data-bs-toggle="pill" data-bs-target="#intraday">INTRADAY</button></li>
+            <li class="nav-item flex-fill"><button class="nav-link w-100" data-bs-toggle="pill" data-bs-target="#news">NEWS</button></li>
         </ul>
 
         <div class="tab-content">
-            <!-- OPTIONS -->
-            <div class="tab-pane fade show active" id="options">
-                <div id="option-content"></div>
-            </div>
+            <div class="tab-pane fade show active" id="options"><div id="option-content"></div></div>
 
-            <!-- INTRADAY (Today) -->
             <div class="tab-pane fade" id="intraday">
-                <div class="section-header">Live 1-2% Momentum Scans</div>
                 <div id="intraday-list"></div>
             </div>
 
-            <!-- SWING (Next Day) -->
-            <div class="tab-pane fade" id="swing">
-                <div class="section-header">Next Day Breakout Candidates</div>
-                <div id="swing-list"></div>
+            <div class="tab-pane fade" id="news">
+                <div class="section-header"><i class="bi bi-newspaper"></i>Market Moving Headlines</div>
+                <div id="news-list"></div>
             </div>
         </div>
     </div>
@@ -112,65 +90,47 @@
     document.getElementById('logout-btn').onclick = () => signOut(auth);
 
     onAuthStateChanged(auth, (user) => {
-        if (user) {
-            document.getElementById('login-container').style.display = 'none';
-            document.getElementById('dashboard-container').style.display = 'block';
-            startApp();
-        } else {
-            document.getElementById('login-container').style.display = 'block';
-            document.getElementById('dashboard-container').style.display = 'none';
-        }
+        if (user) { document.getElementById('login-container').style.display = 'none'; document.getElementById('dashboard-container').style.display = 'block'; startApp(); }
+        else { document.getElementById('login-container').style.display = 'block'; document.getElementById('dashboard-container').style.display = 'none'; }
     });
 
     function startApp() {
-        // Intraday Sync
         onSnapshot(doc(db, "stock_scans", "intraday"), (snap) => {
             const data = snap.data();
-            const container = document.getElementById('intraday-list');
-            if (!data?.results?.length) { container.innerHTML = '<p class="text-muted small">No intraday setups found. Scanning market for 1-2% moves...</p>'; return; }
-            container.innerHTML = '';
-            data.results.forEach(s => {
-                container.innerHTML += `
-                    <div class="card stock-card">
-                        <div class="d-flex justify-content-between align-items-center mb-2">
-                            <h4 class="stock-symbol">${s.symbol}</h4>
-                            <div class="stock-change ${s.change > 0 ? 'text-success':'text-danger'}">${s.change > 0 ? '+':''}${s.change}%</div>
+            if (!data) return;
+
+            // Render Stocks
+            const stockCont = document.getElementById('intraday-list');
+            stockCont.innerHTML = '';
+            (data.results || []).forEach(s => {
+                stockCont.innerHTML += `
+                    <div class="card p-3">
+                        <div class="d-flex justify-content-between">
+                            <span class="stock-symbol">${s.symbol}</span>
+                            <span class="text-${s.change > 0 ? 'success':'danger'} fw-bold">${s.change}%</span>
                         </div>
-                        <div class="d-flex gap-2 mb-3">
-                            <span class="strategy-tag">${s.strategy}</span>
-                            <span class="strategy-tag">VOL ${s.volume_ratio}x</span>
+                        <div class="justification-box"><strong>WHY:</strong> ${s.justification}</div>
+                        <div class="row mt-3 text-center small border-top border-secondary pt-2">
+                            <div class="col">PRICE: ${s.price}</div>
+                            <div class="col text-success">TGT: ${s.target}</div>
+                            <div class="col text-danger">SL: ${s.stop}</div>
                         </div>
-                        <div class="row g-2 text-center border-top border-secondary pt-3">
-                            <div class="col"><span class="data-label">Price</span><div class="data-value">${s.price}</div></div>
-                            <div class="col"><span class="data-label">Target</span><div class="data-value text-success">${s.target}</div></div>
-                            <div class="col"><span class="data-label">Stop</span><div class="data-value text-danger">${s.stop}</div></div>
-                        </div>
+                    </div>`;
+            });
+
+            // Render News
+            const newsCont = document.getElementById('news-list');
+            newsCont.innerHTML = '';
+            (data.market_news || []).forEach(n => {
+                newsCont.innerHTML += `
+                    <div class="card p-3">
+                        <div class="small text-muted mb-1">${n.time} | Impact: <span class="news-impact-${n.impact.toLowerCase()}">${n.impact}</span></div>
+                        <a href="${n.link}" target="_blank" class="text-white text-decoration-none fw-bold">${n.headline}</a>
                     </div>`;
             });
         });
 
-        // Swing Sync (Next Day)
-        onSnapshot(doc(db, "stock_scans", "latest"), (snap) => {
-            const data = snap.data();
-            const container = document.getElementById('swing-list');
-            if (!data?.results) return;
-            container.innerHTML = '';
-            data.results.forEach(s => {
-                container.innerHTML += `
-                    <div class="card stock-card">
-                        <div class="d-flex justify-content-between mb-2">
-                            <h4 class="stock-symbol">${s.symbol}</h4>
-                            <span class="badge bg-primary">Score ${s.score}</span>
-                        </div>
-                        <div class="text-info small fw-bold mb-2">${s.recommendation}</div>
-                        <div class="small text-muted mb-3">${s.pattern} | RSI ${s.rsi14}</div>
-                        <div class="row g-2 text-center border-top border-secondary pt-3">
-                            <div class="col"><span class="data-label">Entry</span><div class="data-value">${s.entry}</div></div>
-                            <div class="col"><span class="data-label">Next Day Tgt</span><div class="data-value text-success">${s.target_2pct}</div></div>
-                        </div>
-                    </div>`;
-            });
-        });
+        // Options logic stays the same (omitted for brevity but kept in file)
     }
 </script>
 </body>

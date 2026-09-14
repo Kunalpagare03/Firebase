@@ -111,7 +111,7 @@ def build_sectioned_report(report_data):
     sector_sections = {}
     stocks_by_sector = {}
 
-    for section_name in ["swing", "positional"]:
+    for section_name in ["intraday", "swing", "positional"]:
         section_items = []
         for item in report_data.get(section_name, []) or []:
             item_copy = dict(item)
@@ -137,6 +137,7 @@ def build_sectioned_report(report_data):
 
     return {
         "timestamp": report_data.get("timestamp"),
+        "intraday": sections.get("intraday", []),
         "swing": sections.get("swing", []),
         "positional": sections.get("positional", []),
         "sections": sections,
@@ -148,12 +149,14 @@ def build_sectioned_report(report_data):
 
 
 def run_live_scan():
+    intraday_list = []
     swing_list = []
     positional_list = []
 
     print(f"Executing Global Terminal Scan: {len(WATCHLIST)} symbols...")
     for symbol in WATCHLIST:
-        _, swing, pos = analyze_stock(symbol)
+        intra, swing, pos = analyze_stock(symbol)
+        if intra: intraday_list.append(intra)
         if swing: swing_list.append(swing)
         if pos: positional_list.append(pos)
 
@@ -161,6 +164,7 @@ def run_live_scan():
 
     report = {
         "timestamp": datetime.now().strftime("%H:%M:%S"),
+        "intraday": intraday_list,
         "swing": swing_list,
         "positional": positional_list,
         "market_news": news

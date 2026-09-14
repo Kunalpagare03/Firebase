@@ -3,105 +3,108 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>StockPro Terminal | v8.1</title>
+    <title>StockPro | Ultimate Hub v13</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
     <style>
         :root {
-            --primary-bg: #0b0f19; --card-bg: #151c2c; --accent: #38bdf8;
-            --bull: #22c55e; --bear: #ef4444; --border: #2d3748; --text-dim: #94a3b8;
-            --text-main: #f8fafc;
+            --bg-main: #060912; --bg-card: #111827; --accent: #38bdf8;
+            --bull: #10b981; --bear: #f43f5e; --border: #374151;
+            --txt-main: #ffffff; --txt-dim: #9ca3af;
         }
-        body { background-color: var(--primary-bg); color: var(--text-main); font-family: 'Inter', sans-serif; overflow-x: hidden; }
-        .navbar { background: var(--card-bg); border-bottom: 1px solid var(--border); }
-        .nav-pills .nav-link { color: var(--text-dim); font-weight: 600; border-radius: 8px; margin-right: 5px; border: 1px solid transparent; }
-        .nav-pills .nav-link.active { background: rgba(56, 189, 248, 0.1); color: var(--accent); border: 1px solid var(--accent); }
-        .card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; margin-bottom: 1rem; }
+        body { background-color: var(--bg-main); color: var(--txt-main); font-family: 'Inter', sans-serif; overflow-x: hidden; margin: 0; padding: 0; }
+        .navbar { background: var(--bg-card); border-bottom: 1px solid var(--border); }
+        .card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; margin-bottom: 15px; }
+        .nav-pills .nav-link { color: var(--txt-dim); font-weight: 700; border-radius: 8px; font-size: 0.8rem; border: 1px solid transparent; }
+        .nav-pills .nav-link.active { background: rgba(56, 189, 248, 0.15); color: var(--accent); border: 1px solid var(--accent); }
 
-        /* Options Dashboard */
-        .signal-banner { padding: 1.2rem; border-radius: 12px; margin-bottom: 1rem; text-align: center; font-weight: 800; font-size: 1.4rem; text-transform: uppercase; }
-        .signal-bullish { background: linear-gradient(135deg, #064e3b 0%, #065f46 100%); border: 1px solid var(--bull); color: #4ade80; }
-        .signal-bearish { background: linear-gradient(135deg, #450a0a 0%, #7f1d1d 100%); border: 1px solid var(--bear); color: #f87171; }
-        .alert-panel { background: #0c4a6e; border-left: 4px solid var(--accent); padding: 1rem; border-radius: 8px; margin-bottom: 1rem; }
+        /* Options Header */
+        .signal-banner { padding: 1.2rem; border-radius: 12px; text-align: center; font-weight: 900; font-size: 1.5rem; text-transform: uppercase; margin-bottom: 1rem; }
+        .bull-grad { background: linear-gradient(135deg, #064e3b 0%, #065f46 100%); border: 2px solid var(--bull); }
+        .bear-grad { background: linear-gradient(135deg, #450a0a 0%, #7f1d1d 100%); border: 2px solid var(--bear); }
+
         .section-header { font-size: 0.8rem; font-weight: 800; color: var(--accent); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0.75rem; display: flex; align-items: center; }
         .section-header i { margin-right: 8px; }
-        .data-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.6rem; margin-bottom: 1rem; }
-        .data-box { background: rgba(15, 23, 42, 0.5); padding: 0.6rem; border-radius: 8px; border: 1px solid var(--border); text-align: center; }
-        .data-label { font-size: 0.65rem; color: var(--text-dim); display: block; margin-bottom: 2px; text-transform: uppercase; }
-        .data-val { font-size: 0.95rem; font-weight: 700; }
-        .chart-box { height: 280px; background: rgba(0, 0, 0, 0.2); border-radius: 8px; margin-bottom: 1rem; }
-        .table-custom { font-size: 0.75rem; color: var(--text-main); }
-        .table-custom th { color: var(--text-dim); font-weight: 600; border-bottom: 1px solid var(--border); }
 
-        /* Stock List */
-        .sector-header { font-size: 0.75rem; font-weight: 800; color: var(--accent); text-transform: uppercase; letter-spacing: 0.1em; padding: 10px 0; border-bottom: 1px solid var(--border); margin-bottom: 10px; }
-        .stock-row { display: flex; justify-content: space-between; align-items: center; padding: 12px; border-bottom: 1px solid #1e293b; cursor: pointer; }
-        .stock-row:hover { background: rgba(56, 189, 248, 0.05); }
+        .data-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 1rem; }
+        .data-box { background: rgba(31, 41, 55, 0.8); padding: 10px; border-radius: 10px; border: 1px solid var(--border); text-align: center; }
+        .data-label { font-size: 0.65rem; color: var(--txt-dim); display: block; font-weight: 800; text-transform: uppercase; margin-bottom: 4px; }
+        .data-val { font-size: 1rem; font-weight: 800; color: #fff; }
+        .chart-box { height: 280px; width: 100%; border-radius: 12px; background: #000; margin-bottom: 1.5rem; border: 1px solid var(--border); }
 
-        /* Detail View */
-        .full-screen-detail { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--primary-bg); z-index: 2000; overflow-y: auto; padding: 20px; }
-        .back-btn { font-size: 1.5rem; cursor: pointer; color: var(--accent); margin-bottom: 20px; display: inline-block; }
+        /* Stock Section */
+        .sector-title { font-size: 0.85rem; font-weight: 900; color: var(--accent); border-bottom: 1px solid var(--border); padding: 15px 0 5px 0; margin-top: 10px; text-transform: uppercase; }
+        .stock-item { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 15px; margin-bottom: 10px; width: 100%; display: block; text-align: left; color: inherit; border: 1px solid var(--border); }
+        .stock-item:active { background: #1f2937; }
 
-        #login-container { max-width: 400px; margin: 100px auto; }
-        #dashboard-container { display: none; }
+        .price-strip { display: flex; justify-content: space-around; margin-top: 10px; padding-top: 10px; border-top: 1px solid #1e293b; text-align: center; }
+        .price-item { font-size: 0.65rem; color: var(--txt-dim); font-weight: 600; }
+        .price-item span { display: block; font-size: 0.85rem; font-weight: 800; color: #fff; }
+
+        /* Full Detail Overlay */
+        #detail-view { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg-main); z-index: 10000; overflow-y: auto; padding: 20px; }
+        .close-btn { color: var(--accent); font-weight: 900; cursor: pointer; margin-bottom: 20px; font-size: 1rem; }
+        .justification-card { background: rgba(56, 189, 248, 0.1); border-left: 4px solid var(--accent); padding: 15px; border-radius: 8px; color: #fff; font-size: 0.95rem; line-height: 1.6; }
+
+        #login-container { max-width: 400px; margin: 100px auto; padding: 20px; }
     </style>
 </head>
 <body>
 
-<div id="login-container" class="container">
-    <div class="card p-4 text-center shadow-lg">
+<div id="login-container">
+    <div class="card p-4 text-center">
         <h2 class="fw-bold mb-4 text-info"><i class="bi bi-cpu"></i> STOCKPRO</h2>
-        <input type="email" id="email" class="form-control bg-dark text-white border-secondary mb-3" placeholder="Email">
+        <input type="email" id="email" class="form-control bg-dark text-white border-secondary mb-3" placeholder="Terminal Email">
         <input type="password" id="password" class="form-control bg-dark text-white border-secondary mb-4" placeholder="Access Key">
-        <button id="login-btn" class="btn btn-info w-100 fw-bold">AUTHENTICATE</button>
+        <button id="login-btn" class="btn btn-info w-100 fw-bold text-white shadow">LOGIN</button>
     </div>
 </div>
 
-<div id="dashboard-container">
-    <nav class="navbar navbar-dark px-3 py-2 sticky-top">
-        <span class="navbar-brand fw-bold small text-info"><i class="bi bi-broadcast"></i> PRO TERMINAL v8.1</span>
-        <button id="logout-btn" class="btn btn-link text-muted p-0"><i class="bi bi-power"></i></button>
+<div id="dashboard-root" style="display: none;">
+    <nav class="navbar navbar-dark sticky-top px-3">
+        <span class="navbar-brand fw-bold small text-info"><i class="bi bi-shield-check"></i> PRO HUB v13</span>
+        <button id="logout-btn" class="btn btn-link text-dim p-0"><i class="bi bi-power"></i></button>
     </nav>
 
     <div class="container-fluid p-3">
-        <ul class="nav nav-pills mb-4" id="main-tabs">
-            <li class="nav-item flex-fill"><button class="nav-link active w-100" data-bs-toggle="pill" data-bs-target="#options-tab">OPTIONS</button></li>
-            <li class="nav-item flex-fill"><button class="nav-link w-100" data-bs-toggle="pill" data-bs-target="#stocks-tab">STOCKS</button></li>
+        <ul class="nav nav-pills mb-4" id="pills-tab">
+            <li class="nav-item flex-fill"><button class="nav-link active w-100" data-bs-toggle="pill" data-bs-target="#options-pane">OPTIONS</button></li>
+            <li class="nav-item flex-fill"><button class="nav-link w-100" data-bs-toggle="pill" data-bs-target="#stocks-pane">STOCKS</button></li>
         </ul>
 
         <div class="tab-content">
-            <div class="tab-pane fade show active" id="options-tab">
-                <select id="symbol-select" class="form-select bg-dark text-white border-secondary mb-3">
+            <!-- OPTIONS -->
+            <div class="tab-pane fade show active" id="options-pane">
+                <select id="sym-select" class="form-select bg-dark text-white border-secondary mb-3">
                     <option value="NIFTY">NIFTY 50 INDEX</option>
                     <option value="BANKNIFTY">BANKNIFTY INDEX</option>
-                    <option value="FINNIFTY">FINNIFTY INDEX</option>
-                    <option value="SENSEX">SENSEX INDEX</option>
                 </select>
-                <div id="option-content"></div>
+                <div id="option-render"></div>
             </div>
 
-            <div class="tab-pane fade" id="stocks-tab">
-                <ul class="nav nav-pills nav-fill mb-3 bg-dark p-1 rounded-pill" style="font-size: 0.7rem;">
-                    <li class="nav-item"><button class="nav-link active rounded-pill" data-bs-toggle="pill" data-bs-target="#intra">INTRADAY</button></li>
-                    <li class="nav-item"><button class="nav-link rounded-pill" data-bs-toggle="pill" data-bs-target="#swing">SWING</button></li>
-                    <li class="nav-item"><button class="nav-link rounded-pill" data-bs-toggle="pill" data-bs-target="#pos">POSITIONAL</button></li>
-                    <li class="nav-item"><button class="nav-link rounded-pill" data-bs-toggle="pill" data-bs-target="#news-pane">NEWS</button></li>
+            <!-- STOCKS -->
+            <div class="tab-pane fade" id="stocks-pane">
+                <ul class="nav nav-pills nav-fill mb-3 bg-dark p-1 rounded-pill" style="font-size: 0.65rem;">
+                    <li class="nav-item"><button class="nav-link active rounded-pill" data-bs-toggle="pill" data-bs-target="#intra-sub">INTRADAY</button></li>
+                    <li class="nav-item"><button class="nav-link rounded-pill" data-bs-toggle="pill" data-bs-target="#swing-sub">SWING</button></li>
+                    <li class="nav-item"><button class="nav-link rounded-pill" data-bs-toggle="pill" data-bs-target="#pos-sub">POSITIONAL</button></li>
+                    <li class="nav-item"><button class="nav-link rounded-pill" data-bs-toggle="pill" data-bs-target="#news-sub">NEWS</button></li>
                 </ul>
                 <div class="tab-content">
-                    <div class="tab-pane fade show active" id="intra"><div id="intra-list"></div></div>
-                    <div class="tab-pane fade" id="swing"><div id="swing-list"></div></div>
-                    <div class="tab-pane fade" id="pos"><div id="pos-list"></div></div>
-                    <div class="tab-pane fade" id="news-pane"><div id="news-list"></div></div>
+                    <div class="tab-pane fade show active" id="intra-sub"><div id="intra-list"></div></div>
+                    <div class="tab-pane fade" id="swing-sub"><div id="swing-list"></div></div>
+                    <div class="tab-pane fade" id="pos-sub"><div id="pos-list"></div></div>
+                    <div class="tab-pane fade" id="news-sub"><div id="news-list"></div></div>
                 </div>
             </div>
         </div>
     </div>
 </div>
 
-<div id="stock-detail-view" class="full-screen-detail">
-    <div class="back-btn" id="close-detail-btn"><i class="bi bi-arrow-left-circle"></i></div>
-    <div id="detail-content"></div>
+<div id="detail-view">
+    <div class="close-btn" onclick="document.getElementById('detail-view').style.display='none'"><i class="bi bi-chevron-left"></i> BACK TO HUB</div>
+    <div id="detail-body"></div>
 </div>
 
 <script type="module">
@@ -109,7 +112,7 @@
     import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
     import { getFirestore, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-    const firebaseConfig = {
+    const config = {
         apiKey: "AIzaSyDMEUmFGSJBjGrz7fpDN46OiZlSJ6NTsjE",
         authDomain: "kunal-analysis.firebaseapp.com",
         projectId: "kunal-analysis",
@@ -117,131 +120,109 @@
         appId: "1:328297105533:web:3ed3d8d5aa3ec677b88914"
     };
 
-    const app = initializeApp(firebaseConfig);
+    const app = initializeApp(config);
     const auth = getAuth(app);
     const db = getFirestore(app);
-    let optSub = null;
+    let optUnsub = null;
+    let currentData = {};
 
     document.getElementById('login-btn').onclick = async () => {
         const e = document.getElementById('email').value, p = document.getElementById('password').value;
-        try { await signInWithEmailAndPassword(auth, e, p); } catch(err) { alert("Auth Failed"); }
+        try { await signInWithEmailAndPassword(auth, e, p); } catch(err) { alert("Access Denied: " + err.message); }
     };
     document.getElementById('logout-btn').onclick = () => signOut(auth);
 
     onAuthStateChanged(auth, (user) => {
-        if (user) {
-            document.getElementById('login-container').style.display = 'none';
-            document.getElementById('dashboard-container').style.display = 'block';
-            startApp();
-        } else {
-            document.getElementById('login-container').style.display = 'block';
-            document.getElementById('dashboard-container').style.display = 'none';
-        }
+        if (user) { document.getElementById('login-container').style.display = 'none'; document.getElementById('dashboard-root').style.display = 'block'; startHub(); }
+        else { document.getElementById('login-container').style.display = 'block'; document.getElementById('dashboard-root').style.display = 'none'; }
     });
 
-    const openDetail = (s) => {
-        const isBull = s.change > 0;
-        document.getElementById('detail-content').innerHTML = `
-            <div class="signal-banner ${isBull ? 'signal-bullish' : 'signal-bearish'}">
-                ${s.symbol.replace('.NS','').replace('.BO','')}
-                <div style="font-size: 0.8rem; font-weight: 400;">${s.recommendation}</div>
+    window.openDetail = (symbol, type) => {
+        const list = type === 'intra' ? currentData.intraday : currentData.swing;
+        const s = list.find(x => x.symbol === symbol);
+        if (!s) return;
+        const isUp = s.change > 0;
+        document.getElementById('detail-body').innerHTML = `
+            <div class="signal-banner ${isUp ? 'bull-grad' : 'bear-grad'}">${s.symbol.replace('.NS','')}<div class="small fw-light mt-1">${s.recommendation}</div></div>
+            <div class="data-grid">
+                <div class="data-box"><span class="data-label">Entry Price</span><span class="data-val">${s.entry_price || s.price}</span></div>
+                <div class="data-box"><span class="data-label">Target</span><span class="data-val text-info">${s.target_price || 'N/A'}</span></div>
+                <div class="data-box"><span class="data-label">Stop Loss</span><span class="data-val text-danger">${s.sl_price || 'N/A'}</span></div>
+                <div class="data-box"><span class="data-label">Rating</span><span class="data-val text-warning">${s.rating}</span></div>
             </div>
-            <div class="data-grid mb-3">
-                <div class="data-box"><span class="data-label">Price</span><span class="data-val">${s.price}</span></div>
-                <div class="data-box"><span class="data-label">Rating</span><span class="data-val text-info">${s.rating}</span></div>
-                <div class="data-box"><span class="data-label">Change</span><span class="data-val ${isBull ? 'text-success':'text-danger'}">${s.change}%</span></div>
-                <div class="data-box"><span class="data-label">Vol Ratio</span><span class="data-val">${s.vol_ratio}x</span></div>
-            </div>
-            <div class="section-header">Analysis Justification</div>
-            <div class="card p-3 small mb-3 border-info">${s.justification}</div>
-            <div class="section-header">Technical Telemetry (EMA)</div>
-            <div class="data-grid mb-3">
+            <div class="section-header mt-3">Trade Justification</div>
+            <div class="justification-card mb-4">${s.justification}</div>
+            <div class="section-header">Technical Indicators (EMA)</div>
+            <div class="data-grid mb-4">
                 <div class="data-box"><span class="data-label">EMA 20</span><span class="data-val">${s.ema20}</span></div>
                 <div class="data-box"><span class="data-label">EMA 50</span><span class="data-val">${s.ema50}</span></div>
                 <div class="data-box"><span class="data-label">EMA 100</span><span class="data-val">${s.ema100 || 'N/A'}</span></div>
                 <div class="data-box"><span class="data-label">EMA 200</span><span class="data-val">${s.ema200}</span></div>
             </div>
-            <div class="section-header">Market Structure</div>
-            <div class="card p-3 small mb-5">
-                <div class="mb-1"><span class="text-dim text-uppercase x-small">Sector:</span> ${s.sector}</div>
-                <div class="mb-1"><span class="text-dim text-uppercase x-small">Strategy:</span> ${s.strategy || 'Trend Alignment'}</div>
-                <div class="mb-0"><span class="text-dim text-uppercase x-small">Status:</span> ${s.price > s.ema20 ? 'Above Support' : 'Below Resistance'}</div>
-            </div>
+            <div class="card p-3 small mb-5"><div class="text-dim">Sector: ${s.sector}</div><div class="text-dim mt-1">Strategy: ${s.strategy}</div></div>
         `;
-        document.getElementById('stock-detail-view').style.display = 'block';
+        document.getElementById('detail-view').style.display = 'block';
     };
 
-    document.getElementById('close-detail-btn').onclick = () => document.getElementById('stock-detail-view').style.display = 'none';
-
-    function startApp() {
+    function startHub() {
         onSnapshot(doc(db, "stock_scans", "comprehensive"), (snap) => {
             const data = snap.data(); if (!data) return;
-            const render = (id, list) => {
+            currentData = data;
+            const render = (id, list, type) => {
                 const c = document.getElementById(id); c.innerHTML = '';
                 const sectors = {}; (list || []).forEach(s => { if(!sectors[s.sector]) sectors[s.sector] = []; sectors[s.sector].push(s); });
                 Object.keys(sectors).sort().forEach(sec => {
-                    const h = document.createElement('div'); h.className = 'sector-header'; h.innerText = sec; c.appendChild(h);
+                    c.innerHTML += `<div class="sector-title">${sec}</div>`;
                     sectors[sec].forEach(s => {
-                        const r = document.createElement('div'); r.className = 'stock-row';
-                        r.innerHTML = `<div><div class="fw-bold">${s.symbol.replace('.NS','').replace('.BO','')}</div><div class="small text-dim">${s.rating} Rating</div></div>
-                                       <div class="text-end"><div class="fw-bold text-${s.change > 0 ? 'success':'danger'}">${s.change}%</div><div class="small text-dim">Vol ${s.vol_ratio}x</div></div>`;
-                        r.onclick = () => openDetail(s); c.appendChild(r);
+                        const div = document.createElement('div'); div.className = 'stock-item';
+                        div.onclick = () => window.openDetail(s.symbol, type);
+                        div.innerHTML = `
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div><div class="fw-bold fs-5">${s.symbol.replace('.NS','')}</div><div class="small text-info">${s.rating} Rating</div></div>
+                                <div class="text-end"><div class="fw-bold text-${s.change > 0 ? 'success':'danger'}">${s.change}%</div><div class="small text-dim">${s.price}</div></div>
+                            </div>
+                            <div class="price-strip">
+                                <div class="price-item">ENTRY<span>${s.entry_price || s.price}</span></div>
+                                <div class="price-item">TGT<span>${s.target_price || 'N/A'}</span></div>
+                                <div class="price-item">SL<span>${s.sl_price || 'N/A'}</span></div>
+                            </div>`;
+                        c.appendChild(div);
                     });
                 });
             };
-            render('intra-list', data.intraday); render('swing-list', data.swing); render('pos-list', data.positional || data.swing);
-            const n = document.getElementById('news-list'); n.innerHTML = '';
-            (data.market_news || []).forEach(item => {
-                const div = document.createElement('div'); div.className = 'card p-3 small mb-2';
-                div.innerHTML = `<div class="text-dim mb-1">${item.time} | Impact: ${item.impact}</div><a href="${item.link}" target="_blank" class="text-white fw-bold text-decoration-none">${item.headline}</a>`;
-                n.appendChild(div);
-            });
+            render('intra-list', data.intraday, 'intra'); render('swing-list', data.swing, 'swing'); render('pos-list', data.positional || data.swing, 'swing');
+            const nList = document.getElementById('news-list'); nList.innerHTML = '';
+            (data.market_news || []).forEach(n => { nList.innerHTML += `<div class="card p-3 small mb-2"><div class="text-dim mb-1">${n.time} | Impact: ${n.impact}</div><a href="${n.link}" target="_blank" class="text-white fw-bold text-decoration-none">${n.headline}</a></div>`; });
         });
 
-        setupOptSub("NIFTY");
-        document.getElementById('symbol-select').onchange = (e) => setupOptSub(e.target.value);
+        loadOptions("NIFTY");
+        document.getElementById('sym-select').onchange = (e) => loadOptions(e.target.value);
     }
 
-    function setupOptSub(symbol) {
-        if (optSub) optSub();
-        optSub = onSnapshot(doc(db, "option_sentiment", symbol), (snap) => {
+    function loadOptions(sym) {
+        if (optUnsub) optUnsub();
+        optUnsub = onSnapshot(doc(db, "option_sentiment", sym), (snap) => {
             const d = snap.data(); if (!d) return;
-            const isBull = d.final_signal === 'Bullish';
-            let oiRows = ''; (d.top_strikes || []).forEach(r => { oiRows += `<tr><td>${r.strike}</td><td>${r.call_oi}</td><td>${r.put_oi}</td><td>${r.total_oi}</td><td class="${r.oi_side.includes('Call') ? 'text-danger':'text-success'}">${r.oi_side}</td></tr>`; });
-            document.getElementById('option-content').innerHTML = `
-                <div class="signal-banner ${isBull ? 'signal-bullish' : 'signal-bearish'}">${d.final_signal || 'NEUTRAL'}</div>
-                <div class="alert-panel p-3"><div class="section-header">ACTION PROTOCOL</div><div class="fw-bold">${d.trade_alert?.action || 'HOLD'}</div><div class="small mt-1">${d.trade_alert?.trigger || ''}</div></div>
-                <div class="section-header">LIVE SPOT TICK</div><div id="main-chart" class="chart-box"></div>
+            const isB = d.final_signal === 'Bullish';
+            let oiHtml = ''; (d.top_strikes || []).forEach(r => { oiHtml += `<tr><td>${r.strike}</td><td>${r.call_oi}</td><td>${r.put_oi}</td><td>${r.total_oi}</td><td class="text-${r.oi_side.includes('Call')?'danger':'success'}">${r.oi_side}</td></tr>`; });
+            document.getElementById('option-render').innerHTML = `
+                <div class="signal-banner ${isB ? 'bull-grad' : 'bear-grad'}">${d.final_signal || 'NEUTRAL'}</div>
+                <div class="alert-panel p-3"><div class="section-header text-white-50">ACTION ALERT</div><div class="fw-bold fs-5">${d.trade_alert?.action || 'HOLD'}</div><div class="small mt-1 text-white-50">${d.trade_alert?.trigger || ''}</div></div>
+                <div class="section-header"><i class="bi bi-graph-up"></i>LIVE MARKET TICK</div><div id="chart-area" class="chart-box"></div>
                 <div class="data-grid">
                     <div class="data-box"><span class="data-label">Spot Price</span><span class="data-val">${d.spot_price}</span></div>
                     <div class="data-box"><span class="data-label">Max Pain</span><span class="data-val">${d.max_pain}</span></div>
                     <div class="data-box"><span class="data-label">PCR (OI)</span><span class="data-val">${d.pcr_oi}</span></div>
-                    <div class="data-box"><span class="data-label">PCR (Vol)</span><span class="data-val">${d.pcr_volume}</span></div>
+                    <div class="data-box"><span class="data-label">Sentiment</span><span class="data-val small text-info">${d.combined_sentiment_read || 'MIXED'}</span></div>
                 </div>
-                <div class="section-header">EXCHANGE TELEMETRY</div>
-                <div class="card p-3 small mb-3">
-                    <div class="mb-1"><span class="text-dim">Read:</span> <span class="text-info fw-bold">${d.market_read || 'N/A'}</span></div>
-                    <div class="mb-1"><span class="text-dim">Structure:</span> ${d.price_structure?.trend || 'Range'}</div>
-                    <div class="mb-1"><span class="text-dim">Support:</span> ${(d.support_zones || []).join(' | ')}</div>
-                    <div class="mb-0"><span class="text-dim">Resistance:</span> ${(d.resistance_zones || []).join(' | ')}</div>
-                </div>
-                <div class="section-header">GREEKS</div>
-                <div class="data-grid">
-                    <div class="data-box"><span class="data-label">Call Delta</span><span class="data-val">${d.greeks?.call_delta || 'N/A'}</span></div>
-                    <div class="data-box"><span class="data-label">Put Delta</span><span class="data-val">${d.greeks?.put_delta || 'N/A'}</span></div>
-                    <div class="data-box"><span class="data-label">Gamma</span><span class="data-val">${d.greeks?.gamma || 'N/A'}</span></div>
-                    <div class="data-box"><span class="data-label">Vega</span><span class="data-val">${d.greeks?.vega || 'N/A'}</span></div>
-                </div>
+                <div class="section-header">TELEMETRY & GREEKS</div>
+                <div class="card p-3 mb-3 small"><div class="mb-1"><span class="text-dim">Structure:</span> ${d.price_structure?.trend || 'Range'}</div><div class="mb-1"><span class="text-dim">Support:</span> ${(d.support_zones || []).join(' | ')}</div><div class="mt-2 row text-center border-top border-secondary pt-2"><div class="col"><div class="data-label">Call Delta</div><div class="fw-bold">${d.greeks?.call_delta || 'N/A'}</div></div><div class="col"><div class="data-label">Put Delta</div><div class="fw-bold">${d.greeks?.put_delta || 'N/A'}</div></div></div></div>
                 <div class="section-header mt-2">OI CONCENTRATION</div>
-                <table class="table table-custom text-center"><thead><tr><th>Strike</th><th>Call OI</th><th>Put OI</th><th>Total</th><th>Side</th></tr></thead><tbody>${oiRows}</tbody></table>
+                <div class="table-responsive"><table class="table table-dark table-custom text-center"><thead><tr><th>Strike</th><th>C-OI</th><th>P-OI</th><th>Total</th><th>Side</th></tr></thead><tbody>${oiHtml}</tbody></table></div>
+                <div class="text-center text-dim x-small mt-3">Terminal Sync: ${d.fetched_at || '--:--'}</div>
             `;
-            drawChart(d.spot_history || []);
+            if((d.spot_history || []).length > 1) Plotly.newPlot('chart-area', [{ x: d.spot_history.map(h=>new Date(h.time)), y: d.spot_history.map(h=>h.value), type:'scatter', mode:'lines', line:{color:'#38bdf8', width:3}, fill:'tozeroy', fillcolor:'rgba(56,189,248,0.1)' }], { paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:'rgba(0,0,0,0)', margin:{t:10,r:15,b:30,l:35}, xaxis:{showgrid:false, tickfont:{color:'#9ca3af',size:8}, tickformat:'%H:%M'}, yaxis:{gridcolor:'#1f2937', tickfont:{color:'#9ca3af',size:8}} }, {responsive:true, displayModeBar:false});
         });
-    }
-
-    function drawChart(hist) {
-        if (!hist.length) return;
-        Plotly.newPlot('main-chart', [{ x: hist.map(h => new Date(h.time)), y: hist.map(h => h.value), type: 'scatter', mode: 'lines', line: { color: '#38bdf8', width: 2, shape: 'spline' }, fill: 'tozeroy', fillcolor: 'rgba(56, 189, 248, 0.1)' }], { paper_bgcolor: 'rgba(0,0,0,0)', plot_bgcolor: 'rgba(0,0,0,0)', margin: { t: 5, r: 15, b: 30, l: 35 }, xaxis: { showgrid: false, tickfont: { color: '#94a3b8', size: 9 }, tickformat: '%H:%M' }, yaxis: { gridcolor: '#334155', tickfont: { color: '#94a3b8', size: 9 } } }, { responsive: true, displayModeBar: false });
     }
 </script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>

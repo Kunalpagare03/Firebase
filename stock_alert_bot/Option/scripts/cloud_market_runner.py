@@ -14,6 +14,7 @@ if ROOT not in sys.path:
 from step1_fetch import get_option_chain
 from step2_parse import parse_option_chain
 from step7_dashboard import build_dashboard
+from step9_deep_dive_analysis import perform_deep_dive
 from utils.firebase_sync import sync_to_firestore
 from brokers.angel_one import start_live_feed, get_latest_spot, get_live_status
 from stock_alert.market_hours import market_status
@@ -102,6 +103,7 @@ def run_terminal_sync(symbol="NIFTY"):
                 data["price_action"] = analyze_price_action(symbol)
                 data["greeks"] = analyze_chain_greeks(df_prev, spot)
                 data["price_structure"] = analyze_price_structure([s["value"] for s in _chart_history[symbol]])
+                data["deep_dive"] = perform_deep_dive(df_prev, spot) # Added Volume Deep Dive
                 data["spot_history"] = list(_chart_history[symbol])[-100:] # Last 100 ticks for mobile chart
                 data["fetched_at"] = datetime.now().strftime("%H:%M:%S")
 

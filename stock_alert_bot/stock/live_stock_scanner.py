@@ -1,0 +1,96 @@
+import yfinance as yf
+import pandas as pd
+import numpy as np
+from datetime import datetime
+import os
+from utils.firebase_sync import sync_to_firestore
+
+# List of top liquid stocks (NSE 200) to keep scanning efficient
+WATCHLIST = [
+    "RELIANCE.NS", "HDFCBANK.NS", "ICICIBANK.NS", "INFY.NS", "TCS.NS", "SBIN.NS", "BHARTIARTL.NS", "AXISBANK.NS",
+    "LICI.NS", "ITC.NS", "LT.NS", "KOTAKBANK.NS", "HINDUNILVR.NS", "TATAMOTORS.NS", "BAJFINANCE.NS", "ADANIENT.NS",
+    "SUNPHARMA.NS", "MARUTI.NS", "ASIANPAINT.NS", "TITAN.NS", "ULTRACEMCO.NS", "JSWSTEEL.NS", "TATASTEEL.NS",
+    "POWERGRID.NS", "NTPC.NS", "ONGC.NS", "ADANIPORTS.NS", "WIPRO.NS", "HCLTECH.NS", "M&M.NS", "BAJAJ-AUTO.NS",
+    "COALINDIA.NS", "GRASIM.NS", "JSWENERGY.NS", "TRENT.NS", "BEL.NS", "HAL.NS", "DIXON.NS", "POLYCAB.NS",
+    "PERSISTENT.NS", "LTIM.NS", "TATACONSUM.NS", "APOLLOHOSP.NS", "NESTLEIND.NS", "DRREDDY.NS", "CIPLA.NS",
+    "TECHM.NS", "HINDALCO.NS", "BRITANNIA.NS", "EICHERMOT.NS", "INDUSINDBK.NS", "BPCL.NS", "SBILIFE.NS",
+    "HDFCLIFE.NS", "HEROMOTOCO.NS", "TATACOMM.NS", "VOLTAS.NS", "CUMMINSIND.NS", "AUROPHARMA.NS", "LUPIN.NS"
+]
+
+def analyze_intraday(symbol):
+    try:
+        # Get 5-minute data for today
+        ticker = yf.Ticker(symbol)
+        df = ticker.history(period="2d", interval="5m")
+        if df.empty or len(df) < 20: return None
+
+        # Basic Stats
+        current_price = df['Close'].iloc[-1]
+        prev_close = ticker.fast_info['previousClose']
+        change_pct = ((current_price - prev_close) / prev_close) * 100
+
+        # Technicals
+        df['ema9'] = df['Close'].ewm(span=9).mean()
+        df['ema21'] = df['Close'].ewm(span=21).mean()
+        df['avg_vol'] = df['Volume'].rolling(20).mean()
+
+        latest_ema9 = df['ema9'].iloc[-1]
+        latest_ema21 = df['ema21'].iloc[-1]
+        latest_vol = df['Volume'].iloc[-1]
+        avg_vol = df['avg_vol'].iloc[-1]
+
+        # --- Intraday Logic (Buy/Sell Today) ---
+        is_intraday = False
+        strategy = ""
+
+        # 1% to 2.5% move + Volume + Above EMAs
+        if 1.0 <= change_pct <= 2.5 and current_price > latest_ema9 > latest_ema21 and latest_vol > (avg_vol * 1.5):
+            is_intraday = True
+            strategy = "Momentum Breakout"
+        elif -2.5 <= change_pct <= -1.0 and current_price < latest_ema9 < latest_ema21 and latest_vol > (avg_vol * 1.5):
+            is_intraday = True
+            strategy = "Momentum Breakdown"
+
+        # Retest Logic (Price touches EMA 21 and bounces)
+        if abs(current_price - latest_ema21) / current_price < 0.002 and current_price > df['Close'].iloc[-5]:
+            is_intraday = True
+            strategy = "EMA Retest / Support"
+
+        if not is_intraday: return None
+
+        return {
+            "symbol": symbol,
+            "price": round(current_price, 2),
+            "change": round(change_pct, 2),
+            "strategy": strategy,
+            "volume_ratio": round(latest_vol / avg_vol, 1),
+            "ema_status": "Bullish Alignment" if latest_ema9 > latest_ema21 else "Bearish Alignment",
+            "recommendation": "BUY INTRADAY" if change_pct > 0 else "SELL INTRADAY",
+            "target": round(current_price * (1.01 if change_pct > 0 else 0.99), 2),
+            "stop": round(current_price * (0.993 if change_pct > 0 else 1.007), 2)
+        }
+    except:
+        return None
+
+def run_live_scan():
+    intraday_results = []
+    print(f"Scanning {len(WATCHLIST)} stocks for Intraday setups...")
+
+    for symbol in WATCHLIST:
+        res = analyze_intraday(symbol)
+        if res:
+            intraday_results.append(res)
+
+    # Sort by volume and change
+    intraday_results.sort(key=lambda x: (x['volume_ratio'], abs(x['change'])), reverse=True)
+
+    report = {
+        "timestamp": datetime.now().strftime("%H:%M:%S"),
+        "results": intraday_results[:15] # Top 15 setups
+    }
+
+    sync_to_firestore("stock_scans", "intraday", report)
+    print(f"Synced {len(intraday_results)} intraday setups to Cloud.")
+
+if __name__ == "__main__":
+    run_live_scan()

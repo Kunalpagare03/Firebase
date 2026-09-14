@@ -3,113 +3,84 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Stock Pro Analysis | Live</title>
+    <title>StockPro Terminal | Hub</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
     <style>
         :root {
-            --primary-bg: #0f172a;
-            --secondary-bg: #1e293b;
-            --accent-blue: #38bdf8;
-            --bull-green: #22c55e;
-            --bear-red: #ef4444;
-            --text-main: #f8fafc;
-            --text-dim: #94a3b8;
+            --primary-bg: #0b0f19;
+            --card-bg: #151c2c;
+            --accent: #38bdf8;
+            --success: #10b981;
+            --danger: #ef4444;
+            --border: #2d3748;
+            --text-muted: #94a3b8;
         }
-        body { background-color: var(--primary-bg); color: var(--text-main); font-family: 'Inter', system-ui, -apple-system, sans-serif; }
-        .navbar { background-color: var(--secondary-bg) !important; border-bottom: 1px solid #334155; }
-        .card { background-color: var(--secondary-bg); border: 1px solid #334155; border-radius: 12px; margin-bottom: 1rem; color: var(--text-main); }
-        .nav-pills .nav-link { color: var(--text-dim); border-radius: 8px; font-weight: 600; margin: 0 4px; }
-        .nav-pills .nav-link.active { background-color: var(--accent-blue); color: var(--primary-bg); }
+        body { background-color: var(--primary-bg); color: #f8fafc; font-family: 'Segoe UI', system-ui, sans-serif; }
+        .navbar { background-color: var(--card-bg) !important; border-bottom: 1px solid var(--border); }
+        .nav-pills .nav-link { color: var(--text-muted); font-weight: 600; border-radius: 8px; margin-right: 5px; border: 1px solid transparent; }
+        .nav-pills .nav-link.active { background-color: rgba(56, 189, 248, 0.1); color: var(--accent); border: 1px solid var(--accent); }
 
-        .signal-banner { padding: 1.5rem; border-radius: 12px; margin-bottom: 1rem; text-align: center; font-weight: 800; font-size: 1.5rem; text-transform: uppercase; }
-        .signal-bullish { background: linear-gradient(135deg, #064e3b 0%, #065f46 100%); border: 1px solid var(--bull-green); color: #4ade80; }
-        .signal-bearish { background: linear-gradient(135deg, #450a0a 0%, #7f1d1d 100%); border: 1px solid var(--bear-red); color: #f87171; }
+        .card { background-color: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; margin-bottom: 1rem; }
+        .section-header { font-size: 0.8rem; font-weight: 800; color: var(--accent); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 1rem; }
 
-        .alert-panel { background: #0c4a6e; border-left: 4px solid var(--accent-blue); padding: 1rem; border-radius: 8px; margin-bottom: 1rem; }
-        .section-header { font-size: 0.9rem; font-weight: 700; color: var(--accent-blue); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 1rem; display: flex; align-items: center; }
-        .section-header i { margin-right: 8px; }
+        /* Stock Specific Styling */
+        .stock-card { padding: 1.25rem; }
+        .stock-symbol { font-size: 1.25rem; font-weight: 700; margin: 0; }
+        .stock-change { font-weight: 700; font-size: 0.9rem; }
+        .strategy-tag { font-size: 0.7rem; background: #2d3748; padding: 3px 8px; border-radius: 4px; color: var(--accent); font-weight: 700; }
+        .data-label { font-size: 0.65rem; color: var(--text-muted); text-transform: uppercase; }
+        .data-value { font-size: 0.95rem; font-weight: 600; }
 
-        .data-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.75rem; margin-bottom: 1rem; }
-        .data-box { background: rgba(15, 23, 42, 0.5); padding: 0.75rem; border-radius: 8px; border: 1px solid #334155; }
-        .data-label { font-size: 0.7rem; color: var(--text-dim); display: block; margin-bottom: 2px; }
-        .data-val { font-size: 1rem; font-weight: 700; color: var(--text-main); }
+        .tab-pane { animation: slideUp 0.3s ease-out; }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
-        .chart-box { height: 320px; background: rgba(15, 23, 42, 0.8); border-radius: 8px; overflow: hidden; }
-        .table-custom { font-size: 0.8rem; color: var(--text-main); }
-        .table-custom th { color: var(--text-dim); font-weight: 600; border-bottom: 1px solid #334155; }
-        .table-custom td { border-bottom: 1px solid #1e293b; padding: 8px 4px; }
-
-        #login-container { max-width: 420px; margin-top: 80px; }
-        .btn-primary { background-color: var(--accent-blue); border: none; font-weight: 700; color: var(--primary-bg); }
-
-        .tab-pane { animation: fadeIn 0.3s ease-in-out; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        #login-container { max-width: 400px; margin-top: 100px; }
+        #dashboard-container { display: none; }
     </style>
 </head>
 <body>
 
 <div id="login-container" class="container">
-    <div class="card p-4 shadow-lg">
-        <div class="text-center mb-4">
-            <i class="bi bi-graph-up-arrow text-info" style="font-size: 3rem;"></i>
-            <h2 class="mt-2">StockPro</h2>
-            <p class="text-muted">Private Institutional Access</p>
-        </div>
-        <div class="mb-3">
-            <input type="email" id="email" class="form-control bg-dark text-white border-secondary" placeholder="Terminal Email">
-        </div>
-        <div class="mb-4">
-            <input type="password" id="password" class="form-control bg-dark text-white border-secondary" placeholder="Access Key">
-        </div>
-        <button id="login-btn" class="btn btn-primary w-100 py-2">LOG IN TO TERMINAL</button>
-        <p id="login-error" class="text-danger mt-3 small text-center" style="display:none;"></p>
+    <div class="card p-4 text-center">
+        <h2 class="fw-bold mb-4"><i class="bi bi-cpu text-info"></i> STOCKPRO</h2>
+        <input type="email" id="email" class="form-control bg-dark text-white border-secondary mb-3" placeholder="Email">
+        <input type="password" id="password" class="form-control bg-dark text-white border-secondary mb-4" placeholder="Password">
+        <button id="login-btn" class="btn btn-info w-100 fw-bold">AUTHENTICATE</button>
+        <p id="login-error" class="text-danger mt-3 small" style="display:none;"></p>
     </div>
 </div>
 
 <div id="dashboard-container">
-    <nav class="navbar navbar-expand navbar-dark px-3 py-2 sticky-top">
-        <a class="navbar-brand d-flex align-items-center" href="#">
-            <i class="bi bi-shield-lock-fill text-info me-2"></i>
-            <span class="fw-bold">STOCKPRO LIVE</span>
-        </a>
-        <div class="ms-auto d-flex align-items-center">
-            <div id="connection-status" class="me-3 small text-success">
-                <i class="bi bi-broadcast"></i> LIVE
-            </div>
-            <button id="logout-btn" class="btn btn-link text-dim p-0"><i class="bi bi-power"></i></button>
-        </div>
+    <nav class="navbar navbar-dark px-3 py-2 sticky-top">
+        <span class="navbar-brand fw-bold small"><i class="bi bi-lightning-charge-fill text-warning"></i> TERMINAL v3</span>
+        <button id="logout-btn" class="btn btn-link text-muted p-0"><i class="bi bi-power"></i></button>
     </nav>
 
-    <div class="container-fluid px-3 pt-3">
-        <ul class="nav nav-pills mb-3" id="main-tabs">
-            <li class="nav-item flex-fill">
-                <button class="nav-link active w-100" data-bs-toggle="pill" data-bs-target="#options-tab">OPTIONS</button>
-            </li>
-            <li class="nav-item flex-fill">
-                <button class="nav-link w-100" data-bs-toggle="pill" data-bs-target="#stocks-tab">STOCKS</button>
-            </li>
+    <div class="container-fluid p-3">
+        <ul class="nav nav-pills mb-4">
+            <li class="nav-item"><button class="nav-link active" data-bs-toggle="pill" data-bs-target="#options">OPTIONS</button></li>
+            <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#intraday">INTRADAY</button></li>
+            <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#swing">SWING</button></li>
         </ul>
 
         <div class="tab-content">
-            <!-- OPTIONS TAB -->
-            <div class="tab-pane fade show active" id="options-tab">
-                <select id="symbol-select" class="form-select bg-dark text-white border-secondary mb-3 shadow-sm">
-                    <option value="NIFTY">NIFTY 50 INDEX</option>
-                    <option value="BANKNIFTY">BANKNIFTY INDEX</option>
-                </select>
-
-                <div id="option-content">
-                    <div class="text-center py-5 text-dim"><div class="spinner-border text-info mb-2"></div><br>Syncing with Exchange...</div>
-                </div>
+            <!-- OPTIONS -->
+            <div class="tab-pane fade show active" id="options">
+                <div id="option-content"></div>
             </div>
 
-            <!-- STOCKS TAB -->
-            <div class="tab-pane fade" id="stocks-tab">
-                <div id="stock-list">
-                    <div class="text-center py-5 text-dim">Fetching After-Market Scans...</div>
-                </div>
+            <!-- INTRADAY (Today) -->
+            <div class="tab-pane fade" id="intraday">
+                <div class="section-header">Live 1-2% Momentum Scans</div>
+                <div id="intraday-list"></div>
+            </div>
+
+            <!-- SWING (Next Day) -->
+            <div class="tab-pane fade" id="swing">
+                <div class="section-header">Next Day Breakout Candidates</div>
+                <div id="swing-list"></div>
             </div>
         </div>
     </div>
@@ -132,144 +103,75 @@
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
-    let optSub = null;
 
     document.getElementById('login-btn').onclick = async () => {
         const e = document.getElementById('email').value;
         const p = document.getElementById('password').value;
-        try { await signInWithEmailAndPassword(auth, e, p); }
-        catch (err) { document.getElementById('login-error').innerText = "Access Denied: Invalid Credentials"; document.getElementById('login-error').style.display = 'block'; }
+        try { await signInWithEmailAndPassword(auth, e, p); } catch(err) { document.getElementById('login-error').innerText = "Auth Failed"; document.getElementById('login-error').style.display='block'; }
     };
-
     document.getElementById('logout-btn').onclick = () => signOut(auth);
 
     onAuthStateChanged(auth, (user) => {
         if (user) {
             document.getElementById('login-container').style.display = 'none';
             document.getElementById('dashboard-container').style.display = 'block';
-            initApp();
+            startApp();
         } else {
             document.getElementById('login-container').style.display = 'block';
             document.getElementById('dashboard-container').style.display = 'none';
         }
     });
 
-    function initApp() {
-        // Stock Scan Listener
-        onSnapshot(doc(db, "stock_scans", "latest"), (snap) => {
+    function startApp() {
+        // Intraday Sync
+        onSnapshot(doc(db, "stock_scans", "intraday"), (snap) => {
             const data = snap.data();
-            if (!data?.results) return;
-            const container = document.getElementById('stock-list');
+            const container = document.getElementById('intraday-list');
+            if (!data?.results?.length) { container.innerHTML = '<p class="text-muted small">No intraday setups found. Scanning market for 1-2% moves...</p>'; return; }
             container.innerHTML = '';
             data.results.forEach(s => {
                 container.innerHTML += `
-                    <div class="card p-3">
-                        <div class="d-flex justify-content-between align-items-start">
-                            <div>
-                                <h5 class="mb-0 fw-bold">${s.symbol}</h5>
-                                <div class="text-dim small mt-1">${s.pattern} | RSI ${s.rsi14}</div>
-                            </div>
-                            <span class="badge ${s.score >= 4 ? 'bg-success' : 'bg-primary'}">Score ${s.score}</span>
+                    <div class="card stock-card">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <h4 class="stock-symbol">${s.symbol}</h4>
+                            <div class="stock-change ${s.change > 0 ? 'text-success':'text-danger'}">${s.change > 0 ? '+':''}${s.change}%</div>
                         </div>
-                        <div class="mt-2 text-info small fw-bold">${s.recommendation}</div>
-                        <div class="row mt-3 g-2 text-center border-top border-secondary pt-2">
-                            <div class="col"><div class="small text-dim">ENTRY</div><div class="fw-bold">${s.entry}</div></div>
-                            <div class="col"><div class="small text-dim">TARGET</div><div class="fw-bold">${s.target_2pct}</div></div>
-                            <div class="col"><div class="small text-dim">STOP</div><div class="fw-bold">${s.stop_loss}</div></div>
+                        <div class="d-flex gap-2 mb-3">
+                            <span class="strategy-tag">${s.strategy}</span>
+                            <span class="strategy-tag">VOL ${s.volume_ratio}x</span>
+                        </div>
+                        <div class="row g-2 text-center border-top border-secondary pt-3">
+                            <div class="col"><span class="data-label">Price</span><div class="data-value">${s.price}</div></div>
+                            <div class="col"><span class="data-label">Target</span><div class="data-value text-success">${s.target}</div></div>
+                            <div class="col"><span class="data-label">Stop</span><div class="data-value text-danger">${s.stop}</div></div>
                         </div>
                     </div>`;
             });
         });
 
-        // Option Switcher
-        setupOptSub("NIFTY");
-        document.getElementById('symbol-select').onchange = (e) => setupOptSub(e.target.value);
-    }
-
-    function setupOptSub(symbol) {
-        if (optSub) optSub();
-        optSub = onSnapshot(doc(db, "option_sentiment", symbol), (snap) => {
-            const d = snap.data();
-            if (!d) {
-                document.getElementById('option-content').innerHTML = '<div class="alert alert-info mt-3 small">Exchange connection closed. Ready at Market Open.</div>';
-                return;
-            }
-            renderOptions(symbol, d);
+        // Swing Sync (Next Day)
+        onSnapshot(doc(db, "stock_scans", "latest"), (snap) => {
+            const data = snap.data();
+            const container = document.getElementById('swing-list');
+            if (!data?.results) return;
+            container.innerHTML = '';
+            data.results.forEach(s => {
+                container.innerHTML += `
+                    <div class="card stock-card">
+                        <div class="d-flex justify-content-between mb-2">
+                            <h4 class="stock-symbol">${s.symbol}</h4>
+                            <span class="badge bg-primary">Score ${s.score}</span>
+                        </div>
+                        <div class="text-info small fw-bold mb-2">${s.recommendation}</div>
+                        <div class="small text-muted mb-3">${s.pattern} | RSI ${s.rsi14}</div>
+                        <div class="row g-2 text-center border-top border-secondary pt-3">
+                            <div class="col"><span class="data-label">Entry</span><div class="data-value">${s.entry}</div></div>
+                            <div class="col"><span class="data-label">Next Day Tgt</span><div class="data-value text-success">${s.target_2pct}</div></div>
+                        </div>
+                    </div>`;
+            });
         });
-    }
-
-    function renderOptions(symbol, d) {
-        const t = d.trade_alert || {};
-        const isBull = d.final_signal === 'Bullish';
-
-        let oiRows = '';
-        (d.top_strikes || []).forEach(r => {
-            oiRows += `<tr><td>${r.strike}</td><td>${r.call_oi}</td><td>${r.put_oi}</td><td>${r.total_oi}</td><td class="${r.oi_side.includes('Call') ? 'text-danger':'text-success'}">${r.oi_side}</td></tr>`;
-        });
-
-        document.getElementById('option-content').innerHTML = `
-            <div class="signal-banner ${isBull ? 'signal-bullish' : 'signal-bearish'}">
-                ${d.final_signal || 'NEUTRAL'}
-                <div style="font-size: 0.8rem; font-weight: 400; opacity: 0.8;">Market Sentiment Index</div>
-            </div>
-
-            <div class="alert-panel">
-                <div class="section-header"><i class="bi bi-lightning-fill"></i>ACTION PROTOCOL</div>
-                <div class="fw-bold text-white">${t.action || 'HOLD / MONITOR'}</div>
-                <div class="small text-dim mt-1">Trigger: ${t.trigger || 'Wait for structure break'}</div>
-            </div>
-
-            <div class="section-header"><i class="bi bi-clock-history"></i>LIVE TICK CHART</div>
-            <div id="main-chart" class="chart-box mb-4"></div>
-
-            <div class="section-header"><i class="bi bi-grid-3x3-gap-fill"></i>EXCHANGE TELEMETRY</div>
-            <div class="data-grid">
-                <div class="data-box"><span class="data-label">SPOT PRICE</span><span class="data-val">${d.spot_price}</span></div>
-                <div class="data-box"><span class="data-label">MAX PAIN</span><span class="data-val">${d.max_pain}</span></div>
-                <div class="data-box"><span class="data-label">PCR (OI)</span><span class="data-val">${d.pcr_oi}</span></div>
-                <div class="data-box"><span class="data-label">INTRADAY</span><span class="data-val small">${d.intraday_price_read || 'MIXED'}</span></div>
-            </div>
-
-            <div class="section-header"><i class="bi bi-shield-check"></i>SIGNAL VERIFICATION</div>
-            <div class="card p-3 small">
-                <div class="mb-1"><span class="text-dim">Structure:</span> <span class="text-info fw-bold">${d.price_structure?.trend || 'Range'}</span></div>
-                <div class="mb-1"><span class="text-dim">Trendline:</span> ${t.technical?.trendline || 'Flat'}</div>
-                <div class="mb-1"><span class="text-dim">Support:</span> ${(d.support_zones || []).join(' | ')}</div>
-                <div class="mb-0"><span class="text-dim">Resistance:</span> ${(d.resistance_zones || []).join(' | ')}</div>
-            </div>
-
-            <div class="section-header"><i class="bi bi-bar-chart-line-fill"></i>OI CONCENTRATION</div>
-            <div class="table-responsive">
-                <table class="table table-custom text-center">
-                    <thead><tr><th>Strike</th><th>Call OI</th><th>Put OI</th><th>Total</th><th>Side</th></tr></thead>
-                    <tbody>${oiRows || '<tr><td colspan="5">No Active Strikes</td></tr>'}</tbody>
-                </table>
-            </div>
-
-            <div class="text-center text-dim x-small mt-4 mb-5">
-                Last Terminal Update: ${d.fetched_at || '--:--:--'}<br>
-                Source: Angel One Live Feed (V2)
-            </div>
-        `;
-        drawChart(d.spot_history || []);
-    }
-
-    function drawChart(hist) {
-        if (!hist.length) return;
-        const x = hist.map(h => new Date(h.time));
-        const y = hist.map(h => h.value);
-        Plotly.newPlot('main-chart', [{
-            x, y, type: 'scatter', mode: 'lines',
-            line: { color: '#38bdf8', width: 2, shape: 'spline' },
-            fill: 'tozeroy', fillcolor: 'rgba(56, 189, 248, 0.1)'
-        }], {
-            paper_bgcolor: 'rgba(0,0,0,0)', plot_bgcolor: 'rgba(0,0,0,0)',
-            margin: { t: 5, r: 15, b: 30, l: 35 },
-            xaxis: { showgrid: false, tickfont: { color: '#94a3b8', size: 9 }, tickformat: '%H:%M' },
-            yaxis: { gridcolor: '#334155', tickfont: { color: '#94a3b8', size: 9 } }
-        }, { responsive: true, displayModeBar: false });
     }
 </script>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

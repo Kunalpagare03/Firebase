@@ -38,7 +38,7 @@ def analyze_stock(symbol):
         df_daily = ticker.history(period="1y", interval="1d")
         df_intraday = ticker.history(period="2d", interval="5m")
 
-        if df_daily.empty or len(df_daily) < 200: return None
+        if df_daily.empty or len(df_daily) < 200: return None, None
 
         # Daily Indicators for Swing
         for p in [20, 50, 100, 200]:

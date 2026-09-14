@@ -5,89 +5,105 @@ from datetime import datetime
 import os
 from utils.firebase_sync import sync_to_firestore
 from utils.news_engine import fetch_market_news
+from utils.sector_map import get_sector, SECTOR_MAP
 
-WATCHLIST = [
-    "RELIANCE.NS", "HDFCBANK.NS", "ICICIBANK.NS", "INFY.NS", "TCS.NS", "SBIN.NS", "BHARTIARTL.NS", "AXISBANK.NS",
-    "LICI.NS", "ITC.NS", "LT.NS", "KOTAKBANK.NS", "HINDUNILVR.NS", "TATAMOTORS.NS", "BAJFINANCE.NS", "ADANIENT.NS",
-    "SUNPHARMA.NS", "MARUTI.NS", "ASIANPAINT.NS", "TITAN.NS", "ULTRACEMCO.NS", "JSWSTEEL.NS", "TATASTEEL.NS",
-    "POWERGRID.NS", "NTPC.NS", "ONGC.NS", "ADANIPORTS.NS", "WIPRO.NS", "HCLTECH.NS", "M&M.NS", "BAJAJ-AUTO.NS",
-    "COALINDIA.NS", "GRASIM.NS", "JSWENERGY.NS", "TRENT.NS", "BEL.NS", "HAL.NS", "DIXON.NS", "POLYCAB.NS",
-    "PERSISTENT.NS", "LTIM.NS", "TATACONSUM.NS", "APOLLOHOSP.NS", "NESTLEIND.NS", "DRREDDY.NS", "CIPLA.NS",
-    "TECHM.NS", "HINDALCO.NS", "BRITANNIA.NS", "EICHERMOT.NS", "INDUSINDBK.NS", "BPCL.NS", "SBILIFE.NS",
-    "HDFCLIFE.NS", "HEROMOTOCO.NS", "TATACOMM.NS", "VOLTAS.NS", "CUMMINSIND.NS", "AUROPHARMA.NS", "LUPIN.NS"
-]
+# Flatten symbols from sector map for scanning
+WATCHLIST = [sym for sector in SECTOR_MAP.values() for sym in sector]
 
-def get_justification(strategy, change_pct, vol_ratio):
-    reasons = []
-    if abs(change_pct) > 1.5: reasons.append(f"Strong {'Price Momentum' if change_pct > 0 else 'Sell-off'} ({abs(change_pct)}%)")
-    if vol_ratio > 2.0: reasons.append(f"High Institutional Activity ({vol_ratio}x Vol)")
-    if "Retest" in strategy: reasons.append("Price bouncing from key EMA Support")
-    if "Breakout" in strategy: reasons.append("Surpassing immediate resistance levels")
-    return " | ".join(reasons) if reasons else "Aligned with intraday trend"
+def calculate_rating(df, change_pct, vol_ratio, is_swing=False):
+    score = 0
+    # Price Trend
+    if df['Close'].iloc[-1] > df['ema20'].iloc[-1]: score += 2
+    if df['ema20'].iloc[-1] > df['ema50'].iloc[-1]: score += 1
+    if df['ema50'].iloc[-1] > df['ema100'].iloc[-1]: score += 1
+    if df['ema100'].iloc[-1] > df['ema200'].iloc[-1]: score += 1
 
-def analyze_intraday(symbol):
+    # Volume
+    if vol_ratio > 2.0: score += 2
+    elif vol_ratio > 1.5: score += 1
+
+    # Momentum
+    if abs(change_pct) > 1.5: score += 2
+    elif abs(change_pct) > 0.8: score += 1
+
+    # Retest/Bounce
+    if abs(df['Close'].iloc[-1] - df['ema20'].iloc[-1]) / df['Close'].iloc[-1] < 0.005: score += 1
+
+    return min(10, score)
+
+def analyze_stock(symbol):
     try:
         ticker = yf.Ticker(symbol)
-        df = ticker.history(period="2d", interval="5m")
-        if df.empty or len(df) < 20: return None
+        # Fetch longer history for EMA 200 (need at least 250+ points)
+        df_daily = ticker.history(period="1y", interval="1d")
+        df_intraday = ticker.history(period="2d", interval="5m")
 
-        current_price = df['Close'].iloc[-1]
-        prev_close = ticker.fast_info['previousClose']
+        if df_daily.empty or len(df_daily) < 200: return None
+
+        # Daily Indicators for Swing
+        for p in [20, 50, 100, 200]:
+            df_daily[f'ema{p}'] = df_daily['Close'].ewm(span=p).mean()
+
+        # Intraday Indicators
+        if not df_intraday.empty:
+            for p in [20, 50]:
+                df_intraday[f'ema{p}'] = df_intraday['Close'].ewm(span=p).mean()
+
+        current_price = df_daily['Close'].iloc[-1]
+        prev_close = df_daily['Close'].iloc[-2]
         change_pct = ((current_price - prev_close) / prev_close) * 100
 
-        df['ema9'] = df['Close'].ewm(span=9).mean()
-        df['ema21'] = df['Close'].ewm(span=21).mean()
-        df['avg_vol'] = df['Volume'].rolling(20).mean()
+        avg_vol = df_daily['Volume'].rolling(20).mean().iloc[-1]
+        curr_vol = df_daily['Volume'].iloc[-1]
+        vol_ratio = curr_vol / avg_vol if avg_vol > 0 else 0
 
-        latest_ema9 = df['ema9'].iloc[-1]
-        latest_ema21 = df['ema21'].iloc[-1]
-        latest_vol = df['Volume'].iloc[-1]
-        avg_vol = df['avg_vol'].iloc[-1]
-        vol_ratio = latest_vol / avg_vol if avg_vol > 0 else 0
+        rating = calculate_rating(df_daily, change_pct, vol_ratio)
+        sector = get_sector(symbol)
 
-        is_intraday = False
-        strategy = ""
-
-        if 1.0 <= change_pct <= 2.5 and current_price > latest_ema9 > latest_ema21 and vol_ratio > 1.5:
-            is_intraday = True
-            strategy = "Momentum Breakout"
-        elif -2.5 <= change_pct <= -1.0 and current_price < latest_ema9 < latest_ema21 and vol_ratio > 1.5:
-            is_intraday = True
-            strategy = "Momentum Breakdown"
-        elif abs(current_price - latest_ema21) / current_price < 0.002:
-            is_intraday = True
-            strategy = "EMA Retest"
-
-        if not is_intraday: return None
-
-        return {
+        base_info = {
             "symbol": symbol,
+            "sector": sector,
             "price": round(current_price, 2),
             "change": round(change_pct, 2),
-            "strategy": strategy,
-            "volume_ratio": round(vol_ratio, 1),
-            "justification": get_justification(strategy, change_pct, vol_ratio),
-            "recommendation": "BUY" if change_pct > 0 else "SELL",
-            "target": round(current_price * (1.015 if change_pct > 0 else 0.985), 2),
-            "stop": round(current_price * (0.993 if change_pct > 0 else 1.007), 2)
+            "rating": f"{rating}/10",
+            "vol_ratio": round(vol_ratio, 1),
+            "ema20": round(df_daily['ema20'].iloc[-1], 2),
+            "ema50": round(df_daily['ema50'].iloc[-1], 2),
+            "ema200": round(df_daily['ema200'].iloc[-1], 2),
         }
-    except: return None
+
+        # Logic for Intraday (1-2% move + vol)
+        intraday_data = None
+        if abs(change_pct) >= 1.0 and vol_ratio > 1.2:
+            intraday_data = {**base_info, "type": "INTRADAY", "recommendation": "BUY TODAY" if change_pct > 0 else "SELL TODAY"}
+
+        # Logic for Swing (EMA alignment)
+        swing_data = None
+        if current_price > df_daily['ema20'].iloc[-1] > df_daily['ema50'].iloc[-1] and rating >= 7:
+            swing_data = {**base_info, "type": "SWING", "recommendation": "BUY NEXT DAY"}
+
+        return intraday_data, swing_data
+    except Exception as e:
+        return None, None
 
 def run_live_scan():
     intraday_results = []
-    for symbol in WATCHLIST:
-        res = analyze_intraday(symbol)
-        if res: intraday_results.append(res)
+    swing_results = []
 
-    intraday_results.sort(key=lambda x: (x['volume_ratio'], abs(x['change'])), reverse=True)
+    for symbol in WATCHLIST:
+        intra, swing = analyze_stock(symbol)
+        if intra: intraday_results.append(intra)
+        if swing: swing_results.append(swing)
+
     news = fetch_market_news()
 
     report = {
         "timestamp": datetime.now().strftime("%H:%M:%S"),
-        "results": intraday_results[:15],
+        "intraday": intraday_results,
+        "swing": swing_results,
         "market_news": news
     }
-    sync_to_firestore("stock_scans", "intraday", report)
+    sync_to_firestore("stock_scans", "comprehensive", report)
 
 if __name__ == "__main__":
     run_live_scan()

@@ -31,7 +31,7 @@ jobs:
 
       - name: Start Real-Time Cloud Runner
         env:
-          PYTHONPATH: ${{ github.workspace }}/stock_alert_bot/Option
+          PYTHONPATH: ${{ github.workspace }}/stock_alert_bot/Option:${{ github.workspace }}/stock_alert_bot/stock
           ANGEL_API_KEY: ${{ secrets.ANGEL_API_KEY }}
           ANGEL_CLIENT_CODE: ${{ secrets.ANGEL_CLIENT_CODE }}
           ANGEL_PIN: ${{ secrets.ANGEL_PIN }}
@@ -39,4 +39,11 @@ jobs:
           SYMBOL: "NIFTY"
         run: |
           cd stock_alert_bot/Option
-          python scripts/cloud_market_runner.py
+          # Run continuous sentiment runner in background
+          python scripts/cloud_market_runner.py &
+          # Run stock scanner periodically
+          cd ../stock
+          while true; do
+            python live_stock_scanner.py
+            sleep 1800 # Every 30 minutes
+          done

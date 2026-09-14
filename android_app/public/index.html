@@ -3,129 +3,273 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Stock Analysis Dashboard</title>
+    <title>Stock Pro Analysis | Live</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
     <style>
-        body { background-color: #f8f9fa; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
-        .card { margin-bottom: 15px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-        .nav-tabs { background: white; position: sticky; top: 0; z-index: 1000; }
-        .score-badge { font-size: 1.2rem; font-weight: bold; }
-        .recommendation { font-weight: bold; color: #0d6efd; }
+        :root {
+            --primary-bg: #0f172a;
+            --secondary-bg: #1e293b;
+            --accent-blue: #38bdf8;
+            --bull-green: #22c55e;
+            --bear-red: #ef4444;
+            --text-main: #f8fafc;
+            --text-dim: #94a3b8;
+        }
+        body { background-color: var(--primary-bg); color: var(--text-main); font-family: 'Inter', system-ui, -apple-system, sans-serif; }
+        .navbar { background-color: var(--secondary-bg) !important; border-bottom: 1px solid #334155; }
+        .card { background-color: var(--secondary-bg); border: 1px solid #334155; border-radius: 12px; margin-bottom: 1rem; color: var(--text-main); }
+        .nav-pills .nav-link { color: var(--text-dim); border-radius: 8px; font-weight: 600; margin: 0 4px; }
+        .nav-pills .nav-link.active { background-color: var(--accent-blue); color: var(--primary-bg); }
+
+        .signal-banner { padding: 1.5rem; border-radius: 12px; margin-bottom: 1rem; text-align: center; font-weight: 800; font-size: 1.5rem; text-transform: uppercase; }
+        .signal-bullish { background: linear-gradient(135deg, #064e3b 0%, #065f46 100%); border: 1px solid var(--bull-green); color: #4ade80; }
+        .signal-bearish { background: linear-gradient(135deg, #450a0a 0%, #7f1d1d 100%); border: 1px solid var(--bear-red); color: #f87171; }
+
+        .alert-panel { background: #0c4a6e; border-left: 4px solid var(--accent-blue); padding: 1rem; border-radius: 8px; margin-bottom: 1rem; }
+        .section-header { font-size: 0.9rem; font-weight: 700; color: var(--accent-blue); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 1rem; display: flex; align-items: center; }
+        .section-header i { margin-right: 8px; }
+
+        .data-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.75rem; margin-bottom: 1rem; }
+        .data-box { background: rgba(15, 23, 42, 0.5); padding: 0.75rem; border-radius: 8px; border: 1px solid #334155; }
+        .data-label { font-size: 0.7rem; color: var(--text-dim); display: block; margin-bottom: 2px; }
+        .data-val { font-size: 1rem; font-weight: 700; color: var(--text-main); }
+
+        .chart-box { height: 320px; background: rgba(15, 23, 42, 0.8); border-radius: 8px; overflow: hidden; }
+        .table-custom { font-size: 0.8rem; color: var(--text-main); }
+        .table-custom th { color: var(--text-dim); font-weight: 600; border-bottom: 1px solid #334155; }
+        .table-custom td { border-bottom: 1px solid #1e293b; padding: 8px 4px; }
+
+        #login-container { max-width: 420px; margin-top: 80px; }
+        .btn-primary { background-color: var(--accent-blue); border: none; font-weight: 700; color: var(--primary-bg); }
+
+        .tab-pane { animation: fadeIn 0.3s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
 <body>
 
-<nav class="navbar navbar-dark bg-primary mb-3">
-    <div class="container-fluid">
-        <span class="navbar-brand mb-0 h1">Stock Analysis</span>
+<div id="login-container" class="container">
+    <div class="card p-4 shadow-lg">
+        <div class="text-center mb-4">
+            <i class="bi bi-graph-up-arrow text-info" style="font-size: 3rem;"></i>
+            <h2 class="mt-2">StockPro</h2>
+            <p class="text-muted">Private Institutional Access</p>
+        </div>
+        <div class="mb-3">
+            <input type="email" id="email" class="form-control bg-dark text-white border-secondary" placeholder="Terminal Email">
+        </div>
+        <div class="mb-4">
+            <input type="password" id="password" class="form-control bg-dark text-white border-secondary" placeholder="Access Key">
+        </div>
+        <button id="login-btn" class="btn btn-primary w-100 py-2">LOG IN TO TERMINAL</button>
+        <p id="login-error" class="text-danger mt-3 small text-center" style="display:none;"></p>
     </div>
-</nav>
+</div>
 
-<div class="container">
-    <ul class="nav nav-pills nav-fill mb-3" id="pills-tab" role="tablist">
-        <li class="nav-item" role="presentation">
-            <button class="nav-link active" id="pills-stocks-tab" data-bs-toggle="pill" data-bs-target="#pills-stocks" type="button" role="tab">Stock Scans</button>
-        </li>
-        <li class="nav-item" role="presentation">
-            <button class="nav-link" id="pills-options-tab" data-bs-toggle="pill" data-bs-target="#pills-options" type="button" role="tab">Options</button>
-        </li>
-    </ul>
+<div id="dashboard-container">
+    <nav class="navbar navbar-expand navbar-dark px-3 py-2 sticky-top">
+        <a class="navbar-brand d-flex align-items-center" href="#">
+            <i class="bi bi-shield-lock-fill text-info me-2"></i>
+            <span class="fw-bold">STOCKPRO LIVE</span>
+        </a>
+        <div class="ms-auto d-flex align-items-center">
+            <div id="connection-status" class="me-3 small text-success">
+                <i class="bi bi-broadcast"></i> LIVE
+            </div>
+            <button id="logout-btn" class="btn btn-link text-dim p-0"><i class="bi bi-power"></i></button>
+        </div>
+    </nav>
 
-    <div class="tab-content" id="pills-tabContent">
-        <!-- Stock Scans Tab -->
-        <div class="tab-pane fade show active" id="pills-stocks" role="tabpanel">
-            <div id="stock-list">
-                <div class="text-center py-5">
-                    <div class="spinner-border text-primary" role="status"></div>
-                    <p>Loading latest scans...</p>
+    <div class="container-fluid px-3 pt-3">
+        <ul class="nav nav-pills mb-3" id="main-tabs">
+            <li class="nav-item flex-fill">
+                <button class="nav-link active w-100" data-bs-toggle="pill" data-bs-target="#options-tab">OPTIONS</button>
+            </li>
+            <li class="nav-item flex-fill">
+                <button class="nav-link w-100" data-bs-toggle="pill" data-bs-target="#stocks-tab">STOCKS</button>
+            </li>
+        </ul>
+
+        <div class="tab-content">
+            <!-- OPTIONS TAB -->
+            <div class="tab-pane fade show active" id="options-tab">
+                <select id="symbol-select" class="form-select bg-dark text-white border-secondary mb-3 shadow-sm">
+                    <option value="NIFTY">NIFTY 50 INDEX</option>
+                    <option value="BANKNIFTY">BANKNIFTY INDEX</option>
+                </select>
+
+                <div id="option-content">
+                    <div class="text-center py-5 text-dim"><div class="spinner-border text-info mb-2"></div><br>Syncing with Exchange...</div>
                 </div>
             </div>
-        </div>
 
-        <!-- Options Tab -->
-        <div class="tab-pane fade" id="pills-options" role="tabpanel">
-            <div id="option-sentiment">
-                <div class="text-center py-5">
-                    <div class="spinner-border text-primary" role="status"></div>
-                    <p>Loading market sentiment...</p>
+            <!-- STOCKS TAB -->
+            <div class="tab-pane fade" id="stocks-tab">
+                <div id="stock-list">
+                    <div class="text-center py-5 text-dim">Fetching After-Market Scans...</div>
                 </div>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Firebase SDKs -->
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getFirestore, doc, getDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+    import { getFirestore, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-    // Your web app's Firebase configuration
     const firebaseConfig = {
         apiKey: "AIzaSyDMEUmFGSJBjGrz7fpDN46OiZlSJ6NTsjE",
         authDomain: "kunal-analysis.firebaseapp.com",
         projectId: "kunal-analysis",
         storageBucket: "kunal-analysis.firebasestorage.app",
         messagingSenderId: "328297105533",
-        appId: "1:328297105533:web:3ed3d8d5aa3ec677b88914",
-        measurementId: "G-91D760DWX5"
+        appId: "1:328297105533:web:3ed3d8d5aa3ec677b88914"
     };
 
     const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
     const db = getFirestore(app);
+    let optSub = null;
 
-    // Listen for Stock Scans
-    onSnapshot(doc(db, "stock_scans", "latest"), (doc) => {
-        const data = doc.data();
-        if (data && data.results) {
-            const list = document.getElementById('stock-list');
-            list.innerHTML = '';
-            data.results.forEach(stock => {
-                const card = `
-                    <div class="card">
-                        <div class="card-body">
-                            <div class="d-flex justify-content-between">
-                                <h5 class="card-title">${stock.symbol}</h5>
-                                <span class="badge bg-success score-badge">${stock.score}</span>
+    document.getElementById('login-btn').onclick = async () => {
+        const e = document.getElementById('email').value;
+        const p = document.getElementById('password').value;
+        try { await signInWithEmailAndPassword(auth, e, p); }
+        catch (err) { document.getElementById('login-error').innerText = "Access Denied: Invalid Credentials"; document.getElementById('login-error').style.display = 'block'; }
+    };
+
+    document.getElementById('logout-btn').onclick = () => signOut(auth);
+
+    onAuthStateChanged(auth, (user) => {
+        if (user) {
+            document.getElementById('login-container').style.display = 'none';
+            document.getElementById('dashboard-container').style.display = 'block';
+            initApp();
+        } else {
+            document.getElementById('login-container').style.display = 'block';
+            document.getElementById('dashboard-container').style.display = 'none';
+        }
+    });
+
+    function initApp() {
+        // Stock Scan Listener
+        onSnapshot(doc(db, "stock_scans", "latest"), (snap) => {
+            const data = snap.data();
+            if (!data?.results) return;
+            const container = document.getElementById('stock-list');
+            container.innerHTML = '';
+            data.results.forEach(s => {
+                container.innerHTML += `
+                    <div class="card p-3">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <h5 class="mb-0 fw-bold">${s.symbol}</h5>
+                                <div class="text-dim small mt-1">${s.pattern} | RSI ${s.rsi14}</div>
                             </div>
-                            <p class="mb-1 text-muted">RSI: ${stock.rsi14} | Pattern: ${stock.pattern}</p>
-                            <p class="mb-2 recommendation">${stock.recommendation}</p>
-                            <div class="row text-center border-top pt-2">
-                                <div class="col"><strong>Entry</strong><br>${stock.entry}</div>
-                                <div class="col"><strong>Target</strong><br>${stock.target_2pct}</div>
-                                <div class="col"><strong>Stop</strong><br>${stock.stop_loss}</div>
-                            </div>
+                            <span class="badge ${s.score >= 4 ? 'bg-success' : 'bg-primary'}">Score ${s.score}</span>
+                        </div>
+                        <div class="mt-2 text-info small fw-bold">${s.recommendation}</div>
+                        <div class="row mt-3 g-2 text-center border-top border-secondary pt-2">
+                            <div class="col"><div class="small text-dim">ENTRY</div><div class="fw-bold">${s.entry}</div></div>
+                            <div class="col"><div class="small text-dim">TARGET</div><div class="fw-bold">${s.target_2pct}</div></div>
+                            <div class="col"><div class="small text-dim">STOP</div><div class="fw-bold">${s.stop_loss}</div></div>
                         </div>
                     </div>`;
-                list.innerHTML += card;
             });
-        }
-    });
+        });
 
-    // Listen for Option Sentiment
-    onSnapshot(doc(db, "option_sentiment", "NIFTY"), (doc) => {
-        const data = doc.data();
-        if (data) {
-            const div = document.getElementById('option-sentiment');
-            div.innerHTML = `
-                <div class="card bg-dark text-white">
-                    <div class="card-body text-center">
-                        <h2 class="card-title">${data.combined_sentiment_read}</h2>
-                        <p class="card-text">NIFTY Spot: ${data.spot_price}</p>
-                    </div>
-                </div>
-                <div class="card">
-                    <div class="card-body">
-                        <p><strong>PCR (OI):</strong> ${data.pcr_oi}</p>
-                        <p><strong>PCR (Vol):</strong> ${data.pcr_volume}</p>
-                        <p><strong>Max Pain:</strong> ${data.max_pain}</p>
-                        <p><strong>Buildup:</strong> ${data.oi_buildup_overall}</p>
-                        <p class="border-top pt-2"><strong>Votes:</strong> Bullish ${data.votes.bullish} | Bearish ${data.votes.bearish}</p>
-                    </div>
-                </div>`;
-        }
-    });
+        // Option Switcher
+        setupOptSub("NIFTY");
+        document.getElementById('symbol-select').onchange = (e) => setupOptSub(e.target.value);
+    }
+
+    function setupOptSub(symbol) {
+        if (optSub) optSub();
+        optSub = onSnapshot(doc(db, "option_sentiment", symbol), (snap) => {
+            const d = snap.data();
+            if (!d) {
+                document.getElementById('option-content').innerHTML = '<div class="alert alert-info mt-3 small">Exchange connection closed. Ready at Market Open.</div>';
+                return;
+            }
+            renderOptions(symbol, d);
+        });
+    }
+
+    function renderOptions(symbol, d) {
+        const t = d.trade_alert || {};
+        const isBull = d.final_signal === 'Bullish';
+
+        let oiRows = '';
+        (d.top_strikes || []).forEach(r => {
+            oiRows += `<tr><td>${r.strike}</td><td>${r.call_oi}</td><td>${r.put_oi}</td><td>${r.total_oi}</td><td class="${r.oi_side.includes('Call') ? 'text-danger':'text-success'}">${r.oi_side}</td></tr>`;
+        });
+
+        document.getElementById('option-content').innerHTML = `
+            <div class="signal-banner ${isBull ? 'signal-bullish' : 'signal-bearish'}">
+                ${d.final_signal || 'NEUTRAL'}
+                <div style="font-size: 0.8rem; font-weight: 400; opacity: 0.8;">Market Sentiment Index</div>
+            </div>
+
+            <div class="alert-panel">
+                <div class="section-header"><i class="bi bi-lightning-fill"></i>ACTION PROTOCOL</div>
+                <div class="fw-bold text-white">${t.action || 'HOLD / MONITOR'}</div>
+                <div class="small text-dim mt-1">Trigger: ${t.trigger || 'Wait for structure break'}</div>
+            </div>
+
+            <div class="section-header"><i class="bi bi-clock-history"></i>LIVE TICK CHART</div>
+            <div id="main-chart" class="chart-box mb-4"></div>
+
+            <div class="section-header"><i class="bi bi-grid-3x3-gap-fill"></i>EXCHANGE TELEMETRY</div>
+            <div class="data-grid">
+                <div class="data-box"><span class="data-label">SPOT PRICE</span><span class="data-val">${d.spot_price}</span></div>
+                <div class="data-box"><span class="data-label">MAX PAIN</span><span class="data-val">${d.max_pain}</span></div>
+                <div class="data-box"><span class="data-label">PCR (OI)</span><span class="data-val">${d.pcr_oi}</span></div>
+                <div class="data-box"><span class="data-label">INTRADAY</span><span class="data-val small">${d.intraday_price_read || 'MIXED'}</span></div>
+            </div>
+
+            <div class="section-header"><i class="bi bi-shield-check"></i>SIGNAL VERIFICATION</div>
+            <div class="card p-3 small">
+                <div class="mb-1"><span class="text-dim">Structure:</span> <span class="text-info fw-bold">${d.price_structure?.trend || 'Range'}</span></div>
+                <div class="mb-1"><span class="text-dim">Trendline:</span> ${t.technical?.trendline || 'Flat'}</div>
+                <div class="mb-1"><span class="text-dim">Support:</span> ${(d.support_zones || []).join(' | ')}</div>
+                <div class="mb-0"><span class="text-dim">Resistance:</span> ${(d.resistance_zones || []).join(' | ')}</div>
+            </div>
+
+            <div class="section-header"><i class="bi bi-bar-chart-line-fill"></i>OI CONCENTRATION</div>
+            <div class="table-responsive">
+                <table class="table table-custom text-center">
+                    <thead><tr><th>Strike</th><th>Call OI</th><th>Put OI</th><th>Total</th><th>Side</th></tr></thead>
+                    <tbody>${oiRows || '<tr><td colspan="5">No Active Strikes</td></tr>'}</tbody>
+                </table>
+            </div>
+
+            <div class="text-center text-dim x-small mt-4 mb-5">
+                Last Terminal Update: ${d.fetched_at || '--:--:--'}<br>
+                Source: Angel One Live Feed (V2)
+            </div>
+        `;
+        drawChart(d.spot_history || []);
+    }
+
+    function drawChart(hist) {
+        if (!hist.length) return;
+        const x = hist.map(h => new Date(h.time));
+        const y = hist.map(h => h.value);
+        Plotly.newPlot('main-chart', [{
+            x, y, type: 'scatter', mode: 'lines',
+            line: { color: '#38bdf8', width: 2, shape: 'spline' },
+            fill: 'tozeroy', fillcolor: 'rgba(56, 189, 248, 0.1)'
+        }], {
+            paper_bgcolor: 'rgba(0,0,0,0)', plot_bgcolor: 'rgba(0,0,0,0)',
+            margin: { t: 5, r: 15, b: 30, l: 35 },
+            xaxis: { showgrid: false, tickfont: { color: '#94a3b8', size: 9 }, tickformat: '%H:%M' },
+            yaxis: { gridcolor: '#334155', tickfont: { color: '#94a3b8', size: 9 } }
+        }, { responsive: true, displayModeBar: false });
+    }
 </script>
-
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

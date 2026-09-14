@@ -5,6 +5,7 @@ import pandas as pd
 from scanners.chartlink_scanner import run_chartlink_scanner
 from analysis.price_action import detect_trend
 from stock_scanner import fetch_screener_symbols
+from live_stock_scanner import build_sectioned_report
 
 
 HTML = """
@@ -63,3 +64,24 @@ def test_detect_trend_uses_latest_ema_values():
     })
 
     assert detect_trend(df) == "Uptrend"
+
+
+def test_build_sectioned_report_groups_by_section_and_sector():
+    report = build_sectioned_report({
+        "intraday": [
+            {"symbol": "TCS.NS", "sector": "IT", "recommendation": "TRADE TODAY"},
+            {"symbol": "INFY.NS", "sector": "IT", "recommendation": "TRADE TODAY"},
+        ],
+        "swing": [
+            {"symbol": "TATAMOTORS.NS", "sector": "AUTO", "recommendation": "SWING ENTRY"},
+        ],
+        "positional": [
+            {"symbol": "SUNPHARMA.NS", "sector": "PHARMA", "recommendation": "POS HOLD"},
+        ],
+        "market_news": [{"headline": "Test news", "impact": "Positive"}],
+    })
+
+    assert report["sections"]["intraday"][0]["symbol"] == "TCS.NS"
+    assert report["sector_sections"]["IT"]["count"] == 2
+    assert report["stocks_by_sector"]["AUTO"][0]["symbol"] == "TATAMOTORS.NS"
+    assert report["market_news"][0]["headline"] == "Test news"

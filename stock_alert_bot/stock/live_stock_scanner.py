@@ -70,10 +70,18 @@ def analyze_stock(symbol):
         if abs(current_price - df['ema20'].iloc[-1]) / current_price < 0.005: strategy = "EMA 20 Retest"
         elif change_pct > 1.5 and vol_ratio > 1.5: strategy = "High Vol Breakout"
 
+        target_price = round(current_price * (1.02 if change_pct > 0 else 0.98), 2)
+        stop_loss = round(current_price * (0.99 if change_pct > 0 else 1.01), 2)
+        sell_price = target_price # For intraday, sell is the target
+
         base_info = {
             "symbol": symbol,
             "sector": sector,
             "price": round(current_price, 2),
+            "entry_price": round(current_price, 2),
+            "target_price": target_price,
+            "sell_price": sell_price,
+            "sl_price": stop_loss,
             "change": round(change_pct, 2),
             "rating": f"{rating}/10",
             "vol_ratio": round(vol_ratio, 1),
@@ -98,6 +106,47 @@ def analyze_stock(symbol):
     except:
         return None, None, None
 
+def build_sectioned_report(report_data):
+    sections = {}
+    sector_sections = {}
+    stocks_by_sector = {}
+
+    for section_name in ["intraday", "swing", "positional"]:
+        section_items = []
+        for item in report_data.get(section_name, []) or []:
+            item_copy = dict(item)
+            item_copy["section"] = section_name
+            section_items.append(item_copy)
+        sections[section_name] = section_items
+
+    all_stocks = []
+    for section_name, items in sections.items():
+        for item in items:
+            sector = item.get("sector") or get_sector(item.get("symbol", "")) or "OTHERS"
+            section_bucket = sector_sections.setdefault(sector, {
+                "sector": sector,
+                "count": 0,
+                "stocks": []
+            })
+            section_bucket["count"] += 1
+            section_bucket["stocks"].append(item)
+
+            stocks_by_sector.setdefault(sector, []).append(item)
+            all_stocks.append(item)
+
+    return {
+        "timestamp": report_data.get("timestamp"),
+        "intraday": sections.get("intraday", []),
+        "swing": sections.get("swing", []),
+        "positional": sections.get("positional", []),
+        "sections": sections,
+        "sector_sections": sector_sections,
+        "stocks_by_sector": stocks_by_sector,
+        "market_news": report_data.get("market_news", []) or [],
+        "stocks": all_stocks,
+    }
+
+
 def run_live_scan():
     intraday_list = []
     swing_list = []
@@ -119,7 +168,9 @@ def run_live_scan():
         "positional": positional_list,
         "market_news": news
     }
-    sync_to_firestore("stock_scans", "comprehensive", report)
+
+    sectioned_report = build_sectioned_report(report)
+    sync_to_firestore("stock_scans", "comprehensive", sectioned_report)
     print("Cloud Terminal Sync Complete.")
 
 if __name__ == "__main__":

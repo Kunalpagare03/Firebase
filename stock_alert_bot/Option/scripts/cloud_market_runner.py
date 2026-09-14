@@ -64,9 +64,13 @@ def run_terminal_sync(symbol="NIFTY"):
     while True:
         try:
             session = market_status()
+            reason = session.get("reason", "unknown")
+            if reason == "after market close":
+                log.info(f"Market Cycle Completed: {session['reason']} ({session['local_time']})")
+                log.info("Stopping live option runner at market close.")
+                return
             if not session["is_open"]:
-                log.info(f"Market Cycle Completed: {session['reason']}")
-                # Wait for next session
+                log.info(f"Market not yet open ({reason}, {session['local_time']}); waiting for next session.")
                 time.sleep(300)
                 continue
 

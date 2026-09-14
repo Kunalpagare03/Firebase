@@ -84,8 +84,12 @@ def run_loop():
     while True:
         try:
             session = market_status()
+            reason = session.get("reason", "unknown")
+            if reason == "after market close":
+                print(f"Market closed ({session['local_time']}); stopping live monitor at session close.")
+                return
             if not session["is_open"]:
-                print(f"Market closed ({session['reason']}, {session['local_time']}); waiting.")
+                print(f"Market not yet open ({reason}, {session['local_time']}); waiting.")
                 time.sleep(REFRESH_MINUTES * 60)
                 continue
             if USE_LIVE_API and cfg.get("data_source") == "yfinance_mock":

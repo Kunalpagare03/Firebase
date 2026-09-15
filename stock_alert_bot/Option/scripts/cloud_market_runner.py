@@ -83,39 +83,45 @@ def run_terminal_sync(symbol="NIFTY"):
                 _spot_history[symbol].append(live_spot)
                 _chart_history[symbol].append({"time": int(now * 1000), "value": live_spot})
 
-            # 2. Sync Cycle (Every 5 seconds for High Frequency)
-            # Full Chain Refresh every 3 minutes to keep OI data fresh
-            if now - last_full_refresh > 180 or df_prev is None:
-                raw = get_option_chain(symbol)
-                df_curr, spot_chain = parse_option_chain(raw)
-                df_prev = df_curr
-                last_full_refresh = now
-                log.info("Exchange Option Chain Synced")
+            # 2. Sync Cycle (High Frequency)
+            # Full Chain Refresh every 2 minutes
+            if now - last_full_refresh > 120 or df_prev is None:
+                try:
+                    raw = get_option_chain(symbol)
+                    df_curr, spot_chain = parse_option_chain(raw)
+                    df_prev = df_curr
+                    last_full_refresh = now
+                    log.info("NSE Option Chain Refreshed")
+                except Exception as e:
+                    log.error(f"Chain Fetch Failed: {e}")
 
             if df_prev is not None:
                 spot = live_spot if live_spot else df_prev.get('spot_price', 0)
+                if spot == 0:
+                    spot = spot_chain if 'spot_chain' in locals() else 23400
 
                 # Build Core Dashboard
-                data = build_dashboard(df_prev, df_prev, spot)
+                try:
+                    data = build_dashboard(df_prev, df_prev, spot)
+                    data["trade_alert"] = _get_trade_alert(data, symbol)
+                    data["price_action"] = analyze_price_action(symbol)
+                    data["greeks"] = analyze_chain_greeks(df_prev, spot)
+                    data["price_structure"] = analyze_price_structure([s["value"] for s in _chart_history[symbol]])
+                    data["deep_dive"] = perform_deep_dive(df_prev, spot)
+                    data["spot_history"] = list(_chart_history[symbol])[-100:]
+                    data["fetched_at"] = datetime.now().strftime("%H:%M:%S")
 
-                # Add Real-Time Analysis Layers
-                data["trade_alert"] = _get_trade_alert(data, symbol)
-                data["price_action"] = analyze_price_action(symbol)
-                data["greeks"] = analyze_chain_greeks(df_prev, spot)
-                data["price_structure"] = analyze_price_structure([s["value"] for s in _chart_history[symbol]])
-                data["deep_dive"] = perform_deep_dive(df_prev, spot) # Added Volume Deep Dive
-                data["spot_history"] = list(_chart_history[symbol])[-100:] # Last 100 ticks for mobile chart
-                data["fetched_at"] = datetime.now().strftime("%H:%M:%S")
-
-                # Push to Cloud
-                sync_to_firestore("option_sentiment", symbol, data)
-                log.info(f"Institutional Data Pushed: {symbol} @ {spot}")
+                    # Push to Cloud
+                    sync_to_firestore("option_sentiment", symbol, data)
+                    log.info(f"Sync Success: {symbol} @ {spot} at {data['fetched_at']}")
+                except Exception as e:
+                    log.error(f"Dashboard/Sync Failed: {e}")
 
         except Exception as e:
-            log.error(f"Terminal Failure: {e}")
-            time.sleep(5)
+            log.error(f"Main Loop Error: {e}")
+            time.sleep(10)
 
-        time.sleep(5)
+        time.sleep(10) # Update every 10 seconds
 
 if __name__ == "__main__":
     target = os.environ.get("SYMBOL", "NIFTY")

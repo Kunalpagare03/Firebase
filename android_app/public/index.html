@@ -2,115 +2,71 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>StockPro | Ultimate Hub v17</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>StockPro | Terminal v31.1</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
     <style>
-        :root {
-            --bg-main: #060912; --bg-card: #111827; --accent: #38bdf8;
-            --bull: #10b981; --bear: #f43f5e; --border: #374151;
-            --txt-main: #ffffff; --txt-dim: #9ca3af;
-        }
-        body { background-color: var(--bg-main); color: var(--txt-main); font-family: 'Inter', sans-serif; overflow-x: hidden; margin: 0; padding: 0; }
-        .navbar { background: var(--bg-card); border-bottom: 1px solid var(--border); }
-        .card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; margin-bottom: 15px; }
-        .nav-pills .nav-link { color: var(--txt-dim); font-weight: 700; border-radius: 8px; font-size: 0.8rem; border: 1px solid transparent; }
-        .nav-pills .nav-link.active { background: rgba(56, 189, 248, 0.15); color: var(--accent); border: 1px solid var(--accent); }
+        :root { --bg-main: #060912; --bg-card: #111827; --accent: #38bdf8; --bull: #10b981; --bear: #f43f5e; --border: #374151; --txt-main: #ffffff; --txt-dim: #9ca3af; }
+        body { background-color: var(--bg-main); color: var(--txt-main); font-family: 'Inter', sans-serif; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+        .navbar { background: var(--bg-card); border-bottom: 1px solid var(--border); sticky-top; z-index: 1000; }
 
-        /* Signal Banner */
-        .signal-banner { padding: 1.2rem; border-radius: 12px; text-align: center; font-weight: 900; font-size: 1.5rem; text-transform: uppercase; margin-bottom: 1rem; }
-        .bull-grad { background: linear-gradient(135deg, #064e3b 0%, #065f46 100%); border: 2px solid var(--bull); }
-        .bear-grad { background: linear-gradient(135deg, #450a0a 0%, #7f1d1d 100%); border: 2px solid var(--bear); }
+        .bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; background: var(--bg-card); display: flex; border-top: 1px solid var(--border); z-index: 1000; height: 65px; }
+        .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--txt-dim); font-size: 0.7rem; font-weight: 700; gap: 4px; border: none; background: none; }
+        .nav-item.active { color: var(--accent); background: rgba(56, 189, 248, 0.05); }
+        .nav-item i { font-size: 1.3rem; }
 
-        .alert-panel { background: #0c4a6e; border-left: 4px solid var(--accent); padding: 1rem; border-radius: 8px; margin-bottom: 1rem; }
-        .section-header { font-size: 0.85rem; font-weight: 800; color: var(--accent); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0.75rem; display: flex; align-items: center; }
-        .section-header i { margin-right: 8px; }
+        #main-scroll { padding: 15px; padding-bottom: 80px; }
 
-        .data-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 1rem; }
-        .data-box { background: rgba(31, 41, 55, 0.8); padding: 10px; border-radius: 10px; border: 1px solid var(--border); text-align: center; }
-        .data-label { font-size: 0.65rem; color: var(--txt-dim); display: block; font-weight: 800; text-transform: uppercase; margin-bottom: 4px; }
-        .data-val { font-size: 1rem; font-weight: 800; color: #fff; }
-        .chart-box { height: 280px; width: 100%; border-radius: 12px; background: #000; margin-bottom: 1.5rem; border: 1px solid var(--border); }
+        .banner { padding: 1.5rem; border-radius: 12px; text-align: center; font-weight: 900; font-size: 1.8rem; margin-bottom: 1rem; border: 2px solid transparent; }
+        .bull-mode { background: linear-gradient(135deg, #064e3b 0%, #065f46 100%); border-color: var(--bull); }
+        .bear-mode { background: linear-gradient(135deg, #450a0a 0%, #7f1d1d 100%); border-color: var(--bear); }
+        .neutral-mode { background: #1f2937; border-color: var(--txt-dim); }
 
-        /* Stocks */
-        .sector-title { font-size: 0.85rem; font-weight: 900; color: var(--accent); border-bottom: 1px solid var(--border); padding: 15px 0 5px 0; margin-top: 10px; text-transform: uppercase; }
-        .stock-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 15px; margin-bottom: 12px; width: 100%; text-align: left; color: inherit; display: block; cursor: pointer; border-left: 5px solid transparent; text-decoration: none; }
-        .stock-card:active { background: #1f2937; }
-        .stock-card.bull { border-left-color: var(--bull); }
-        .stock-card.bear { border-left-color: var(--bear); }
+        .data-box { background: rgba(31, 41, 55, 0.9); padding: 12px; border-radius: 12px; border: 1px solid var(--border); text-align: center; }
+        .data-label { font-size: 0.6rem; color: var(--txt-dim); display: block; font-weight: 800; text-transform: uppercase; margin-bottom: 3px; }
+        .data-val { font-size: 1rem; font-weight: 900; color: #fff; }
+        .chart-box { height: 300px; width: 100%; border-radius: 12px; background: #000; margin-bottom: 1.5rem; border: 1px solid var(--border); }
 
-        .price-row { display: flex; justify-content: space-around; margin-top: 10px; padding-top: 10px; border-top: 1px solid #1e293b; text-align: center; }
-        .price-box { font-size: 0.65rem; color: var(--txt-dim); font-weight: 700; }
-        .price-box span { display: block; font-size: 0.85rem; font-weight: 800; color: #fff; margin-top: 2px; }
+        .stk-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 15px; margin-bottom: 12px; width: 100%; text-align: left; border-left: 5px solid transparent; }
+        .stk-card.bull { border-left-color: var(--bull); }
+        .stk-card.bear { border-left-color: var(--bear); }
+        .sector-title { font-size: 0.85rem; font-weight: 900; color: var(--accent); border-bottom: 1px solid var(--border); padding-bottom: 5px; margin-bottom: 15px; text-transform: uppercase; }
+        .price-strip { display: flex; justify-content: space-around; margin-top: 10px; padding-top: 10px; border-top: 1px solid #1e293b; text-align: center; }
+        .price-col { font-size: 0.65rem; color: #94a3b8; font-weight: 800; }
+        .price-col span { display: block; font-size: 0.85rem; font-weight: 900; color: #fff; }
 
-        /* Table */
-        .table-custom { font-size: 0.75rem; color: var(--txt-main); }
-        .table-custom th { color: var(--txt-dim); font-weight: 600; border-bottom: 1px solid var(--border); }
+        #detail-view { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg-main); z-index: 2000; padding: 20px; overflow-y: auto; }
+        .back-btn { font-size: 1rem; font-weight: 900; color: var(--accent); cursor: pointer; margin-bottom: 20px; display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--accent); padding: 8px 15px; border-radius: 30px; }
 
-        /* Overlay */
-        #detail-view { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg-main); z-index: 10000; padding: 20px; overflow-y: auto; }
-        .back-nav { font-size: 1rem; font-weight: 900; color: var(--accent); cursor: pointer; margin-bottom: 20px; padding: 8px 15px; border: 1px solid var(--accent); border-radius: 30px; display: inline-block; }
-        .just-box { background: rgba(56, 189, 248, 0.1); border-left: 4px solid var(--accent); padding: 15px; border-radius: 8px; color: #fff; font-size: 0.95rem; line-height: 1.6; }
-
-        #login-overlay { max-width: 400px; margin: 100px auto; padding: 20px; }
+        #login-wrap { max-width: 400px; margin: 100px auto; padding: 20px; }
     </style>
 </head>
 <body>
 
-<div id="login-overlay">
+<div id="login-wrap">
     <div class="card p-4 text-center">
-        <h2 class="fw-bold mb-4 text-info"><i class="bi bi-cpu"></i> STOCKPRO</h2>
-        <input type="email" id="email" class="form-control bg-dark text-white border-secondary mb-3" placeholder="Terminal Email">
-        <input type="password" id="password" class="form-control bg-dark text-white border-secondary mb-4" placeholder="Access Key">
-        <button id="login-btn" class="btn btn-info w-100 fw-bold text-white shadow">LOGIN</button>
+        <h2 class="fw-bold mb-4 text-info">STOCKPRO</h2>
+        <input type="email" id="email" class="form-control bg-dark text-white mb-3" placeholder="Email">
+        <input type="password" id="password" class="form-control bg-dark text-white border-secondary mb-4" placeholder="Password">
+        <button id="login-btn" class="btn btn-info w-100 fw-bold">ACCESS TERMINAL</button>
     </div>
 </div>
 
-<div id="dashboard-root" style="display: none;">
-    <nav class="navbar navbar-dark sticky-top px-3">
-        <span class="navbar-brand fw-bold small text-info"><i class="bi bi-shield-check"></i> PRO HUB v17</span>
-        <button id="logout-btn" class="btn btn-link text-dim p-0"><i class="bi bi-power"></i></button>
-    </nav>
-
-    <div class="container-fluid p-3">
-        <ul class="nav nav-pills mb-4" id="pills-tab">
-            <li class="nav-item flex-fill"><button class="nav-link active w-100" data-bs-toggle="pill" data-bs-target="#options-pane">OPTIONS</button></li>
-            <li class="nav-item flex-fill"><button class="nav-link w-100" data-bs-toggle="pill" data-bs-target="#stocks-pane">STOCKS</button></li>
-        </ul>
-
-        <div class="tab-content">
-            <!-- OPTIONS -->
-            <div class="tab-pane fade show active" id="options-pane">
-                <select id="sym-select" class="form-select bg-dark text-white border-secondary mb-3">
-                    <option value="NIFTY">NIFTY 50 INDEX</option>
-                    <option value="BANKNIFTY">BANKNIFTY INDEX</option>
-                </select>
-                <div id="option-render"></div>
-            </div>
-
-            <!-- STOCKS -->
-            <div class="tab-pane fade" id="stocks-pane">
-                <ul class="nav nav-pills nav-fill mb-3 bg-dark p-1 rounded-pill" style="font-size: 0.65rem;">
-                    <li class="nav-item"><button class="nav-link active rounded-pill" data-bs-toggle="pill" data-bs-target="#intra-sub">INTRADAY</button></li>
-                    <li class="nav-item"><button class="nav-link rounded-pill" data-bs-toggle="pill" data-bs-target="#swing-sub">SWING</button></li>
-                    <li class="nav-item"><button class="nav-link rounded-pill" data-bs-toggle="pill" data-bs-target="#pos-sub">POSITIONAL</button></li>
-                    <li class="nav-item"><button class="nav-link rounded-pill" data-bs-toggle="pill" data-bs-target="#news-sub">NEWS</button></li>
-                </ul>
-                <div class="tab-content">
-                    <div class="tab-pane fade show active" id="intra-sub"><div id="intra-list"></div></div>
-                    <div class="tab-pane fade" id="swing-sub"><div id="swing-list"></div></div>
-                    <div class="tab-pane fade" id="pos-sub"><div id="pos-list"></div></div>
-                    <div class="tab-pane fade" id="news-sub"><div id="news-list"></div></div>
-                </div>
-            </div>
-        </div>
+<div id="app-content" style="display: none;">
+    <nav class="navbar navbar-dark sticky-top px-3 py-2"><span class="navbar-brand fw-bold small text-info"><i class="bi bi-broadcast"></i> PRO HUB v31.1</span><button id="logout-btn" class="btn btn-link text-dim p-0"><i class="bi bi-power"></i></button></nav>
+    <div id="main-scroll"></div>
+    <div class="bottom-nav">
+        <button class="nav-item active" onclick="setView('options')"><i class="bi bi-graph-up"></i>OPTIONS</button>
+        <button class="nav-item" onclick="setView('intra')"><i class="bi bi-lightning-charge"></i>INTRA</button>
+        <button class="nav-item" onclick="setView('swing')"><i class="bi bi-calendar-event"></i>SWING</button>
+        <button class="nav-item" onclick="setView('pos')"><i class="bi bi-shield-check"></i>POS</button>
     </div>
 </div>
 
 <div id="detail-view">
-    <div class="back-nav" onclick="document.getElementById('detail-view').style.display='none'"><i class="bi bi-chevron-left"></i> BACK TO HUB</div>
+    <div class="back-btn" onclick="document.getElementById('detail-view').style.display='none'"><i class="bi bi-chevron-left"></i> BACK</div>
     <div id="detail-body"></div>
 </div>
 
@@ -130,141 +86,131 @@
     const app = initializeApp(config);
     const auth = getAuth(app);
     const db = getFirestore(app);
-    let optSub = null;
-    let globalData = {};
+    let activeView = 'options';
+    let masterData = { opt: null, stocks: { intra: [], swing: [], pos: [] } };
 
     document.getElementById('login-btn').onclick = async () => {
         const e = document.getElementById('email').value, p = document.getElementById('password').value;
-        try { await signInWithEmailAndPassword(auth, e, p); } catch(err) { alert("Access Denied: " + err.message); }
+        try { await signInWithEmailAndPassword(auth, e, p); } catch(err) { alert("Access Denied"); }
     };
     document.getElementById('logout-btn').onclick = () => signOut(auth);
 
     onAuthStateChanged(auth, (user) => {
-        if (user) { document.getElementById('login-overlay').style.display = 'none'; document.getElementById('dashboard-root').style.display = 'block'; startHub(); }
-        else { document.getElementById('login-overlay').style.display = 'block'; document.getElementById('dashboard-root').style.display = 'none'; }
+        if (user) { document.getElementById('login-wrap').style.display='none'; document.getElementById('app-content').style.display='block'; startRealtime(); }
+        else { document.getElementById('login-wrap').style.display='block'; document.getElementById('app-content').style.display='none'; }
     });
 
-    window.openInfo = (symbol, listType) => {
-        const list = globalData[listType] || [];
-        const s = list.find(x => x.symbol === symbol);
+    window.setView = (view) => {
+        activeView = view;
+        document.querySelectorAll('.nav-item').forEach(btn => {
+            btn.classList.toggle('active', btn.innerText.toLowerCase().includes(view.slice(0,3)));
+        });
+        renderUI();
+    };
+
+    window.openDetail = (symbol, type) => {
+        const s = masterData.stocks[type].find(x => x.symbol === symbol);
         if (!s) return;
-        const isUp = s.change > 0;
+        const up = s.change > 0;
         document.getElementById('detail-body').innerHTML = `
-            <div class="signal-banner ${isUp ? 'bull-grad' : 'bear-grad'}">${s.symbol.replace('.NS','')}<div class="small fw-light mt-1">${s.recommendation}</div></div>
-            <div class="data-grid">
-                <div class="data-box"><span class="data-label">Entry Price</span><span class="data-val">${s.entry_price || s.price}</span></div>
-                <div class="data-box"><span class="data-label">Target</span><span class="data-val text-info">${s.target_price || 'N/A'}</span></div>
-                <div class="data-box"><span class="data-label">SL Price</span><span class="data-val text-danger">${s.sl_price || 'N/A'}</span></div>
-                <div class="data-box"><span class="data-label">Rating</span><span class="data-val text-warning">${s.rating}</span></div>
+            <div class="banner ${up ? 'bull-mode' : 'bear-mode'}">${s.symbol.replace('.NS','')}<div class="small fw-light mt-1">${s.recommendation}</div></div>
+            <div class="row g-2 mb-4">
+                <div class="col-6"><div class="data-box"><span class="data-label">Entry Price</span><span class="data-val">${s.entry_price || s.price}</span></div></div>
+                <div class="col-6"><div class="data-box"><span class="data-label">Rating</span><span class="data-val text-warning">${s.rating}</span></div></div>
+                <div class="col-6"><div class="data-box"><span class="data-label">Target</span><span class="data-val text-info">${s.target_price || 'N/A'}</span></div></div>
+                <div class="col-6"><div class="data-box"><span class="data-label">Stop Loss</span><span class="data-val text-danger">${s.sl_price || 'N/A'}</span></div></div>
             </div>
-            <div class="section-header mt-3">Trade Justification</div>
-            <div class="just-box mb-4">${s.justification}</div>
-            <div class="section-header">Technical Indicators (EMA)</div>
-            <div class="data-grid mb-4">
-                <div class="data-box"><span class="data-label">EMA 20</span><span class="data-val">${s.ema20}</span></div>
-                <div class="data-box"><span class="data-label">EMA 50</span><span class="data-val">${s.ema50}</span></div>
-                <div class="data-box"><span class="data-label">EMA 100</span><span class="data-val">${s.ema100 || 'N/A'}</span></div>
-                <div class="data-box"><span class="data-label">EMA 200</span><span class="data-val">${s.ema200}</span></div>
-            </div>
-            <div class="card p-3 small mb-5 border-secondary bg-dark">
-                <div class="mb-1"><strong>SECTOR:</strong> ${s.sector}</div>
-                <div class="mb-1"><strong>STRATEGY:</strong> ${s.strategy}</div>
-                <div class="mb-0"><strong>STRENGTH:</strong> ${s.vol_ratio}x Volume</div>
-            </div>
-        `;
+            <div class="card p-3 mb-4 bg-dark border-secondary"><strong>Justification:</strong><p class="small mt-2 mb-0">${s.justification}</p></div>
+            <div class="row g-2 mb-5">
+                <div class="col-6"><div class="data-box"><span class="data-label">EMA 20</span><span class="data-val">${s.ema20}</span></div></div>
+                <div class="col-6"><div class="data-box"><span class="data-label">EMA 200</span><span class="data-val">${s.ema200}</span></div></div>
+            </div>`;
         document.getElementById('detail-view').style.display = 'block';
     };
 
-    function startHub() {
-        onSnapshot(doc(db, "stock_scans", "comprehensive"), (snap) => {
-            const data = snap.data(); if (!data) return;
-            globalData = data;
-            const render = (containerId, list, typeKey) => {
-                const target = document.getElementById(containerId); target.innerHTML = '';
-                if (!list || list.length === 0) {
-                    target.innerHTML = `<div class="text-center py-5 opacity-50"><i class="bi bi-clock-history fs-1"></i><p class="mt-2 small">Scanning for ${typeKey} setups...</p></div>`;
-                    return;
-                }
-                const sectors = {}; (list || []).forEach(s => { if(!sectors[s.sector]) sectors[s.sector] = []; sectors[s.sector].push(s); });
-                Object.keys(sectors).sort().forEach(sec => {
-                    target.innerHTML += `<div class="sector-title">${sec}</div>`;
-                    sectors[sec].forEach(s => {
-                        const card = document.createElement('div');
-                        card.className = `stock-card ${s.change > 0 ? 'bull':'bear'}`;
-                        card.onclick = () => window.openInfo(s.symbol, typeKey);
-                        card.innerHTML = `
-                            <div class="d-flex justify-content-between align-items-center">
-                                <div><div class="fw-bold fs-5 text-white">${s.symbol.replace('.NS','')}</div><div class="small text-info">${s.rating} Score</div></div>
-                                <div class="text-end"><div class="fw-bold text-${s.change > 0 ? 'success':'danger'}">${s.change}%</div><div class="small text-white-50">${s.price}</div></div>
-                            </div>
-                            <div class="price-row">
-                                <div class="price-box">ENTRY<span>${s.entry_price || s.price}</span></div>
-                                <div class="price-box">TARGET<span class="text-info">${s.target_price || 'N/A'}</span></div>
-                                <div class="price-box">STOPLOSS<span class="text-danger">${s.sl_price || 'N/A'}</span></div>
-                            </div>`;
-                        target.appendChild(card);
-                    });
-                });
-            };
-            render('intra-list', data.intraday, 'intraday');
-            render('swing-list', data.swing, 'swing');
-            render('pos-list', data.positional, 'positional');
-
-            const newsCont = document.getElementById('news-list'); newsCont.innerHTML = '';
-            (data.market_news || []).forEach(n => { nList.innerHTML += `<div class="card p-3 small mb-2"><div class="text-dim mb-1">${n.time} | Impact: ${n.impact}</div><a href="${n.link}" target="_blank" class="text-white fw-bold text-decoration-none">${n.headline}</a></div>`; });
+    function startRealtime() {
+        onSnapshot(doc(db, "option_sentiment", "NIFTY"), (snap) => {
+            const data = snap.data();
+            if (data) { masterData.opt = data; if(activeView === 'options') renderUI(); }
         });
-
-        loadOptions("NIFTY");
-        document.getElementById('sym-select').onchange = (e) => loadOptions(e.target.value);
+        onSnapshot(doc(db, "stock_scans", "comprehensive"), (snap) => {
+            const d = snap.data(); if (!d) return;
+            masterData.stocks = { "intra": d.intraday || [], "swing": d.swing || [], "pos": d.positional || [] };
+            if(activeView !== 'options') renderUI();
+        });
     }
 
-    function loadOptions(sym) {
-        if (optSub) optSub();
-        optSub = onSnapshot(doc(db, "option_sentiment", sym), (snap) => {
-            const d = snap.data(); if (!d) return;
-            const isBull = d.final_signal === 'Bullish';
-            let oiHtml = ''; (d.top_strikes || []).forEach(r => { oiHtml += `<tr><td>${r.strike}</td><td>${r.call_oi}</td><td>${r.put_oi}</td><td>${r.total_oi}</td><td class="text-${r.oi_side.includes('Call')?'danger':'success'}">${r.oi_side}</td></tr>`; });
+    function renderUI() {
+        const container = document.getElementById('main-scroll');
+        if (!container) return;
 
+        if (activeView === 'options') {
+            const d = masterData.opt;
+            if (!d) { container.innerHTML = '<div class="text-center py-5 opacity-40">Connecting to Exchange...</div>'; return; }
+
+            const signal = d.final_signal || 'NEUTRAL';
+            const sigClass = signal === 'Bullish' ? 'bull-mode' : (signal === 'Bearish' ? 'bear-mode' : 'neutral-mode');
             const dd = d.deep_dive || {};
+            let strikes = '';
+            (d.top_strikes || []).forEach(r => {
+                strikes += `<tr><td>${r.strike}</td><td>${r.call_oi}</td><td>${r.put_oi}</td><td class="text-${(r.oi_side || '').includes('Call')?'danger':'success'}">${(r.oi_side || 'N/A').split(' ')[0]}</td></tr>`;
+            });
 
-            document.getElementById('option-render').innerHTML = `
-                <div class="signal-banner ${isBull ? 'bull-grad' : 'bear-grad'}">${d.final_signal || 'NEUTRAL'}</div>
-                <div class="alert-panel p-3">
-                    <div class="section-header text-white-50"><i class="bi bi-lightning-charge"></i>ACTION PROTOCOL</div>
-                    <div class="fw-bold fs-5">${d.trade_alert?.action || 'MONITOR'}</div>
-                    <div class="small mt-1 text-white-50">${d.trade_alert?.trigger || ''}</div>
+            container.innerHTML = `
+                <div class="banner ${sigClass}">${signal}</div>
+                <div class="alert-panel p-3"><strong>ACTION:</strong> ${d.trade_alert?.action || 'HOLD'}<div class="small mt-1 opacity-70">${d.trade_alert?.trigger || 'Market Range Bound'}</div></div>
+                <div id="chart" class="chart-box"></div>
+                <div class="row g-2 mb-4">
+                    <div class="col-6"><div class="data-box"><span class="data-label">Spot Price</span><span class="data-val">${d.spot_price || 'N/A'}</span></div></div>
+                    <div class="col-6"><div class="data-box"><span class="data-label">PCR (OI)</span><span class="data-val">${d.pcr_oi || '0.00'}</span></div></div>
+                    <div class="col-6"><div class="data-box"><span class="data-label">Max Pain</span><span class="data-val">${d.max_pain || 'N/A'}</span></div></div>
+                    <div class="col-6"><div class="data-box"><span class="data-label">Vol PCR</span><span class="data-val">${dd.volume_pcr || '0.00'}</span></div></div>
                 </div>
-                <div class="section-header"><i class="bi bi-graph-up"></i>LIVE MARKET TICK</div>
-                <div id="chart-area" class="chart-box"></div>
-
-                <div class="section-header"><i class="bi bi-activity"></i>VOLUME DEEP DIVE</div>
-                <div class="data-grid">
-                    <div class="data-box"><span class="data-label">Volume PCR</span><span class="data-val text-info">${dd.volume_pcr || 'N/A'}</span></div>
-                    <div class="data-box"><span class="data-label">Market Pressure</span><span class="data-val small">${dd.market_pressure || 'Neutral'}</span></div>
-                    <div class="data-box"><span class="data-label">Vol Support</span><span class="data-val text-success">${dd.support_vol || 'N/A'}</span></div>
-                    <div class="data-box"><span class="data-label">Vol Resistance</span><span class="data-val text-danger">${dd.resistance_vol || 'N/A'}</span></div>
+                <div class="card p-3 mb-3 small bg-dark border-secondary">
+                    <div>Structure: ${d.price_structure?.trend || 'Range'}</div>
+                    <div class="row mt-2 border-top border-secondary pt-2 text-center">
+                        <div class="col">Call Delta: ${d.greeks?.call_delta || 'N/A'}</div>
+                        <div class="col">Put Delta: ${d.greeks?.put_delta || 'N/A'}</div>
+                    </div>
                 </div>
-
-                <div class="data-grid mt-3">
-                    <div class="data-box"><span class="data-label">Spot Price</span><span class="data-val">${d.spot_price}</span></div>
-                    <div class="data-box"><span class="data-label">Max Pain</span><span class="data-val">${d.max_pain}</span></div>
-                    <div class="data-box"><span class="data-label">PCR (OI)</span><span class="data-val">${d.pcr_oi}</span></div>
-                    <div class="data-box"><span class="data-label">Sentiment</span><span class="data-val small text-info">${d.combined_sentiment_read || 'MIXED'}</span></div>
+                <div class="table-responsive">
+                    <table class="table table-dark table-sm small text-center"><thead><tr><th>Strike</th><th>C-OI</th><th>P-OI</th><th>Side</th></tr></thead><tbody>${strikes}</tbody></table>
                 </div>
-
-                <div class="section-header">SIGNAL TELEMETRY</div>
-                <div class="card p-3 mb-3 small">
-                    <div class="mb-1"><span class="text-dim">Structure:</span> ${d.price_structure?.trend || 'Range'}</div>
-                    <div class="mb-1"><span class="text-dim">Read:</span> <span class="text-info fw-bold">${d.market_read || 'MIXED'}</span></div>
-                    <div class="mt-2 row text-center border-top border-secondary pt-2"><div class="col"><div class="data-label">Call Delta</div><div class="fw-bold">${d.greeks?.call_delta || 'N/A'}</div></div><div class="col"><div class="data-label">Put Delta</div><div class="fw-bold">${d.greeks?.put_delta || 'N/A'}</div></div></div>
-                </div>
-
-                <div class="section-header mt-2">OI CONCENTRATION</div>
-                <div class="table-responsive"><table class="table table-dark table-custom text-center"><thead><tr><th>Strike</th><th>C-OI</th><th>P-OI</th><th>Total</th><th>Side</th></tr></thead><tbody>${oiHtml}</tbody></table></div>
-                <div class="text-center text-dim x-small mt-3">Terminal Sync: ${d.fetched_at || '--:--'}</div>
+                <div class="text-center small opacity-30 mt-3">Terminal Sync: ${d.fetched_at || '--:--'}</div>
             `;
-            if((d.spot_history || []).length > 1) Plotly.newPlot('chart-area', [{ x: d.spot_history.map(h=>new Date(h.time)), y: d.spot_history.map(h=>h.value), type:'scatter', mode:'lines', line:{color:'#38bdf8', width:3, shape:'spline'}, fill:'tozeroy', fillcolor:'rgba(56,189,248,0.1)' }], { paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:'rgba(0,0,0,0)', margin:{t:10,r:15,b:30,l:35}, xaxis:{showgrid:false, tickfont:{color:'#9ca3af',size:8}, tickformat:'%H:%M'}, yaxis:{gridcolor:'#1f2937', tickfont:{color:'#9ca3af',size:8}} }, {responsive:true, displayModeBar:false});
-        });
+
+            // Use requestAnimationFrame to ensure DOM is updated before Plotly
+            requestAnimationFrame(() => {
+                if((d.spot_history || []).length > 1) {
+                    try {
+                        Plotly.newPlot('chart', [{ x: d.spot_history.map(h=>new Date(h.time)), y: d.spot_history.map(h=>h.value), type:'scatter', mode:'lines', line:{color:'#38bdf8', width:3}, fill:'tozeroy', fillcolor:'rgba(56,189,248,0.1)' }], { paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:'rgba(0,0,0,0)', margin:{t:10,r:15,b:30,l:35}, xaxis:{showgrid:false, tickfont:{color:'#9ca3af',size:8}, tickformat:'%H:%M'}, yaxis:{gridcolor:'#1f2937', tickfont:{color:'#9ca3af',size:8}} }, {responsive:true, displayModeBar:false});
+                    } catch(e) { console.error("Plotly error:", e); }
+                }
+            });
+        } else {
+            const list = masterData.stocks[activeView] || [];
+            if (!list.length) { container.innerHTML = '<div class="text-center py-5 opacity-40">Scanning Live Markets...</div>'; return; }
+            let html = '';
+            const sectors = {}; list.forEach(s => { if(!sectors[s.sector]) sectors[s.sector] = []; sectors[s.sector].push(s); });
+            Object.keys(sectors).sort().forEach(sec => {
+                html += `<div class="sector-title">${sec}</div>`;
+                sectors[sec].forEach(s => {
+                    html += `
+                        <div class="stk-card ${s.change > 0 ? 'bull':'bear'}" onclick="openDetail('${s.symbol}', '${activeView}')">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div><div class="fw-bold fs-5">${s.symbol.replace('.NS','')}</div><div class="small text-info">${s.rating} Score</div></div>
+                                <div class="text-end"><div class="fw-bold text-${s.change > 0 ? 'success':'danger'}">${s.change}%</div><div class="small opacity-50">${s.price}</div></div>
+                            </div>
+                            <div class="price-strip">
+                                <div class="price-item">ENTRY<span>${s.entry_price || s.price}</span></div>
+                                <div class="price-item text-info">TGT<span>${s.target_price || 'N/A'}</span></div>
+                                <div class="price-item text-danger">SL<span>${s.sl_price || 'N/A'}</span></div>
+                            </div>
+                        </div>`;
+                });
+            });
+            container.innerHTML = html;
+        }
     }
 </script>
 </body>

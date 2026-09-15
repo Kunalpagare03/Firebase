@@ -490,8 +490,7 @@ def _get_analysis_and_cache(symbol):
     if isinstance(result, dict):
         result = dict(result)
         result["fetched_at"] = time.strftime("%Y-%m-%d %H:%M:%S")
-        if "dashboard" in result:
-            sync_to_firestore("option_sentiment", symbol, result["dashboard"])
+        # Removed sync_to_firestore from here to prevent overwriting cloud_market_runner data
     _analysis_cache[symbol] = {"at": time.monotonic(), "data": result}
     return result
 

@@ -1,88 +1,171 @@
-<!DOCTYPE html>
-<html>
+<!doctype html>
+<html lang="en">
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Welcome to Firebase Hosting</title>
-
-    <!-- update the version number as needed -->
+    <title>Option Chain Trend</title>
     <script defer src="/__/firebase/12.18.0/firebase-app-compat.js"></script>
-    <!-- include only the Firebase features as you need -->
-    <script defer src="/__/firebase/12.18.0/firebase-auth-compat.js"></script>
-    <script defer src="/__/firebase/12.18.0/firebase-database-compat.js"></script>
     <script defer src="/__/firebase/12.18.0/firebase-firestore-compat.js"></script>
-    <script defer src="/__/firebase/12.18.0/firebase-functions-compat.js"></script>
-    <script defer src="/__/firebase/12.18.0/firebase-messaging-compat.js"></script>
-    <script defer src="/__/firebase/12.18.0/firebase-storage-compat.js"></script>
-    <script defer src="/__/firebase/12.18.0/firebase-analytics-compat.js"></script>
-    <script defer src="/__/firebase/12.18.0/firebase-remote-config-compat.js"></script>
-    <script defer src="/__/firebase/12.18.0/firebase-performance-compat.js"></script>
-    <!-- 
-      initialize the SDK after all desired features are loaded, set useEmulator to false
-      to avoid connecting the SDK to running emulators.
-    -->
-    <script defer src="/__/firebase/init.js?useEmulator=true"></script>
-
-    <style media="screen">
-      body { background: #ECEFF1; color: rgba(0,0,0,0.87); font-family: Roboto, Helvetica, Arial, sans-serif; margin: 0; padding: 0; }
-      #message { background: white; max-width: 360px; margin: 100px auto 16px; padding: 32px 24px; border-radius: 3px; }
-      #message h2 { color: #ffa100; font-weight: bold; font-size: 16px; margin: 0 0 8px; }
-      #message h1 { font-size: 22px; font-weight: 300; color: rgba(0,0,0,0.6); margin: 0 0 16px;}
-      #message p { line-height: 140%; margin: 16px 0 24px; font-size: 14px; }
-      #message a { display: block; text-align: center; background: #039be5; text-transform: uppercase; text-decoration: none; color: white; padding: 16px; border-radius: 4px; }
-      #message, #message a { box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24); }
-      #load { color: rgba(0,0,0,0.4); text-align: center; font-size: 13px; }
-      @media (max-width: 600px) {
-        body, #message { margin-top: 0; background: white; box-shadow: none; }
-        body { border-top: 16px solid #ffa100; }
-      }
+    <script defer src="/__/firebase/init.js?useEmulator=false"></script>
+    <style>
+      :root { font-family: Georgia, 'Times New Roman', serif; color: #17212b; background: #e8eef0; }
+      * { box-sizing: border-box; }
+      body { max-width: 900px; margin: 0 auto; padding: 20px 12px; background: linear-gradient(135deg, #d9f1eb, #f5efe4); min-height: 100vh; }
+      h1 { color: #123b4a; font-size: clamp(1.8rem, 4vw, 3rem); margin: 0 0 6px; }
+      .muted { color: #587078; }
+      .toolbar, .card { background: rgba(255,255,255,.9); border: 1px solid #c5d3d5; border-radius: 8px; padding: 14px; margin: 12px 0; box-shadow: 0 6px 18px rgba(31,57,64,.08); }
+      .toolbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+      select { border: 1px solid #b9c9cd; border-radius: 4px; padding: 8px; font: inherit; }
+      .metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(135px, 1fr)); gap: 8px; }
+      .metric { padding: 12px; background: #f1f6f4; border-left: 4px solid #64a99b; border-radius: 4px; }
+      .metric strong, .metric span { display: block; }
+      .metric span { font-size: 1.2rem; margin-top: 5px; }
+      .tabs { display: flex; gap: 8px; margin: 12px 0; }
+      .tab { border: 1px solid #b9c9cd; border-radius: 4px; padding: 8px 14px; background: #fff; color: #31525d; font: inherit; cursor: pointer; }
+      .tab.active { background: #153f4c; color: #fff; }
+      .hidden { display: none; }
+      .stock-row { border-top: 1px solid #dbe3e3; padding: 10px 0; }
+      .stock-row strong { color: #123b4a; }
+      .headline { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 16px 18px; border: 1px solid #83aab0; border-radius: 8px; background: #153f4c; color: #fff; margin: 10px 0 14px; font-weight: 800; font-size: 1.2rem; }
+      .badge { padding: 9px 15px; border-radius: 5px; background: #69777b; color: #fff; min-width: 120px; text-align: center; }
+      .bullish { background: #1d8f5a; } .bearish { background: #b32727; }
+      .detail-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 8px; }
+      .detail-grid > div { padding: 10px 12px; background: #f1f6f4; border-left: 4px solid #64a99b; border-radius: 4px; }
+      canvas { width: 100%; height: 260px; display: block; background: #fbfcfd; border: 1px solid #c9d9d9; border-radius: 5px; }
+      table { border-collapse: collapse; width: 100%; font-size: .9rem; } th, td { padding: 7px; border-bottom: 1px solid #eee; text-align: left; }
+      .table-wrap { overflow-x: auto; }
+      #signal { color: white; background: #69777b; border-radius: 5px; padding: 12px; font-weight: bold; font-size: 1.2rem; }
+      #error { color: #a12622; font-weight: bold; }
+      @media (max-width: 500px) { body { padding: 14px 9px; } .card, .toolbar { padding: 12px; } }
+      body { max-width: 1440px; padding: 28px; background: radial-gradient(circle at 15% 0%, #d9f1eb 0, #e8eef0 38%, #f5efe4 100%); }
+      h1 { font-size: clamp(1.8rem, 4vw, 3rem); margin: 0 0 6px; color: #123b4a; }
+      .toolbar, .card { border-radius: 8px; padding: 18px; margin-bottom: 14px; background: rgba(255,255,255,.88); box-shadow: 0 8px 24px rgba(31,57,64,.08); }
+      .toolbar { margin-top: 12px; }
+      .headline { padding: 16px 18px; margin: 10px 0 14px; box-shadow: 0 8px 20px rgba(21,63,76,.2); }
+      .metrics { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; margin-bottom: 10px; }
+      .metric { padding: 10px 12px; }
+      h3 { font-size: 1.15rem; margin: 0 0 10px; color: #285466; }
+      @media (max-width: 700px) { body { padding: 14px 9px; } .headline { font-size: 1rem; padding: 12px; } .card, .toolbar { padding: 13px; } canvas { height: 150px; } }
     </style>
   </head>
   <body>
-    <div id="message">
-      <h2>Welcome</h2>
-      <h1>Firebase Hosting Setup Complete</h1>
-      <p>You're seeing this because you've successfully setup Firebase Hosting. Now it's time to go build something extraordinary!</p>
-      <a target="_blank" href="https://firebase.google.com/docs/hosting/">Open Hosting Documentation</a>
-    </div>
-    <p id="load">Firebase SDK Loading&hellip;</p>
-
+    <h1>Live Option Chain Market Analysis</h1>
+    <div class="muted" id="status">Connecting to Firebase...</div>
+    <div class="tabs"><button class="tab active" data-tab="optionPanel">Option</button><button class="tab" data-tab="stockPanel">Stock</button></div>
+    <section id="optionPanel">
+      <div class="toolbar"><label for="symbol">Instrument</label><select id="symbol"><option>NIFTY</option><option>BANKNIFTY</option><option>FINNIFTY</option><option>SENSEX</option></select></div>
+      <div class="headline"><span>Directional signal</span><span id="signal" class="badge">Waiting...</span></div>
+      <div class="card"><strong>Action alert:</strong> <span id="action">WAIT / NO TRADE</span><br><span class="muted">Trigger: <span id="trigger">Waiting for confirmation</span></span><br><span class="muted" id="note">No confirmed trade setup.</span><div class="muted" id="technical">Technical confirmations: waiting</div></div>
+      <div class="card"><div class="metrics">
+      <div class="metric"><strong>Spot</strong><span id="spot">-</span></div>
+      <div class="metric"><strong>Max pain</strong><span id="maxPain">-</span></div>
+      <div class="metric"><strong>PCR (OI)</strong><span id="pcrOi">-</span></div>
+      <div class="metric"><strong>PCR (volume)</strong><span id="pcrVolume">-</span></div>
+      </div></div>
+      <div class="card"><strong>Market read:</strong> <span id="marketRead">-</span><br><strong>Chart structure:</strong> <span id="priceStructure">-</span><br><strong>Support:</strong> <span id="support">-</span> <strong>Resistance:</strong> <span id="resistance">-</span><br><span id="buildup" class="muted">OI buildup: -</span><br><strong>OI trend:</strong> <span id="oiTrend">-</span><br><strong>OI directional read:</strong> <span id="oiRead">-</span><br><span id="oiAnalysis" class="muted">OI building analysis: -</span><br><strong>Flow:</strong> <span id="flowTrend">-</span><br><span id="flowDetail" class="muted">Volume/OI changes: -</span><br><strong>Manipulation risk:</strong> <span id="risk">-</span><br><span id="riskNote" class="muted">Manipulation note: -</span><br><strong>Trend using price + OI buildup:</strong> <span id="trendAnalysis">-</span></div>
+      <div class="card"><h3>Price Action</h3><div class="detail-grid"><div><strong>Close</strong><span id="close">-</span></div><div><strong>Daily change</strong><span id="change">-</span></div><div><strong>20-session SMA</strong><span id="sma20">-</span></div><div><strong>Read</strong><span id="priceRead">-</span></div><div><strong>Intraday read</strong><span id="intraday">-</span></div></div></div>
+      <div class="card"><h3>ATM Greeks</h3><div class="detail-grid"><div><strong>Strike</strong><span id="strike">-</span></div><div><strong>Call delta</strong><span id="callDelta">-</span></div><div><strong>Put delta</strong><span id="putDelta">-</span></div><div><strong>Gamma</strong><span id="gamma">-</span></div><div><strong>Vega / 1%</strong><span id="vega">-</span></div><div><strong>Read</strong><span id="greekRead">-</span></div></div></div>
+      <div class="card"><h3>Live price chart</h3><canvas id="chart" width="1200" height="260"></canvas></div>
+      <div class="card"><h3>Top strikes by total OI</h3><div class="table-wrap"><table><thead><tr><th>Strike</th><th>Call OI</th><th>Put OI</th><th>Total OI</th><th>Call build</th><th>Put build</th><th>OI side</th></tr></thead><tbody id="strikes"></tbody></table></div></div>
+      <div class="card"><strong>Data source:</strong> laptop runner -> Firestore<br><strong>Last update:</strong> <span id="updated">-</span><p id="error"></p></div>
+    </section>
+    <section id="stockPanel" class="hidden">
+      <div class="card"><strong>Stock scanner</strong><p class="muted" id="stockStatus">Waiting for stock scan data...</p><div id="stockResults"></div></div>
+    </section>
     <script>
-      document.addEventListener('DOMContentLoaded', function() {
-        const loadEl = document.querySelector('#load');
-        // // 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥
-        // // The Firebase SDK is initialized and available here!
-        //
-        // firebase.auth().onAuthStateChanged(user => { });
-        // firebase.database().ref('/path/to/ref').on('value', snapshot => { });
-        // firebase.firestore().doc('/foo/bar').get().then(() => { });
-        // firebase.functions().httpsCallable('yourFunction')().then(() => { });
-        // firebase.messaging().requestPermission().then(() => { });
-        // firebase.storage().ref('/path/to/ref').getDownloadURL().then(() => { });
-        // firebase.analytics(); // call to activate
-        // firebase.analytics().logEvent('tutorial_completed');
-        // firebase.performance(); // call to activate
-        //
-        // // 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥
-
+      const symbol = document.getElementById('symbol');
+      let unsubscribeOption = null;
+      let unsubscribeQuote = null;
+      let optionPollTimer = null;
+      let quotePollTimer = null;
+      let latestOptionData = null;
+      const text = (id, value) => { document.getElementById(id).textContent = value ?? '-'; };
+      function show(data) {
+        latestOptionData = data;
+        const signal = data.decision_signal || data.final_signal || data.combined_sentiment_read || '-';
+        const signalEl = document.getElementById('signal');
+        signalEl.textContent = signal;
+        signalEl.style.background = String(signal).toLowerCase().includes('bullish') ? '#1d8f5a' : String(signal).toLowerCase().includes('bearish') ? '#b32727' : '#69777b';
+        text('spot', data.spot_price); text('maxPain', data.max_pain); text('pcrOi', data.pcr_oi); text('pcrVolume', data.pcr_volume);
+        const structure = data.price_structure || {}; const deepDive = data.deep_dive || {};
+        text('marketRead', data.market_read || data.combined_sentiment_read || data.final_signal); text('priceStructure', structure.pattern ? `${structure.pattern} (${structure.trend || 'Neutral'})` : '-'); text('support', (data.support_zones || []).join(', '));
+        text('resistance', (data.resistance_zones || []).join(', ')); text('action', (data.trade_alert || {}).action || 'WAIT / NO TRADE');
+        const supports = data.support_zones || []; const resistances = data.resistance_zones || []; const bearish = String(signal).toLowerCase().includes('bearish');
+        const derivedTrigger = bearish ? `Break below ${supports[0] || 'support'} confirms weakness; reclaim ${resistances[0] || 'resistance'} invalidates it.` : `Hold above ${supports[0] || 'support'} and reclaim ${resistances[0] || 'resistance'} for confirmation.`;
+        text('trigger', (data.trade_alert || {}).trigger || derivedTrigger); text('note', (data.trade_alert || {}).note || `Current bias: ${signal}. Wait for price confirmation before trading.`);
+        text('technical', `Technical confirmations: ${data.price_action?.reading || '-'} | ${structure.trend || '-'} structure | PCR OI ${data.pcr_oi ?? '-'}`);
+        text('buildup', `OI buildup: ${deepDive.v_oi_read || '-'}`); text('oiTrend', deepDive.market_pressure || '-'); text('oiRead', data.combined_sentiment_read || data.final_signal); text('oiAnalysis', deepDive.vol_pcr_sentiment ? `Volume PCR sentiment: ${deepDive.vol_pcr_sentiment}` : '-');
+        text('flowTrend', deepDive.market_pressure || '-'); text('flowDetail', `Volume PCR: ${deepDive.volume_pcr ?? '-'} | Support volume: ${deepDive.support_vol ?? '-'} | Resistance volume: ${deepDive.resistance_vol ?? '-'}`); text('risk', data.manipulation_risk || '-'); text('riskNote', data.manipulation_note || '-'); text('trendAnalysis', structure.trend || data.combined_sentiment_read || '-');
+        const price = data.price_action || {}; text('close', price.close); text('change', price.change == null ? '-' : `${price.change} (${price.change_pct || '-'}%)`); text('sma20', price.sma20); text('priceRead', price.reading); text('intraday', data.intraday_price_read || price.reading || '-');
+        const greek = data.greeks || {}; text('strike', greek.available ? `${greek.strike} (${greek.expiry || '-'})` : '-'); text('callDelta', greek.call_delta); text('putDelta', greek.put_delta); text('gamma', greek.gamma); text('vega', greek.vega_per_1pct); text('greekRead', greek.reading || greek.reason);
+        const rows = data.top_strikes || []; document.getElementById('strikes').innerHTML = rows.map(row => `<tr><td>${row.strike ?? '-'}</td><td>${row.call_oi ?? '-'}</td><td>${row.put_oi ?? '-'}</td><td>${row.total_oi ?? '-'}</td><td>${row.call_buildup || '-'}</td><td>${row.put_buildup || '-'}</td><td>${row.oi_side || '-'}</td></tr>`).join('');
+        drawChart(data.spot_history || []);
+      }
+      function drawChart(samples) {
+        const canvas = document.getElementById('chart'); const ctx = canvas.getContext('2d'); const values = samples.map(item => Number(item.value)).filter(Number.isFinite);
+        if (!values.length) { ctx.clearRect(0, 0, canvas.width, canvas.height); ctx.fillStyle = '#587078'; ctx.font = '16px Georgia'; ctx.fillText('Waiting for live price samples...', 24, 40); return; }
+        const buckets = new Map(); const bucketSize = 5 * 60 * 1000;
+        samples.forEach(sample => { const value = Number(sample.value); if (!Number.isFinite(value)) return; const time = Math.floor(Number(sample.time) / bucketSize) * bucketSize; if (!buckets.has(time)) buckets.set(time, []); buckets.get(time).push(value); });
+        const candles = [...buckets.entries()].sort((a, b) => a[0] - b[0]).map(([time, entries]) => ({ time, open: entries[0], high: Math.max(...entries), low: Math.min(...entries), close: entries[entries.length - 1] }));
+        const min = Math.min(...candles.map(candle => candle.low)); const max = Math.max(...candles.map(candle => candle.high)); const range = Math.max(max - min, 1); const left = 24; const right = 72; const top = 14; const bottom = 28; const plotWidth = canvas.width - left - right; const plotHeight = canvas.height - top - bottom; const y = value => top + ((max - value) / range) * plotHeight;
+        ctx.clearRect(0, 0, canvas.width, canvas.height); ctx.fillStyle = '#fbfcfd'; ctx.fillRect(0, 0, canvas.width, canvas.height); ctx.strokeStyle = '#e1e8e8'; ctx.lineWidth = 1; ctx.font = '12px Georgia';
+        for (let index = 0; index <= 4; index++) { const lineY = top + plotHeight * index / 4; ctx.beginPath(); ctx.moveTo(left, lineY); ctx.lineTo(left + plotWidth, lineY); ctx.stroke(); ctx.fillStyle = '#587078'; ctx.fillText((max - range * index / 4).toFixed(2), canvas.width - right + 8, lineY + 4); }
+        const width = Math.max(4, Math.min(22, plotWidth / Math.max(candles.length, 1) * .65)); candles.forEach((candle, index) => { const x = left + (index + .5) * plotWidth / candles.length; const bullish = candle.close >= candle.open; ctx.strokeStyle = bullish ? '#1d8f5a' : '#b32727'; ctx.fillStyle = ctx.strokeStyle; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x, y(candle.high)); ctx.lineTo(x, y(candle.low)); ctx.stroke(); const bodyTop = Math.min(y(candle.open), y(candle.close)); const bodyHeight = Math.max(2, Math.abs(y(candle.close) - y(candle.open))); ctx.fillRect(x - width / 2, bodyTop, width, bodyHeight); if (index === 0 || index === candles.length - 1) ctx.fillText(new Date(candle.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), x - 20, canvas.height - 8); });
+      }
+      function connect() {
         try {
-          let app = firebase.app();
-          let features = [
-            'auth', 
-            'database', 
-            'firestore',
-            'functions',
-            'messaging', 
-            'storage', 
-            'analytics', 
-            'remoteConfig',
-            'performance',
-          ].filter(feature => typeof app[feature] === 'function');
-          loadEl.textContent = `Firebase SDK loaded with ${features.join(', ')}`;
-        } catch (e) {
-          console.error(e);
-          loadEl.textContent = 'Error loading the Firebase SDK, check the console.';
-        }
+          if (unsubscribeOption) unsubscribeOption();
+          if (unsubscribeQuote) unsubscribeQuote();
+          if (optionPollTimer) clearInterval(optionPollTimer);
+          if (quotePollTimer) clearInterval(quotePollTimer);
+          const documentRef = firebase.firestore().collection('option_sentiment').doc(symbol.value);
+          const quoteRef = firebase.firestore().collection('live_quotes').doc(symbol.value);
+          const updateFromSnapshot = snapshot => {
+            if (!snapshot.exists) throw new Error('No Firestore data for ' + symbol.value);
+            const data = snapshot.data(); show(data); text('updated', data.fetched_at ? `${data.fetched_at} (live)` : new Date().toLocaleString());
+            text('status', 'Live Firebase data connected'); text('error', '');
+          };
+          unsubscribeOption = documentRef.onSnapshot(updateFromSnapshot, error => text('error', 'Live listener reconnecting; polling fallback active'));
+          optionPollTimer = setInterval(() => documentRef.get().then(updateFromSnapshot).catch(() => text('error', 'Firebase update temporarily unavailable')), 10000);
+          const updateQuote = snapshot => {
+            if (!snapshot.exists || !latestOptionData) return;
+            const quote = snapshot.data(); const value = Number(quote.spot_price);
+            if (!Number.isFinite(value)) return;
+            const history = [...(latestOptionData.spot_history || []), { time: Date.now(), value }].slice(-1000);
+            show({ ...latestOptionData, spot_price: value, spot_history: history });
+            text('updated', `${quote.updated_at || new Date().toLocaleTimeString()} (tick)`);
+          };
+          unsubscribeQuote = quoteRef.onSnapshot(updateQuote, () => text('error', 'Quote stream reconnecting; analysis stream active'));
+          quotePollTimer = setInterval(() => quoteRef.get().then(updateQuote).catch(() => {}), 1000);
+        } catch (error) { text('error', 'Firebase connection failed: ' + error.message); }
+      }
+      function connectStock() {
+        firebase.firestore().collection('stock_scans').doc('comprehensive').onSnapshot(snapshot => {
+          if (!snapshot.exists) { text('stockStatus', 'No stock scan has been published yet.'); return; }
+          const data = snapshot.data();
+          text('stockStatus', `Updated ${data.timestamp || '-'} | laptop stock scanner`);
+          const rows = [...(data.intraday || []), ...(data.swing || []), ...(data.positional || [])];
+          document.getElementById('stockResults').innerHTML = rows.length ? rows.map(row => `<div class="stock-row"><strong>${row.symbol || '-'}</strong> ${row.recommendation || '-'} | Price ${row.price || '-'} | Rating ${row.rating || '-'} | RSI ${row.rsi || '-'}</div>`).join('') : 'No qualifying stock setups.';
+        }, error => text('stockStatus', 'Stock read failed: ' + error.message));
+      }
+      document.addEventListener('DOMContentLoaded', () => {
+        const requested = (new URLSearchParams(window.location.search).get('symbol') || 'NIFTY').toUpperCase();
+        symbol.value = requested === 'BANKNIFT' ? 'BANKNIFTY' : requested;
+        if (![...symbol.options].some(option => option.value === symbol.value)) symbol.value = 'NIFTY';
+        symbol.addEventListener('change', () => {
+          const url = new URL(window.location.href);
+          url.searchParams.set('symbol', symbol.value);
+          window.history.replaceState({}, '', url);
+          connect();
+        });
+        document.querySelectorAll('.tab').forEach(tab => tab.addEventListener('click', () => {
+          document.querySelectorAll('.tab').forEach(item => item.classList.remove('active'));
+          tab.classList.add('active');
+          document.getElementById('optionPanel').classList.toggle('hidden', tab.dataset.tab !== 'optionPanel');
+          document.getElementById('stockPanel').classList.toggle('hidden', tab.dataset.tab !== 'stockPanel');
+        }));
+        connect();
+        connectStock();
       });
     </script>
   </body>

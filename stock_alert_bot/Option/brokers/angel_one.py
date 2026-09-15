@@ -57,8 +57,12 @@ def _start_feed(symbol):
             return
         value = message.get("last_traded_price")
         if value is not None:
-            _latest_spot[symbol] = float(value) / 100
+            # SmartAPI V2 returns price as integer multiplied by 100 or float.
+            # We normalize to handle both.
+            spot = float(value) / 100.0 if float(value) > 100000 else float(value)
+            _latest_spot[symbol] = spot
             _latest_tick_at[symbol] = time.monotonic()
+            log.info(f"Tick Received: {symbol} -> {spot}")
 
     def on_open(wsapp):
         socket.subscribe(

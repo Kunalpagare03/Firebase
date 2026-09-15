@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>StockPro | Terminal v31.1</title>
+    <title>StockPro | Hub v37.0</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
@@ -12,33 +12,43 @@
         body { background-color: var(--bg-main); color: var(--txt-main); font-family: 'Inter', sans-serif; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
         .navbar { background: var(--bg-card); border-bottom: 1px solid var(--border); sticky-top; z-index: 1000; }
 
-        .bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; background: var(--bg-card); display: flex; border-top: 1px solid var(--border); z-index: 1000; height: 65px; }
-        .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--txt-dim); font-size: 0.7rem; font-weight: 700; gap: 4px; border: none; background: none; }
+        /* Persistent Bottom Navigation */
+        .bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; background: var(--bg-card); display: flex; border-top: 1px solid var(--border); z-index: 1000; height: 65px; box-shadow: 0 -5px 20px rgba(0,0,0,0.5); }
+        .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--txt-dim); font-size: 0.7rem; font-weight: 700; border: none; background: none; outline: none; }
         .nav-item.active { color: var(--accent); background: rgba(56, 189, 248, 0.05); }
-        .nav-item i { font-size: 1.3rem; }
+        .nav-item i { font-size: 1.3rem; margin-bottom: 2px; }
 
-        #main-scroll { padding: 15px; padding-bottom: 80px; }
+        #main-scroll { padding: 15px; padding-bottom: 85px; }
 
-        .banner { padding: 1.5rem; border-radius: 12px; text-align: center; font-weight: 900; font-size: 1.8rem; margin-bottom: 1rem; border: 2px solid transparent; }
+        /* Institutional Signal Banner */
+        .banner { padding: 1.5rem; border-radius: 12px; text-align: center; font-weight: 900; font-size: 1.8rem; margin-bottom: 1rem; border: 2px solid transparent; box-shadow: 0 4px 15px rgba(0,0,0,0.4); text-transform: uppercase; }
         .bull-mode { background: linear-gradient(135deg, #064e3b 0%, #065f46 100%); border-color: var(--bull); }
         .bear-mode { background: linear-gradient(135deg, #450a0a 0%, #7f1d1d 100%); border-color: var(--bear); }
         .neutral-mode { background: #1f2937; border-color: var(--txt-dim); }
 
+        .data-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 1.2rem; }
         .data-box { background: rgba(31, 41, 55, 0.9); padding: 12px; border-radius: 12px; border: 1px solid var(--border); text-align: center; }
         .data-label { font-size: 0.6rem; color: var(--txt-dim); display: block; font-weight: 800; text-transform: uppercase; margin-bottom: 3px; }
         .data-val { font-size: 1rem; font-weight: 900; color: #fff; }
+
         .chart-box { height: 300px; width: 100%; border-radius: 12px; background: #000; margin-bottom: 1.5rem; border: 1px solid var(--border); }
+        .table-terminal { font-size: 0.75rem; color: #fff; width: 100%; text-align: center; }
+        .table-terminal th { background: #1f2937; color: var(--txt-dim); padding: 8px; }
+        .table-terminal td { padding: 8px; border-bottom: 1px solid #1e293b; }
 
-        .stk-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 15px; margin-bottom: 12px; width: 100%; text-align: left; border-left: 5px solid transparent; }
-        .stk-card.bull { border-left-color: var(--bull); }
-        .stk-card.bear { border-left-color: var(--bear); }
-        .sector-title { font-size: 0.85rem; font-weight: 900; color: var(--accent); border-bottom: 1px solid var(--border); padding-bottom: 5px; margin-bottom: 15px; text-transform: uppercase; }
-        .price-strip { display: flex; justify-content: space-around; margin-top: 10px; padding-top: 10px; border-top: 1px solid #1e293b; text-align: center; }
-        .price-col { font-size: 0.65rem; color: #94a3b8; font-weight: 800; }
-        .price-col span { display: block; font-size: 0.85rem; font-weight: 900; color: #fff; }
+        /* Stock Hub Buttons */
+        .stk-btn { width: 100%; background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 15px; margin-bottom: 12px; text-align: left; color: #fff; display: block; border-left: 6px solid transparent; text-decoration: none; outline: none; transition: 0.1s; }
+        .stk-btn:active { background: #1f2937; transform: scale(0.98); }
+        .bull-btn { border-left-color: var(--bull); }
+        .bear-btn { border-left-color: var(--bear); }
+        .price-strip { display: flex; justify-content: space-around; margin-top: 10px; padding-top: 10px; border-top: 1px solid #1e293b; }
+        .price-col { font-size: 0.65rem; color: #94a3b8; font-weight: 800; text-align: center; }
+        .price-col span { display: block; font-size: 0.95rem; font-weight: 900; color: #fff; }
+        .sector-tag { font-size: 0.8rem; font-weight: 900; color: var(--accent); border-bottom: 1px solid var(--border); padding-bottom: 5px; margin: 15px 0 10px 0; text-transform: uppercase; }
 
+        /* Detail Screen */
         #detail-view { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg-main); z-index: 2000; padding: 20px; overflow-y: auto; }
-        .back-btn { font-size: 1rem; font-weight: 900; color: var(--accent); cursor: pointer; margin-bottom: 20px; display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--accent); padding: 8px 15px; border-radius: 30px; }
+        .back-btn { font-size: 1rem; font-weight: 900; color: var(--accent); cursor: pointer; margin-bottom: 25px; padding: 8px 18px; border: 1px solid var(--accent); border-radius: 30px; display: inline-block; }
 
         #login-wrap { max-width: 400px; margin: 100px auto; padding: 20px; }
     </style>
@@ -47,26 +57,26 @@
 
 <div id="login-wrap">
     <div class="card p-4 text-center">
-        <h2 class="fw-bold mb-4 text-info">STOCKPRO</h2>
-        <input type="email" id="email" class="form-control bg-dark text-white mb-3" placeholder="Email">
-        <input type="password" id="password" class="form-control bg-dark text-white border-secondary mb-4" placeholder="Password">
+        <h2 class="fw-bold mb-4 text-info"><i class="bi bi-cpu"></i> STOCKPRO</h2>
+        <input type="email" id="email" class="form-control bg-dark text-white border-secondary mb-3" placeholder="Email">
+        <input type="password" id="password" class="form-control bg-dark text-white border-secondary mb-4" placeholder="Access Key">
         <button id="login-btn" class="btn btn-info w-100 fw-bold">ACCESS TERMINAL</button>
     </div>
 </div>
 
-<div id="app-content" style="display: none;">
-    <nav class="navbar navbar-dark sticky-top px-3 py-2"><span class="navbar-brand fw-bold small text-info"><i class="bi bi-broadcast"></i> PRO HUB v31.1</span><button id="logout-btn" class="btn btn-link text-dim p-0"><i class="bi bi-power"></i></button></nav>
+<div id="app-root" style="display: none;">
+    <nav class="navbar navbar-dark sticky-top px-3 py-2"><span class="navbar-brand fw-bold small text-info"><i class="bi bi-broadcast"></i> TERMINAL v37</span><button id="logout-btn" class="btn btn-link text-dim p-0"><i class="bi bi-power"></i></button></nav>
     <div id="main-scroll"></div>
     <div class="bottom-nav">
-        <button class="nav-item active" onclick="setView('options')"><i class="bi bi-graph-up"></i>OPTIONS</button>
-        <button class="nav-item" onclick="setView('intra')"><i class="bi bi-lightning-charge"></i>INTRA</button>
-        <button class="nav-item" onclick="setView('swing')"><i class="bi bi-calendar-event"></i>SWING</button>
-        <button class="nav-item" onclick="setView('pos')"><i class="bi bi-shield-check"></i>POS</button>
+        <button class="nav-item active" onclick="changeView('options')"><i class="bi bi-graph-up"></i>OPTIONS</button>
+        <button class="nav-item" onclick="changeView('intra')"><i class="bi bi-lightning-charge"></i>INTRA</button>
+        <button class="nav-item" onclick="changeView('swing')"><i class="bi bi-calendar-event"></i>SWING</button>
+        <button class="nav-item" onclick="changeView('pos')"><i class="bi bi-shield-check"></i>POS</button>
     </div>
 </div>
 
 <div id="detail-view">
-    <div class="back-btn" onclick="document.getElementById('detail-view').style.display='none'"><i class="bi bi-chevron-left"></i> BACK</div>
+    <div class="back-btn" onclick="document.getElementById('detail-view').style.display='none'"><i class="bi bi-chevron-left"></i> BACK TO TERMINAL</div>
     <div id="detail-body"></div>
 </div>
 
@@ -86,8 +96,10 @@
     const app = initializeApp(config);
     const auth = getAuth(app);
     const db = getFirestore(app);
-    let activeView = 'options';
-    let masterData = { opt: null, stocks: { intra: [], swing: [], pos: [] } };
+    let view = 'options';
+    let currentSym = 'NIFTY';
+    let masterData = { opt: {}, stocks: {} };
+    let optUnsub = null;
 
     document.getElementById('login-btn').onclick = async () => {
         const e = document.getElementById('email').value, p = document.getElementById('password').value;
@@ -96,17 +108,17 @@
     document.getElementById('logout-btn').onclick = () => signOut(auth);
 
     onAuthStateChanged(auth, (user) => {
-        if (user) { document.getElementById('login-wrap').style.display='none'; document.getElementById('app-content').style.display='block'; startRealtime(); }
-        else { document.getElementById('login-wrap').style.display='block'; document.getElementById('app-content').style.display='none'; }
+        if (user) { document.getElementById('login-wrap').style.display='none'; document.getElementById('app-root').style.display='block'; startTerminal(); }
+        else { document.getElementById('login-wrap').style.display='block'; document.getElementById('app-root').style.display='none'; }
     });
 
-    window.setView = (view) => {
-        activeView = view;
-        document.querySelectorAll('.nav-item').forEach(btn => {
-            btn.classList.toggle('active', btn.innerText.toLowerCase().includes(view.slice(0,3)));
-        });
-        renderUI();
+    window.changeView = (v) => {
+        view = v;
+        document.querySelectorAll('.nav-item').forEach(b => b.classList.toggle('active', b.innerText.toLowerCase().includes(v.slice(0,3))));
+        render();
     };
+
+    window.switchSym = (s) => { currentSym = s; startOptListener(); };
 
     window.openDetail = (symbol, type) => {
         const s = masterData.stocks[type].find(x => x.symbol === symbol);
@@ -114,102 +126,90 @@
         const up = s.change > 0;
         document.getElementById('detail-body').innerHTML = `
             <div class="banner ${up ? 'bull-mode' : 'bear-mode'}">${s.symbol.replace('.NS','')}<div class="small fw-light mt-1">${s.recommendation}</div></div>
-            <div class="row g-2 mb-4">
-                <div class="col-6"><div class="data-box"><span class="data-label">Entry Price</span><span class="data-val">${s.entry_price || s.price}</span></div></div>
-                <div class="col-6"><div class="data-box"><span class="data-label">Rating</span><span class="data-val text-warning">${s.rating}</span></div></div>
-                <div class="col-6"><div class="data-box"><span class="data-label">Target</span><span class="data-val text-info">${s.target_price || 'N/A'}</span></div></div>
-                <div class="col-6"><div class="data-box"><span class="data-label">Stop Loss</span><span class="data-val text-danger">${s.sl_price || 'N/A'}</span></div></div>
+            <div class="data-grid">
+                <div class="data-box"><span class="data-label">Entry</span><span class="data-val">${s.entry_price || s.price}</span></div>
+                <div class="data-box"><span class="data-label">Rating</span><span class="data-val text-warning">${s.rating}</span></div>
+                <div class="data-box"><span class="data-label">Target</span><span class="data-val text-info">${s.target_price}</span></div>
+                <div class="data-box"><span class="data-label">Stop Loss</span><span class="data-val text-danger">${s.sl_price}</span></div>
             </div>
-            <div class="card p-3 mb-4 bg-dark border-secondary"><strong>Justification:</strong><p class="small mt-2 mb-0">${s.justification}</p></div>
-            <div class="row g-2 mb-5">
-                <div class="col-6"><div class="data-box"><span class="data-label">EMA 20</span><span class="data-val">${s.ema20}</span></div></div>
-                <div class="col-6"><div class="data-box"><span class="data-label">EMA 200</span><span class="data-val">${s.ema200}</span></div></div>
+            <div class="card p-3 mb-4 bg-dark border-secondary small"><strong>JUSTIFICATION:</strong><br>${s.justification}</div>
+            <div class="data-grid mb-5">
+                <div class="data-box"><span class="data-label">EMA 20</span><span class="data-val">${s.ema20}</span></div>
+                <div class="data-box"><span class="data-label">EMA 200</span><span class="data-val">${s.ema200}</span></div>
             </div>`;
         document.getElementById('detail-view').style.display = 'block';
     };
 
-    function startRealtime() {
-        onSnapshot(doc(db, "option_sentiment", "NIFTY"), (snap) => {
-            const data = snap.data();
-            if (data) { masterData.opt = data; if(activeView === 'options') renderUI(); }
-        });
+    function startTerminal() {
+        startOptListener();
         onSnapshot(doc(db, "stock_scans", "comprehensive"), (snap) => {
             const d = snap.data(); if (!d) return;
             masterData.stocks = { "intra": d.intraday || [], "swing": d.swing || [], "pos": d.positional || [] };
-            if(activeView !== 'options') renderUI();
+            if(view !== 'options') render();
         });
     }
 
-    function renderUI() {
+    function startOptListener() {
+        if(optUnsub) optUnsub();
+        optUnsub = onSnapshot(doc(db, "option_sentiment", currentSym), (snap) => {
+            const d = snap.data(); if (d) { masterData.opt[currentSym] = d; if(view === 'options') render(); }
+        });
+    }
+
+    function render() {
         const container = document.getElementById('main-scroll');
-        if (!container) return;
-
-        if (activeView === 'options') {
-            const d = masterData.opt;
-            if (!d) { container.innerHTML = '<div class="text-center py-5 opacity-40">Connecting to Exchange...</div>'; return; }
-
-            const signal = d.final_signal || 'NEUTRAL';
-            const sigClass = signal === 'Bullish' ? 'bull-mode' : (signal === 'Bearish' ? 'bear-mode' : 'neutral-mode');
+        if (view === 'options') {
+            const d = masterData.opt[currentSym];
+            if (!d) { container.innerHTML = '<div class="text-center py-5 opacity-40">Syncing '+currentSym+'...</div>'; return; }
+            const sig = d.final_signal || 'NEUTRAL';
+            const sigClass = sig === 'Bullish' ? 'bull-mode' : (sig === 'Bearish' ? 'bear-mode' : 'neutral-mode');
             const dd = d.deep_dive || {};
-            let strikes = '';
-            (d.top_strikes || []).forEach(r => {
-                strikes += `<tr><td>${r.strike}</td><td>${r.call_oi}</td><td>${r.put_oi}</td><td class="text-${(r.oi_side || '').includes('Call')?'danger':'success'}">${(r.oi_side || 'N/A').split(' ')[0]}</td></tr>`;
-            });
+            let oi = ''; (d.top_strikes || []).forEach(r => { oi += `<tr><td>${r.strike}</td><td>${r.call_oi}</td><td>${r.put_oi}</td><td class="text-${(r.oi_side||'').includes('Call')?'danger':'success'}">${(r.oi_side||'N/A').split(' ')[0]}</td></tr>`; });
 
             container.innerHTML = `
-                <div class="banner ${sigClass}">${signal}</div>
-                <div class="alert-panel p-3"><strong>ACTION:</strong> ${d.trade_alert?.action || 'HOLD'}<div class="small mt-1 opacity-70">${d.trade_alert?.trigger || 'Market Range Bound'}</div></div>
+                <select class="form-select bg-dark text-white border-secondary mb-3" onchange="switchSym(this.value)">
+                    <option value="NIFTY" ${currentSym==='NIFTY'?'selected':''}>NIFTY 50 INDEX</option>
+                    <option value="BANKNIFTY" ${currentSym==='BANKNIFTY'?'selected':''}>BANKNIFTY INDEX</option>
+                </select>
+                <div class="banner ${sigClass}">${sig}</div>
+                <div class="card p-3 mb-3 bg-dark border-secondary"><strong>ACTION:</strong> ${d.trade_alert?.action || 'HOLD'}<div class="small mt-1 opacity-70">${d.trade_alert?.trigger || 'Market Range Bound'}</div></div>
                 <div id="chart" class="chart-box"></div>
-                <div class="row g-2 mb-4">
-                    <div class="col-6"><div class="data-box"><span class="data-label">Spot Price</span><span class="data-val">${d.spot_price || 'N/A'}</span></div></div>
-                    <div class="col-6"><div class="data-box"><span class="data-label">PCR (OI)</span><span class="data-val">${d.pcr_oi || '0.00'}</span></div></div>
-                    <div class="col-6"><div class="data-box"><span class="data-label">Max Pain</span><span class="data-val">${d.max_pain || 'N/A'}</span></div></div>
-                    <div class="col-6"><div class="data-box"><span class="data-label">Vol PCR</span><span class="data-val">${dd.volume_pcr || '0.00'}</span></div></div>
+                <div class="data-grid mb-3">
+                    <div class="data-box"><span class="data-label">Spot Price</span><span class="data-val text-info">${d.spot_price}</span></div>
+                    <div class="data-box"><span class="data-label">Terminal Sync</span><span class="data-val text-warning">${d.fetched_at}</span></div>
+                    <div class="data-box"><span class="data-label">PCR (OI)</span><span class="data-val">${d.pcr_oi}</span></div>
+                    <div class="data-box"><span class="data-label">Vol PCR</span><span class="data-val">${dd.volume_pcr || '0.00'}</span></div>
                 </div>
-                <div class="card p-3 mb-3 small bg-dark border-secondary">
-                    <div>Structure: ${d.price_structure?.trend || 'Range'}</div>
-                    <div class="row mt-2 border-top border-secondary pt-2 text-center">
-                        <div class="col">Call Delta: ${d.greeks?.call_delta || 'N/A'}</div>
-                        <div class="col">Put Delta: ${d.greeks?.put_delta || 'N/A'}</div>
-                    </div>
-                </div>
-                <div class="table-responsive">
-                    <table class="table table-dark table-sm small text-center"><thead><tr><th>Strike</th><th>C-OI</th><th>P-OI</th><th>Side</th></tr></thead><tbody>${strikes}</tbody></table>
-                </div>
-                <div class="text-center small opacity-30 mt-3">Terminal Sync: ${d.fetched_at || '--:--'}</div>
+                <div class="card p-3 mb-3 small bg-dark border-secondary"><div class="row text-center"><div class="col">Call Delta: ${d.greeks?.call_delta || 'N/A'}</div><div class="col">Put Delta: ${d.greeks?.put_delta || 'N/A'}</div></div></div>
+                <table class="table-terminal"><thead><tr><th>Strike</th><th>C-OI</th><th>P-OI</th><th>Side</th></tr></thead><tbody>${oi}</tbody></table>
             `;
-
-            // Use requestAnimationFrame to ensure DOM is updated before Plotly
-            requestAnimationFrame(() => {
-                if((d.spot_history || []).length > 1) {
-                    try {
-                        Plotly.newPlot('chart', [{ x: d.spot_history.map(h=>new Date(h.time)), y: d.spot_history.map(h=>h.value), type:'scatter', mode:'lines', line:{color:'#38bdf8', width:3}, fill:'tozeroy', fillcolor:'rgba(56,189,248,0.1)' }], { paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:'rgba(0,0,0,0)', margin:{t:10,r:15,b:30,l:35}, xaxis:{showgrid:false, tickfont:{color:'#9ca3af',size:8}, tickformat:'%H:%M'}, yaxis:{gridcolor:'#1f2937', tickfont:{color:'#9ca3af',size:8}} }, {responsive:true, displayModeBar:false});
-                    } catch(e) { console.error("Plotly error:", e); }
-                }
-            });
+            if((d.spot_history || []).length > 1) {
+                requestAnimationFrame(() => {
+                    Plotly.newPlot('chart', [{ x: d.spot_history.map(h=>new Date(h.time)), y: d.spot_history.map(h=>h.value), type:'scatter', mode:'lines', line:{color:'#38bdf8', width:3}, fill:'tozeroy', fillcolor:'rgba(56,189,248,0.1)' }], { paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:'rgba(0,0,0,0)', margin:{t:10,r:15,b:30,l:40}, xaxis:{showgrid:false, tickfont:{color:'#9ca3af',size:8}}, yaxis:{gridcolor:'#1f2937', tickfont:{color:'#9ca3af',size:8}} }, {responsive:true, displayModeBar:false});
+                });
+            }
         } else {
-            const list = masterData.stocks[activeView] || [];
-            if (!list.length) { container.innerHTML = '<div class="text-center py-5 opacity-40">Scanning Live Markets...</div>'; return; }
-            let html = '';
+            const list = masterData.stocks[view] || [];
+            if (!list.length) { container.innerHTML = '<div class="text-center py-5 opacity-40">Scanning...</div>'; return; }
+            let h = '';
             const sectors = {}; list.forEach(s => { if(!sectors[s.sector]) sectors[s.sector] = []; sectors[s.sector].push(s); });
             Object.keys(sectors).sort().forEach(sec => {
-                html += `<div class="sector-title">${sec}</div>`;
+                h += `<div class="sector-tag">${sec}</div>`;
                 sectors[sec].forEach(s => {
-                    html += `
-                        <div class="stk-card ${s.change > 0 ? 'bull':'bear'}" onclick="openDetail('${s.symbol}', '${activeView}')">
+                    h += `<div class="stk-btn ${s.change > 0 ? 'bull-btn':'bear-btn'}" onclick="openDetail('${s.symbol}', '${view}')">
                             <div class="d-flex justify-content-between align-items-center">
                                 <div><div class="fw-bold fs-5">${s.symbol.replace('.NS','')}</div><div class="small text-info">${s.rating} Score</div></div>
                                 <div class="text-end"><div class="fw-bold text-${s.change > 0 ? 'success':'danger'}">${s.change}%</div><div class="small opacity-50">${s.price}</div></div>
                             </div>
                             <div class="price-strip">
-                                <div class="price-item">ENTRY<span>${s.entry_price || s.price}</span></div>
-                                <div class="price-item text-info">TGT<span>${s.target_price || 'N/A'}</span></div>
-                                <div class="price-item text-danger">SL<span>${s.sl_price || 'N/A'}</span></div>
+                                <div class="price-col">ENTRY<span>${s.entry_price || s.price}</span></div>
+                                <div class="price-col text-info">TGT<span>${s.target_price}</span></div>
+                                <div class="price-col text-danger">SL<span>${s.sl_price}</span></div>
                             </div>
                         </div>`;
                 });
             });
-            container.innerHTML = html;
+            container.innerHTML = h;
         }
     }
 </script>

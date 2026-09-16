@@ -3,11 +3,12 @@ import pandas as pd
 import numpy as np
 from datetime import datetime
 import os
+import concurrent.futures
 from utils.firebase_sync import sync_to_firestore
 from utils.news_engine import fetch_market_news
 from utils.sector_map import get_sector, SECTOR_MAP
 
-# Comprehensive Watchlist
+# Comprehensive Watchlist from Sector Map (Auto-generated from Excel)
 WATCHLIST = [sym for sector in SECTOR_MAP.values() for sym in sector]
 
 def calculate_rsi(series, period=14):
@@ -19,11 +20,13 @@ def calculate_rsi(series, period=14):
 
 def analyze_stock(symbol):
     try:
+        # Use a smaller period for faster scanning if possible,
+        # but EMA 200 needs at least 200+ days.
         ticker = yf.Ticker(symbol)
         df = ticker.history(period="1y", interval="1d")
         if df.empty or len(df) < 200: return None, None, None
 
-        # Technicals
+        # Technical Indicators
         for p in [20, 50, 100, 200]:
             df[f'ema{p}'] = df['Close'].ewm(span=p, adjust=False).mean()
 
@@ -47,7 +50,7 @@ def analyze_stock(symbol):
 
         rating = min(10, score)
 
-        # Target/SL
+        # Target/SL (Approximate)
         entry = round(curr['Close'], 2)
         target = round(entry * 1.03, 2)
         sl = round(entry * 0.98, 2)
@@ -70,29 +73,46 @@ def analyze_stock(symbol):
         }
 
         # Filtering Logic
-        intra = {**base_info, "recommendation": "INTRA-DAY BUY"} if change_pct > 1.0 and vol_ratio > 1.2 else None
-        swing = {**base_info, "recommendation": "SWING ACCUMULATE"} if rating >= 7 and curr['Close'] > df['ema20'].iloc[-1] else None
-        pos = {**base_info, "recommendation": "LONG TERM HOLD"} if rating >= 8 and df['ema50'].iloc[-1] > df['ema200'].iloc[-1] else None
+        intra = {**base_info, "recommendation": "INTRA-DAY BUY"} if change_pct > 1.5 and vol_ratio > 1.5 else None
+        swing = {**base_info, "recommendation": "SWING ACCUMULATE"} if rating >= 8 and curr['Close'] > df['ema20'].iloc[-1] else None
+        pos = {**base_info, "recommendation": "LONG TERM HOLD"} if rating >= 9 and df['ema50'].iloc[-1] > df['ema200'].iloc[-1] else None
 
         return intra, swing, pos
-    except: return None, None, None
+    except Exception as e:
+        # print(f"Error analyzing {symbol}: {e}")
+        return None, None, None
 
 def run_live_scan():
     intra_list, swing_list, pos_list = [], [], []
     print(f"Executing Global Terminal Scan: {len(WATCHLIST)} symbols...")
-    for sym in WATCHLIST:
-        i, s, p = analyze_stock(sym)
-        if i: intra_list.append(i)
-        if s: swing_list.append(s)
-        if p: pos_list.append(p)
+
+    # Parallel Execution to handle 2000+ stocks efficiently
+    with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
+        future_to_stock = {executor.submit(analyze_stock, sym): sym for sym in WATCHLIST}
+        count = 0
+        for future in concurrent.futures.as_completed(future_to_stock):
+            count += 1
+            if count % 100 == 0:
+                print(f"Scanned {count}/{len(WATCHLIST)} stocks...")
+
+            i, s, p = future.result()
+            if i: intra_list.append(i)
+            if s: swing_list.append(s)
+            if p: pos_list.append(p)
+
+    print(f"Scan complete. Found {len(intra_list)} Intraday, {len(swing_list)} Swing, {len(pos_list)} Positional setups.")
+
+    news = fetch_market_news()
 
     report = {
         "timestamp": datetime.now().strftime("%H:%M:%S"),
         "intraday": intra_list,
         "swing": swing_list,
         "positional": pos_list,
-        "market_news": fetch_market_news()
+        "market_news": news
     }
+
+    # Firestore limit is 1MB. We only sync if we have meaningful data.
     sync_to_firestore("stock_scans", "comprehensive", report)
     print("Terminal Sync Complete.")
 

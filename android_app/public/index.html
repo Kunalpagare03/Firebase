@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>StockPro | Hub v37.0</title>
+    <title>StockPro | Ultimate Hub v38.0</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
@@ -12,7 +12,6 @@
         body { background-color: var(--bg-main); color: var(--txt-main); font-family: 'Inter', sans-serif; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
         .navbar { background: var(--bg-card); border-bottom: 1px solid var(--border); sticky-top; z-index: 1000; }
 
-        /* Persistent Bottom Navigation */
         .bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; background: var(--bg-card); display: flex; border-top: 1px solid var(--border); z-index: 1000; height: 65px; box-shadow: 0 -5px 20px rgba(0,0,0,0.5); }
         .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--txt-dim); font-size: 0.7rem; font-weight: 700; border: none; background: none; outline: none; }
         .nav-item.active { color: var(--accent); background: rgba(56, 189, 248, 0.05); }
@@ -20,11 +19,16 @@
 
         #main-scroll { padding: 15px; padding-bottom: 85px; }
 
-        /* Institutional Signal Banner */
         .banner { padding: 1.5rem; border-radius: 12px; text-align: center; font-weight: 900; font-size: 1.8rem; margin-bottom: 1rem; border: 2px solid transparent; box-shadow: 0 4px 15px rgba(0,0,0,0.4); text-transform: uppercase; }
         .bull-mode { background: linear-gradient(135deg, #064e3b 0%, #065f46 100%); border-color: var(--bull); }
         .bear-mode { background: linear-gradient(135deg, #450a0a 0%, #7f1d1d 100%); border-color: var(--bear); }
         .neutral-mode { background: #1f2937; border-color: var(--txt-dim); }
+
+        /* Manual Scan Controls */
+        .admin-card { background: #1e293b; border: 1px solid var(--accent); padding: 1.5rem; border-radius: 15px; margin-bottom: 1.5rem; text-align: center; }
+        .scan-btn { background: var(--accent); color: #000; border: none; padding: 15px 25px; border-radius: 10px; font-weight: 900; font-size: 1.1rem; width: 100%; margin-bottom: 15px; box-shadow: 0 4px 15px rgba(56, 189, 248, 0.4); }
+        .scan-btn:active { transform: scale(0.95); }
+        .scan-btn:disabled { background: #334155; color: var(--txt-dim); }
 
         .data-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 1.2rem; }
         .data-box { background: rgba(31, 41, 55, 0.9); padding: 12px; border-radius: 12px; border: 1px solid var(--border); text-align: center; }
@@ -32,13 +36,7 @@
         .data-val { font-size: 1rem; font-weight: 900; color: #fff; }
 
         .chart-box { height: 300px; width: 100%; border-radius: 12px; background: #000; margin-bottom: 1.5rem; border: 1px solid var(--border); }
-        .table-terminal { font-size: 0.75rem; color: #fff; width: 100%; text-align: center; }
-        .table-terminal th { background: #1f2937; color: var(--txt-dim); padding: 8px; }
-        .table-terminal td { padding: 8px; border-bottom: 1px solid #1e293b; }
-
-        /* Stock Hub Buttons */
-        .stk-btn { width: 100%; background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 15px; margin-bottom: 12px; text-align: left; color: #fff; display: block; border-left: 6px solid transparent; text-decoration: none; outline: none; transition: 0.1s; }
-        .stk-btn:active { background: #1f2937; transform: scale(0.98); }
+        .stk-btn { width: 100%; background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 15px; margin-bottom: 12px; text-align: left; color: #fff; display: block; border-left: 6px solid transparent; text-decoration: none; outline: none; }
         .bull-btn { border-left-color: var(--bull); }
         .bear-btn { border-left-color: var(--bear); }
         .price-strip { display: flex; justify-content: space-around; margin-top: 10px; padding-top: 10px; border-top: 1px solid #1e293b; }
@@ -46,44 +44,44 @@
         .price-col span { display: block; font-size: 0.95rem; font-weight: 900; color: #fff; }
         .sector-tag { font-size: 0.8rem; font-weight: 900; color: var(--accent); border-bottom: 1px solid var(--border); padding-bottom: 5px; margin: 15px 0 10px 0; text-transform: uppercase; }
 
-        /* Detail Screen */
         #detail-view { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg-main); z-index: 2000; padding: 20px; overflow-y: auto; }
         .back-btn { font-size: 1rem; font-weight: 900; color: var(--accent); cursor: pointer; margin-bottom: 25px; padding: 8px 18px; border: 1px solid var(--accent); border-radius: 30px; display: inline-block; }
 
-        #login-wrap { max-width: 400px; margin: 100px auto; padding: 20px; }
+        #login-overlay { max-width: 400px; margin: 100px auto; padding: 20px; }
     </style>
 </head>
 <body>
 
-<div id="login-wrap">
+<div id="login-overlay">
     <div class="card p-4 text-center">
-        <h2 class="fw-bold mb-4 text-info"><i class="bi bi-cpu"></i> STOCKPRO</h2>
+        <h2 class="fw-bold mb-4 text-info">STOCKPRO</h2>
         <input type="email" id="email" class="form-control bg-dark text-white border-secondary mb-3" placeholder="Email">
-        <input type="password" id="password" class="form-control bg-dark text-white border-secondary mb-4" placeholder="Access Key">
-        <button id="login-btn" class="btn btn-info w-100 fw-bold">ACCESS TERMINAL</button>
+        <input type="password" id="password" class="form-control bg-dark text-white border-secondary mb-4" placeholder="Password">
+        <button id="login-btn" class="btn btn-info w-100 fw-bold">AUTH LOGIN</button>
     </div>
 </div>
 
-<div id="app-root" style="display: none;">
-    <nav class="navbar navbar-dark sticky-top px-3 py-2"><span class="navbar-brand fw-bold small text-info"><i class="bi bi-broadcast"></i> TERMINAL v37</span><button id="logout-btn" class="btn btn-link text-dim p-0"><i class="bi bi-power"></i></button></nav>
+<div id="app-shell" style="display: none;">
+    <nav class="navbar navbar-dark sticky-top px-3 py-2"><span class="navbar-brand fw-bold small text-info"><i class="bi bi-broadcast"></i> PRO HUB v38</span><button id="logout-btn" class="btn btn-link text-dim p-0"><i class="bi bi-power"></i></button></nav>
     <div id="main-scroll"></div>
     <div class="bottom-nav">
         <button class="nav-item active" onclick="changeView('options')"><i class="bi bi-graph-up"></i>OPTIONS</button>
         <button class="nav-item" onclick="changeView('intra')"><i class="bi bi-lightning-charge"></i>INTRA</button>
         <button class="nav-item" onclick="changeView('swing')"><i class="bi bi-calendar-event"></i>SWING</button>
         <button class="nav-item" onclick="changeView('pos')"><i class="bi bi-shield-check"></i>POS</button>
+        <button class="nav-item" onclick="changeView('admin')"><i class="bi bi-gear-fill"></i>SCAN</button>
     </div>
 </div>
 
 <div id="detail-view">
-    <div class="back-btn" onclick="document.getElementById('detail-view').style.display='none'"><i class="bi bi-chevron-left"></i> BACK TO TERMINAL</div>
+    <div class="back-btn" onclick="document.getElementById('detail-view').style.display='none'"><i class="bi bi-chevron-left"></i> BACK</div>
     <div id="detail-body"></div>
 </div>
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
     import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-    import { getFirestore, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
     const config = {
         apiKey: "AIzaSyDMEUmFGSJBjGrz7fpDN46OiZlSJ6NTsjE",
@@ -108,14 +106,31 @@
     document.getElementById('logout-btn').onclick = () => signOut(auth);
 
     onAuthStateChanged(auth, (user) => {
-        if (user) { document.getElementById('login-wrap').style.display='none'; document.getElementById('app-root').style.display='block'; startTerminal(); }
-        else { document.getElementById('login-wrap').style.display='block'; document.getElementById('app-root').style.display='none'; }
+        if (user) { document.getElementById('login-overlay').style.display='none'; document.getElementById('app-shell').style.display='block'; startTerminal(); }
+        else { document.getElementById('login-overlay').style.display='block'; document.getElementById('app-shell').style.display='none'; }
     });
 
     window.changeView = (v) => {
         view = v;
         document.querySelectorAll('.nav-item').forEach(b => b.classList.toggle('active', b.innerText.toLowerCase().includes(v.slice(0,3))));
         render();
+    };
+
+    window.triggerManualScan = async (type) => {
+        const btn = event.target;
+        btn.disabled = true;
+        btn.innerText = 'TRIGGERING...';
+        try {
+            await setDoc(doc(db, "commands", "latest"), {
+                command: type,
+                timestamp: new Date().toISOString(),
+                processed: false
+            });
+            alert("Scan Command Sent to Laptop!");
+        } catch (e) {
+            alert("Error: " + e.message);
+        }
+        setTimeout(() => { btn.disabled = false; btn.innerText = 'RUN FULL SCAN'; }, 3000);
     };
 
     window.switchSym = (s) => { currentSym = s; startOptListener(); };
@@ -145,7 +160,8 @@
         onSnapshot(doc(db, "stock_scans", "comprehensive"), (snap) => {
             const d = snap.data(); if (!d) return;
             masterData.stocks = { "intra": d.intraday || [], "swing": d.swing || [], "pos": d.positional || [] };
-            if(view !== 'options') render();
+            masterData.stocks_timestamp = d.timestamp;
+            if(view !== 'options' && view !== 'admin') render();
         });
     }
 
@@ -158,30 +174,33 @@
 
     function render() {
         const container = document.getElementById('main-scroll');
+        if (view === 'admin') {
+            container.innerHTML = `
+                <div class="admin-card">
+                    <i class="bi bi-cpu fs-1 text-info mb-3 d-block"></i>
+                    <h4 class="fw-bold mb-4">Command Center</h4>
+                    <button class="scan-btn" onclick="triggerManualScan('stock')"><i class="bi bi-search me-2"></i>RUN FULL STOCK SCAN</button>
+                    <p class="text-dim small mt-2">Triggers a parallel scan of 2,176 stocks from your Excel on your laptop.</p>
+                </div>
+            `;
+            return;
+        }
         if (view === 'options') {
             const d = masterData.opt[currentSym];
             if (!d) { container.innerHTML = '<div class="text-center py-5 opacity-40">Syncing '+currentSym+'...</div>'; return; }
             const sig = d.final_signal || 'NEUTRAL';
             const sigClass = sig === 'Bullish' ? 'bull-mode' : (sig === 'Bearish' ? 'bear-mode' : 'neutral-mode');
-            const dd = d.deep_dive || {};
-            let oi = ''; (d.top_strikes || []).forEach(r => { oi += `<tr><td>${r.strike}</td><td>${r.call_oi}</td><td>${r.put_oi}</td><td class="text-${(r.oi_side||'').includes('Call')?'danger':'success'}">${(r.oi_side||'N/A').split(' ')[0]}</td></tr>`; });
-
             container.innerHTML = `
                 <select class="form-select bg-dark text-white border-secondary mb-3" onchange="switchSym(this.value)">
                     <option value="NIFTY" ${currentSym==='NIFTY'?'selected':''}>NIFTY 50 INDEX</option>
                     <option value="BANKNIFTY" ${currentSym==='BANKNIFTY'?'selected':''}>BANKNIFTY INDEX</option>
                 </select>
                 <div class="banner ${sigClass}">${sig}</div>
-                <div class="card p-3 mb-3 bg-dark border-secondary"><strong>ACTION:</strong> ${d.trade_alert?.action || 'HOLD'}<div class="small mt-1 opacity-70">${d.trade_alert?.trigger || 'Market Range Bound'}</div></div>
                 <div id="chart" class="chart-box"></div>
-                <div class="data-grid mb-3">
+                <div class="data-grid">
                     <div class="data-box"><span class="data-label">Spot Price</span><span class="data-val text-info">${d.spot_price}</span></div>
                     <div class="data-box"><span class="data-label">Terminal Sync</span><span class="data-val text-warning">${d.fetched_at}</span></div>
-                    <div class="data-box"><span class="data-label">PCR (OI)</span><span class="data-val">${d.pcr_oi}</span></div>
-                    <div class="data-box"><span class="data-label">Vol PCR</span><span class="data-val">${dd.volume_pcr || '0.00'}</span></div>
                 </div>
-                <div class="card p-3 mb-3 small bg-dark border-secondary"><div class="row text-center"><div class="col">Call Delta: ${d.greeks?.call_delta || 'N/A'}</div><div class="col">Put Delta: ${d.greeks?.put_delta || 'N/A'}</div></div></div>
-                <table class="table-terminal"><thead><tr><th>Strike</th><th>C-OI</th><th>P-OI</th><th>Side</th></tr></thead><tbody>${oi}</tbody></table>
             `;
             if((d.spot_history || []).length > 1) {
                 requestAnimationFrame(() => {
@@ -190,8 +209,8 @@
             }
         } else {
             const list = masterData.stocks[view] || [];
-            if (!list.length) { container.innerHTML = '<div class="text-center py-5 opacity-40">Scanning...</div>'; return; }
-            let h = '';
+            if (!list.length) { container.innerHTML = `<div class="text-center py-5 opacity-40"><p>No ${view.toUpperCase()} trades found.</p></div>`; return; }
+            let h = `<div class="text-center small opacity-30 mb-3">Synced: ${masterData.stocks_timestamp}</div>`;
             const sectors = {}; list.forEach(s => { if(!sectors[s.sector]) sectors[s.sector] = []; sectors[s.sector].push(s); });
             Object.keys(sectors).sort().forEach(sec => {
                 h += `<div class="sector-tag">${sec}</div>`;

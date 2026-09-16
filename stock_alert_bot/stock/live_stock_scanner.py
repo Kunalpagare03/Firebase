@@ -53,12 +53,6 @@ def analyze_stock(symbol):
 
         rating = min(10, score)
 
-        # --- HIGH QUALITY FILTER ---
-        # 1. Only show high-score stocks (8/10 or better)
-        # 2. This applies to ALL stocks, including those below 30 Rupees.
-        if rating < 8: return None, None, None
-        # ---------------------------
-
         # Target/SL
         target = round(entry * 1.05, 2)
         sl = round(entry * 0.97, 2)
@@ -82,8 +76,8 @@ def analyze_stock(symbol):
 
         # Filtering Logic
         intra = {**base_info, "recommendation": "INTRA BUY"} if change_pct > 1.5 and vol_ratio > 1.5 else None
-        swing = {**base_info, "recommendation": "SWING ENTRY"} if curr['Close'] > df['ema20'].iloc[-1] else None
-        pos = {**base_info, "recommendation": "POS HOLD"} if df['ema50'].iloc[-1] > df['ema200'].iloc[-1] else None
+        swing = {**base_info, "recommendation": "SWING ENTRY"} if rating >= 8 and curr['Close'] > df['ema20'].iloc[-1] else None
+        pos = {**base_info, "recommendation": "POS HOLD"} if rating >= 9 and df['ema50'].iloc[-1] > df['ema200'].iloc[-1] else None
 
         return intra, swing, pos
     except:
@@ -93,10 +87,18 @@ def run_live_scan():
     intra_list, swing_list, pos_list = [], [], []
     start_time = time.time()
 
+    # --- HEARTBEAT FOR MANUAL TRIGGER ---
+    sync_to_firestore("stock_scans", "status", {
+        "status": "Scanning...",
+        "start_time": datetime.now().strftime("%H:%M:%S"),
+        "progress": "0%"
+    })
+    # ------------------------------------
+
     print(f"Executing Global Terminal Scan: {len(WATCHLIST)} symbols...")
 
-    # Increased workers to 20 for 3000+ stocks
-    with concurrent.futures.ThreadPoolExecutor(max_workers=20) as executor:
+    # Reduced workers to 10 to avoid Yahoo Finance rate limiting
+    with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
         future_to_stock = {executor.submit(analyze_stock, sym): sym for sym in WATCHLIST}
         count = 0
         for future in concurrent.futures.as_completed(future_to_stock):
@@ -105,15 +107,22 @@ def run_live_scan():
                 elapsed = time.time() - start_time
                 print(f"Scanned {count}/{len(WATCHLIST)} stocks... ({int(elapsed)}s)")
 
-            res = future.result()
-            if res:
-                i, s, p = res
-                if i: intra_list.append(i)
-                if s: swing_list.append(s)
-                if p: pos_list.append(p)
+            try:
+                res = future.result()
+                if res:
+                    i, s, p = res
+                    if i: intra_list.append(i)
+                    if s: swing_list.append(s)
+                    if p: pos_list.append(p)
+            except Exception as e:
+                pass # Silently handle individual stock fetch errors
 
     duration = time.time() - start_time
     print(f"Scan complete in {int(duration/60)}m. Found {len(intra_list)} Intra, {len(swing_list)} Swing.")
+
+    # Sort results by rating (Highest first)
+    intra_list = sorted(intra_list, key=lambda x: int(x['rating'].split('/')[0]), reverse=True)
+    swing_list = sorted(swing_list, key=lambda x: int(x['rating'].split('/')[0]), reverse=True)
 
     report = {
         "timestamp": datetime.now().strftime("%d-%m-%Y %H:%M:%S"),
@@ -124,7 +133,15 @@ def run_live_scan():
     }
 
     sync_to_firestore("stock_scans", "comprehensive", report)
-    print("Cloud Terminal Sync Complete.")
+
+    # --- UPDATE STATUS ---
+    sync_to_firestore("stock_scans", "status", {
+        "status": "Idle / Complete",
+        "last_scan_time": report["timestamp"],
+        "results": f"{len(intra_list)} Intra, {len(swing_list)} Swing"
+    })
+
+    print(f"Terminal Sync Complete at {report['timestamp']}.")
 
 if __name__ == "__main__":
     run_live_scan()

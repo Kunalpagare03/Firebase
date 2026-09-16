@@ -12,6 +12,9 @@ PYTHON_EXE = os.path.join(ROOT, ".venv", "Scripts", "python.exe")
 
 def run_task(task_type):
     print(f"--- Triggering Manual Run: {task_type} ---")
+    log_file = os.path.join(ROOT, "logs", f"manual_{task_type}.log")
+    os.makedirs(os.path.dirname(log_file), exist_ok=True)
+
     if task_type == "stock":
         cmd = [PYTHON_EXE, "live_stock_scanner.py"]
         cwd = os.path.join(ROOT, "stock")
@@ -22,15 +25,13 @@ def run_task(task_type):
         return
 
     try:
-        # Use shell=False for stability, and capture output in logs
-        log_file = os.path.join(ROOT, "logs", f"manual_{task_type}.log")
-        os.makedirs(os.path.dirname(log_file), exist_ok=True)
-
         with open(log_file, "a") as f:
-            f.write(f"\n--- Manual Run Started at {time.ctime()} ---\n")
-            subprocess.Popen(cmd, cwd=cwd, stdout=f, stderr=f)
+            f.write(f"\n--- Manual Run Initiated at {time.ctime()} ---\n")
+            f.flush()
+            p = subprocess.Popen(cmd, cwd=cwd, stdout=f, stderr=f)
+            print(f"Started Process ID: {p.pid}")
 
-        print(f"Successfully started {task_type} scan. Logs: {log_file}")
+        print(f"Successfully started {task_type} scan. Monitor logs: {log_file}")
     except Exception as e:
         print(f"Error starting {task_type}: {e}")
 

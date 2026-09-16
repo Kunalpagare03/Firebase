@@ -95,7 +95,12 @@
 
     window.setView = (v) => { view = v; document.querySelectorAll('.nav-item').forEach(b => b.classList.toggle('active', b.innerText.toLowerCase().includes(v.slice(0,3)))); render(); };
     window.switchSym = (s) => { sym = s; startOpt(); startLive(); };
-    window.triggerScan = async (type) => { try { await setDoc(doc(db, "commands", "latest"), { command: type, timestamp: new Date().toISOString(), processed: false }); alert("Scan Triggered!"); } catch (e) { alert(e.message); } };
+    window.triggerScan = async (type) => {
+        try {
+            await setDoc(doc(db, "commands", "latest"), { command: type, timestamp: new Date().toISOString(), processed: false });
+            alert("Scan Command Sent!");
+        } catch (e) { alert(e.message); }
+    };
 
     function start() {
         startOpt(); startLive();
@@ -104,6 +109,9 @@
             master.stocks = { "intra": d.intraday || [], "swing": d.swing || [], "pos": d.positional || [] };
             master.stocks_ts = d.timestamp;
             if(view !== 'options' && view !== 'admin') render();
+        });
+        onSnapshot(doc(db, "stock_scans", "status"), (snap) => {
+            const d = snap.data(); if (d) { master.scanner_status = d; if(view === 'admin') render(); }
         });
     }
 
@@ -129,7 +137,18 @@
     function render() {
         const container = document.getElementById('main-scroll'); if (!container) return;
         if (view === 'admin') {
-            container.innerHTML = `<div class="card-custom text-center"><h4>Admin Controls</h4><button class="btn btn-dark w-100 fw-bold mt-3" onclick="triggerScan('stock')">RUN FULL STOCK SCAN</button></div>`;
+            const s = master.scanner_status || { status: 'Idle', last_scan_time: '--:--', results: '0' };
+            container.innerHTML = `
+                <div class="card-alert text-center">
+                    <h4>Scanner Command Center</h4>
+                    <div class="my-4">
+                        <div class="small fw-bold text-uppercase muted mb-1">Current Status</div>
+                        <div class="h5 fw-bold" style="color:var(--accent)">${s.status}</div>
+                        <div class="small text-info">${s.results || ''}</div>
+                    </div>
+                    <button class="btn btn-dark w-100 fw-bold py-3 mb-3" onclick="triggerScan('stock')">RUN FULL SCAN (2,800+ STOCKS)</button>
+                    <div class="small muted">Last Scan Finished: ${s.last_scan_time || '--:--'}</div>
+                </div>`;
             return;
         }
         if (view === 'options') {

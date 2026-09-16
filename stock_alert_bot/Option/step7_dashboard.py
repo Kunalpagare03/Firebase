@@ -27,6 +27,15 @@ def build_dashboard(df_prev, df_curr, spot_curr):
     top_strikes["window_call_oi_change"] = top_strikes["strike"].map(previous_by_strike["call_oi"]).rsub(top_strikes["call_oi"]).fillna(0)
     top_strikes["window_put_oi_change"] = top_strikes["strike"].map(previous_by_strike["put_oi"]).rsub(top_strikes["put_oi"]).fillna(0)
 
+    # Map buildup labels from step 6
+    buildup_by_strike = buildup_detail.set_index("strike") if not buildup_detail.empty else pd.DataFrame()
+    if not buildup_by_strike.empty:
+        top_strikes["call_buildup"] = top_strikes["strike"].map(buildup_by_strike["call_buildup"]).fillna("Flat")
+        top_strikes["put_buildup"] = top_strikes["strike"].map(buildup_by_strike["put_buildup"]).fillna("Flat")
+    else:
+        top_strikes["call_buildup"] = "N/A"
+        top_strikes["put_buildup"] = "N/A"
+
     top_strikes["oi_side"] = top_strikes.apply(
         lambda row: "Put-side support" if row["window_put_oi_change"] > row["window_call_oi_change"]
         else "Call-side resistance" if row["window_call_oi_change"] > row["window_put_oi_change"]
@@ -52,10 +61,11 @@ def build_dashboard(df_prev, df_curr, spot_curr):
         "max_pain": max_pain,
         "support_zones": support["strike"].tolist(),
         "resistance_zones": resistance["strike"].tolist(),
-        "top_strikes": top_strikes[["strike", "call_oi", "put_oi", "total_oi", "oi_side"]].to_dict("records"),
+        "top_strikes": top_strikes[["strike", "call_oi", "put_oi", "total_oi", "call_buildup", "put_buildup", "oi_side"]].to_dict("records"),
         "final_signal": final_signal,
         "combined_sentiment_read": f"Leaning {final_signal}" if final_signal != "Neutral" else "Neutral",
-        "deep_dive": perform_deep_dive(df_curr, spot_curr)
+        "deep_dive": perform_deep_dive(df_curr, spot_curr),
+        "oi_buildup_overall": buildup_summary["overall_read"]
     }
     return json_safe(dashboard)
 

@@ -3,80 +3,101 @@ import json
 import os
 import requests
 from io import StringIO
+import re
+
+def clean_name(name):
+    name = str(name).upper()
+    # Remove common corporate suffixes
+    name = re.sub(r' LIMITED| LTD| CORP| CORPORATION| INDUSTRIES| INDS| TRDG| TRADING| SERVICE| SERVICES| TECHNOLOGIES| TECH| INFRASTRUCTURE| INFRA', '', name)
+    return "".join(e for e in name if e.isalnum())
+
+def get_words(name):
+    return set(re.findall(r'\w+', str(name).upper()))
 
 def sync():
-    print("Fetching master symbol lists (NSE + BSE)...")
-    nse_url = "https://archives.nseindia.com/content/equities/EQUITY_L.csv"
-    bse_url = "https://www.bseindia.com/downloads/Help/file/scrip.csv" # BSE is trickier to get directly
-
+    print("Fetching master instrument list (Kite)...")
+    url = "https://api.kite.trade/instruments"
     headers = {"User-Agent": "Mozilla/5.0"}
 
     try:
-        r_nse = requests.get(nse_url, headers=headers)
-        nse_df = pd.read_csv(StringIO(r_nse.text))
+        response = requests.get(url, headers=headers)
+        response.raise_for_status()
+        master_df = pd.read_csv(StringIO(response.text))
     except Exception as e:
-        print(f"Error fetching NSE list: {e}")
+        print(f"Error fetching Kite list: {e}")
         return
 
-    def clean(val):
-        return "".join(e for e in str(val).upper() if e.isalnum())
+    # Filter for Cash Equities on NSE and BSE
+    eq_df = master_df[(master_df['instrument_type'] == 'EQ') & (master_df['segment'] != 'INDICES')]
 
-    # Map NSE: Name -> Symbol
-    nse_mapping = dict(zip(nse_df['NAME OF COMPANY'].apply(clean), nse_df['SYMBOL']))
-    nse_sym_map = dict(zip(nse_df['SYMBOL'].apply(clean), nse_df['SYMBOL']))
+    # Create mapping: Cleaned Name -> [ (symbol, exchange) ]
+    master_data = []
+    for _, row in eq_df.iterrows():
+        name = str(row['name']).upper()
+        symbol = str(row['tradingsymbol']).upper()
+        exch = str(row['exchange']).upper()
 
-    print(f"Loaded {len(nse_mapping)} NSE stocks.")
+        master_data.append({
+            'name': name,
+            'clean': clean_name(name),
+            'words': get_words(name),
+            'sym': symbol,
+            'exch': exch
+        })
+
+    print(f"Loaded {len(master_data)} tradeable equities from Kite.")
 
     # Read User Excel
     excel_path = r"C:\Users\Kunal\Desktop\stocks list sector wise.xlsx"
     user_df = pd.read_excel(excel_path)
 
     new_sector_map = {}
-    found_count = 0
+    found_symbols = set()
     total_requested = 0
 
     for col in user_df.columns:
         sector_name = col.replace(" stocks", "").upper()
         companies = user_df[col].dropna().unique()
         total_requested += len(companies)
-        symbols = []
+        sector_symbols = []
 
         for company in companies:
-            cl = clean(company)
-            # Match 1: Name match in NSE
-            if cl in nse_mapping:
-                symbols.append(f"{nse_mapping[cl]}.NS")
-                found_count += 1
-            # Match 2: Symbol match in NSE (in case user put symbol as name)
-            elif cl in nse_sym_map:
-                symbols.append(f"{nse_sym_map[cl]}.NS")
-                found_count += 1
-            else:
-                # Match 3: Partial name match
-                matched = False
-                for nse_name, sym in nse_mapping.items():
-                    if cl in nse_name or nse_name in cl:
-                        symbols.append(f"{sym}.NS")
-                        found_count += 1
-                        matched = True
-                        break
+            cl_comp = clean_name(company)
+            words_comp = get_words(company)
 
-                if not matched:
-                    # If it's a numeric code, it might be a BSE symbol
-                    if cl.isdigit() and len(cl) == 6:
-                        symbols.append(f"{cl}.BO")
-                        found_count += 1
+            matched_full_sym = None
 
-        if symbols:
-            new_sector_map[sector_name] = sorted(list(set(symbols)))
+            # Match 1: Clean Name match
+            for item in master_data:
+                if cl_comp == item['clean']:
+                    matched_full_sym = f"{item['sym']}.{'NS' if item['exch'] == 'NSE' else 'BO'}"
+                    break
 
-    print(f"Targeting {total_requested} stocks from Excel.")
-    print(f"Successfully mapped {found_count} stocks to live symbols.")
+            # Match 2: Partial/Word overlap
+            if not matched_full_sym:
+                for item in master_data:
+                    overlap = words_comp.intersection(item['words'])
+                    if len(overlap) >= 2 or (len(words_comp) == 1 and list(words_comp)[0] in item['words']):
+                        common = {'THE', 'AND', 'INDIA', 'LIMITED', 'LTD'}
+                        meaningful = overlap - common
+                        if len(meaningful) >= 1:
+                            matched_full_sym = f"{item['sym']}.{'NS' if item['exch'] == 'NSE' else 'BO'}"
+                            break
+
+            if matched_full_sym:
+                sector_symbols.append(matched_full_sym)
+                found_symbols.add(matched_full_sym)
+
+        if sector_symbols:
+            new_sector_map[sector_name] = sorted(list(set(sector_symbols)))
+
+    print(f"Targeting {total_requested} unique entries from Excel.")
+    print(f"Successfully mapped {len(found_symbols)} unique symbols (NSE + BSE).")
 
     # Update sector_map.py
     map_path = os.path.join(os.path.dirname(__file__), "utils", "sector_map.py")
     with open(map_path, "w") as f:
-        f.write("# Updated Full Sector Map\n")
+        f.write("# Auto-generated Multi-Exchange Sector Map\n")
         f.write("SECTOR_MAP = " + json.dumps(new_sector_map, indent=4) + "\n\n")
         f.write("def get_sector(symbol):\n")
         f.write("    for sector, symbols in SECTOR_MAP.items():\n")

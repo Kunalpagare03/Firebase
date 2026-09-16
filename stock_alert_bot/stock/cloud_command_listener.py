@@ -7,7 +7,8 @@ import sys
 
 # Setup Path
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-PYTHON_EXE = sys.executable
+# Force use of .venv python to ensure environment consistency
+PYTHON_EXE = os.path.join(ROOT, ".venv", "Scripts", "python.exe")
 
 def run_task(task_type):
     print(f"--- Triggering Manual Run: {task_type} ---")
@@ -15,23 +16,28 @@ def run_task(task_type):
         cmd = [PYTHON_EXE, "live_stock_scanner.py"]
         cwd = os.path.join(ROOT, "stock")
     elif task_type == "option":
-        # Check if we should run the scheduler or the runner
         cmd = [PYTHON_EXE, "step7_dashboard.py"]
         cwd = os.path.join(ROOT, "Option")
     else:
         return
 
     try:
-        subprocess.Popen(cmd, cwd=cwd)
-        print(f"Successfully started {task_type} scan in background.")
+        # Use shell=False for stability, and capture output in logs
+        log_file = os.path.join(ROOT, "logs", f"manual_{task_type}.log")
+        os.makedirs(os.path.dirname(log_file), exist_ok=True)
+
+        with open(log_file, "a") as f:
+            f.write(f"\n--- Manual Run Started at {time.ctime()} ---\n")
+            subprocess.Popen(cmd, cwd=cwd, stdout=f, stderr=f)
+
+        print(f"Successfully started {task_type} scan. Logs: {log_file}")
     except Exception as e:
         print(f"Error starting {task_type}: {e}")
 
 def listen():
     print("Starting Cloud Command Listener...")
-    print("Waiting for triggers from mobile app...")
+    print(f"Using Python: {PYTHON_EXE}")
 
-    # Initialize Firebase
     cred_path = os.path.join(ROOT, "service-account.json")
     if not firebase_admin._apps:
         cred = credentials.Certificate(cred_path)
@@ -57,7 +63,6 @@ def listen():
 
     doc_ref.on_snapshot(on_snapshot)
 
-    # Keep the script alive
     while True:
         time.sleep(1)
 

@@ -9,18 +9,14 @@ log = logging.getLogger("brokers.angel_one")
 
 _SYMBOL_TOKENS = {
     "NIFTY": ("1", "99926000"),
-    "NIFTY 50": ("1", "99926000"),
-    "NSEI": ("1", "99926000"),
     "BANKNIFTY": ("1", "99926009"),
-    "NSEBANK": ("1", "99926009"),
-    "FINNIFTY": ("1", "99926037"),
-    "SENSEX": ("3", "99919000"),
 }
 
 _latest_spot = {}
 _latest_tick_at = {}
 _feed_started = set()
 _feed_errors = {}
+_last_start_attempt = {}
 _feed_lock = threading.Lock()
 
 
@@ -57,12 +53,11 @@ def _start_feed(symbol):
             return
         value = message.get("last_traded_price")
         if value is not None:
-            # SmartAPI V2 returns price as integer multiplied by 100 or float.
-            # We normalize to handle both.
+            # SmartAPI V2 price is LTP * 100
             spot = float(value) / 100.0 if float(value) > 100000 else float(value)
             _latest_spot[symbol] = spot
             _latest_tick_at[symbol] = time.monotonic()
-            log.info(f"Tick Received: {symbol} -> {spot}")
+            log.info(f"LIVE TICK [{symbol}]: {spot}")
 
     def on_open(wsapp):
         socket.subscribe(
@@ -75,7 +70,9 @@ def _start_feed(symbol):
         log.warning("Angel One WebSocket error: %s", error)
 
     def on_close(*_):
-        log.warning("Angel One WebSocket closed")
+        log.warning("Angel One WebSocket closed for %s", symbol)
+        with _feed_lock:
+            _feed_started.discard(symbol)
 
     socket.on_data = on_data
     socket.on_open = on_open
@@ -89,13 +86,21 @@ def start_live_feed(symbol="NIFTY"):
     symbol = symbol.upper()
     if symbol not in _SYMBOL_TOKENS or not _credentials_available():
         return False
+
+    now = time.monotonic()
     with _feed_lock:
+        # Prevent spamming logins (60s cooldown between attempts per symbol)
         if symbol in _feed_started:
             return True
+        if now - _last_start_attempt.get(symbol, 0) < 60:
+            return False
+
         _feed_started.add(symbol)
+        _last_start_attempt[symbol] = now
 
     def run():
         try:
+            log.info(f"Initializing Angel Feed for {symbol}")
             _start_feed(symbol)
         except Exception as exc:
             log.warning("Angel One live feed unavailable: %s", exc)
@@ -109,15 +114,20 @@ def start_live_feed(symbol="NIFTY"):
 
 def get_latest_spot(symbol="NIFTY"):
     """Return the latest Angel One tick, or None until the feed receives one."""
-    return _latest_spot.get(symbol.upper())
+    val = _latest_spot.get(symbol.upper())
+    tick_at = _latest_tick_at.get(symbol.upper(), 0)
+
+    # If feed died (no ticks for 30s), try to restart
+    if val is None or (time.monotonic() - tick_at > 30):
+         start_live_feed(symbol)
+    return val
 
 
 def get_live_status(symbol="NIFTY"):
     symbol = symbol.upper()
     tick_at = _latest_tick_at.get(symbol)
     return {
-        "credentials_configured": _credentials_available(),
         "connected": symbol in _feed_started and tick_at is not None,
-        "tick_age_seconds": round(time.monotonic() - tick_at, 1) if tick_at else None,
+        "tick_age": round(time.monotonic() - tick_at, 1) if tick_at else None,
         "error": _feed_errors.get(symbol),
     }

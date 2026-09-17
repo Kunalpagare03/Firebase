@@ -22,7 +22,6 @@ def calculate_rsi(series, period=14):
 
 def analyze_stock(symbol):
     try:
-        # Use 1y period for EMA 200 stability
         ticker = yf.Ticker(symbol)
         df = ticker.history(period="1y", interval="1d")
         if df.empty or len(df) < 200: return None, None, None
@@ -54,8 +53,8 @@ def analyze_stock(symbol):
         rating = min(10, score)
 
         # Target/SL
-        target = round(entry * 1.05, 2)
-        sl = round(entry * 0.97, 2)
+        target = round(entry * 1.03, 2)
+        sl = round(entry * 0.98, 2)
 
         base_info = {
             "symbol": symbol,
@@ -68,20 +67,19 @@ def analyze_stock(symbol):
             "rating": f"{rating}/10",
             "rsi": round(curr['rsi'], 1),
             "vol_ratio": round(vol_ratio, 1),
-            "justification": f"{'Bullish' if change_pct > 0 else 'Bearish'} momentum with {round(vol_ratio, 1)}x vol. RSI {round(curr['rsi'], 1)}.",
+            "justification": f"{'Bullish' if change_pct > 0 else 'Bearish'} Momentum with {round(vol_ratio, 1)}x Vol spike. RSI at {round(curr['rsi'], 1)}.",
             "ema20": round(df['ema20'].iloc[-1], 2),
             "ema200": round(df['ema200'].iloc[-1], 2),
-            "strategy": "Breakout" if curr['Close'] > high_52w * 0.95 else "Trend Follow"
+            "strategy": "Breakout" if curr['Close'] > high_52w * 0.95 else "Trend Following"
         }
 
-        # Filtering Logic
-        intra = {**base_info, "recommendation": "INTRA BUY"} if change_pct > 1.5 and vol_ratio > 1.5 else None
-        swing = {**base_info, "recommendation": "SWING ENTRY"} if rating >= 8 and curr['Close'] > df['ema20'].iloc[-1] else None
-        pos = {**base_info, "recommendation": "POS HOLD"} if rating >= 9 and df['ema50'].iloc[-1] > df['ema200'].iloc[-1] else None
+        # Filtering Logic (Restored to Stable State)
+        intra = {**base_info, "recommendation": "INTRA-DAY BUY"} if change_pct > 1.0 and vol_ratio > 1.2 else None
+        swing = {**base_info, "recommendation": "SWING ACCUMULATE"} if rating >= 7 and curr['Close'] > df['ema20'].iloc[-1] else None
+        pos = {**base_info, "recommendation": "LONG TERM HOLD"} if rating >= 8 and df['ema50'].iloc[-1] > df['ema200'].iloc[-1] else None
 
         return intra, swing, pos
-    except:
-        return None, None, None
+    except: return None, None, None
 
 def run_live_scan():
     intra_list, swing_list, pos_list = [], [], []
@@ -97,15 +95,14 @@ def run_live_scan():
 
     print(f"Executing Global Terminal Scan: {len(WATCHLIST)} symbols...")
 
-    # Reduced workers to 10 to avoid Yahoo Finance rate limiting
+    # Using 10 workers for stability
     with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
         future_to_stock = {executor.submit(analyze_stock, sym): sym for sym in WATCHLIST}
         count = 0
         for future in concurrent.futures.as_completed(future_to_stock):
             count += 1
             if count % 100 == 0:
-                elapsed = time.time() - start_time
-                print(f"Scanned {count}/{len(WATCHLIST)} stocks... ({int(elapsed)}s)")
+                print(f"Scanned {count}/{len(WATCHLIST)} stocks...")
 
             try:
                 res = future.result()
@@ -114,11 +111,7 @@ def run_live_scan():
                     if i: intra_list.append(i)
                     if s: swing_list.append(s)
                     if p: pos_list.append(p)
-            except Exception as e:
-                pass # Silently handle individual stock fetch errors
-
-    duration = time.time() - start_time
-    print(f"Scan complete in {int(duration/60)}m. Found {len(intra_list)} Intra, {len(swing_list)} Swing.")
+            except: pass
 
     # Sort results by rating (Highest first)
     intra_list = sorted(intra_list, key=lambda x: int(x['rating'].split('/')[0]), reverse=True)
@@ -140,7 +133,6 @@ def run_live_scan():
         "last_scan_time": report["timestamp"],
         "results": f"{len(intra_list)} Intra, {len(swing_list)} Swing"
     })
-
     print(f"Terminal Sync Complete at {report['timestamp']}.")
 
 if __name__ == "__main__":

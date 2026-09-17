@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>StockPro | Master Terminal v76.0</title>
+    <title>StockPro | Master Terminal v77.0</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
@@ -16,7 +16,7 @@
         .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--txt-dim); font-size: 0.7rem; font-weight: 700; border: none; background: none; outline: none; cursor: pointer; }
         .nav-item.active { color: var(--accent); background: #f1f6f4; }
         .nav-item i { font-size: 1.3rem; margin-bottom: 2px; }
-        #main-scroll { padding: 12px; padding-bottom: 85px; max-width: 1200px; margin: 0 auto; }
+        #main-scroll { padding: 15px; padding-bottom: 85px; max-width: 1200px; margin: 0 auto; }
         .meta-text { font-size: 0.68rem; color: var(--txt-dim); line-height: 1.6; margin-bottom: 10px; background: rgba(255,255,255,0.4); padding: 8px; border-radius: 6px; }
 
         .card-manual { border: 1px solid var(--border); padding: 15px; border-radius: 10px; margin-bottom: 14px; background: #ffffff; box-shadow: 0 4px 12px rgba(0,0,0,0.03); }
@@ -42,11 +42,8 @@
         .spot-hl { color: #2563eb !important; font-family: monospace; font-size: 1.15rem; font-weight: 900; }
         .analysis-block { font-size: 0.85rem; line-height: 1.8; color: var(--txt-main); }
         .analysis-row { margin-bottom: 2px; border-bottom: 1px solid #f5f5f5; padding: 2px 0; }
-        .analysis-row strong { color: var(--accent); min-width: 110px; display: inline-block; }
+        .analysis-row strong { color: var(--accent); min-width: 125px; display: inline-block; }
         .chart-box { background: #fbfcfd; border: 1px solid #c9d9d9; border-radius: 5px; margin-bottom: 1rem; height: 380px; width: 100%; }
-        .tf-ctrls { display: flex; gap: 6px; margin-bottom: 8px; }
-        .tf-btn { border: 1px solid #b9c9cd; background: #fff; color: #31525d; border-radius: 4px; padding: 6px 11px; font-size: .88rem; cursor: pointer; }
-        .tf-btn.active { background: #153f4c; color: #fff; border-color: #153f4c; }
         .table-pro { width: 100%; font-size: 0.85rem; border-collapse: collapse; background: #fff; }
         .table-pro th { background: #f8fbfc; padding: 12px; color: var(--txt-dim); border-bottom: 1px solid var(--border); text-align: left; }
         .table-pro td { padding: 12px; border-bottom: 1px solid #eee; text-align: left; font-weight: 600; }
@@ -162,7 +159,7 @@
             let oi = ''; (d.top_strikes || []).forEach(r => { oi += `<tr><td>${r.strike}</td><td>${r.call_oi}</td><td>${r.put_oi}</td><td>${r.total_oi}</td><td>${r.call_buildup||'-'}</td><td>${r.put_buildup||'-'}</td><td>${(r.oi_side||'N/A').split(' ')[0]}</td></tr>`; });
 
             container.innerHTML = `
-                <div class="meta-text"><span class="dot"></span> LIVE TERMINAL [${symbol}] • SYNC: ${d.fetched_at}</div>
+                <div class="meta-text">Chain: nse-fallback | Spot: Live | <span class="dot"></span> LIVE TICK [${symbol}] | Refreshed: ${d.fetched_at}<br>Market status: OPEN | market open | ${d.fetched_at}</div>
                 <div class="card-manual">
                     <div class="mb-3 d-flex align-items-center gap-2">
                         <span class="fw-bold small muted">Instrument</span>
@@ -177,26 +174,44 @@
                 </div>
 
                 <div class="sig-header"><span>Directional signal</span><span class="sig-badge ${sig==='Bullish'?'bg-bull':'bg-bear'}">${sig}</span></div>
-                <div class="card-custom"><strong>Action alert:</strong> <span id="tradeAction" class="${alert.action?.includes('CALL')?'alert-bullish':(alert.action?.includes('PUT')?'alert-bearish':'alert-wait')}">${alert.action || 'WAIT'}</span><br><div class="muted small mt-1">RSI: ${tech.rsi || '-'} | MACD: ${tech.macd || '-'} | Trend: ${tech.trendline || '-'}</div></div>
+                <div class="card-custom"><strong>Action alert:</strong> <span id="tradeAction" class="${alert.action?.includes('CALL')?'alert-bullish':(alert.action?.includes('PUT')?'alert-bearish':'alert-wait')}">${alert.action || 'WAIT'}</span><br><span class="muted small">Trigger: ${alert.trigger || 'Wait for break'}</span><br><div class="muted small mt-1">RSI: ${tech.rsi || '-'} | MACD: ${tech.macd || '-'} | Trend: ${tech.trendline || '-'} | Candle: ${tech.candle || '-'}</div></div>
 
                 <div class="metrics-grid">
                     <div class="m-box"><span class="m-lbl">Spot:</span><span class="m-val spot-hl" id="live-spot-val">${liveSpot}</span></div>
                     <div class="m-box"><span class="m-lbl">Max pain:</span><span class="m-val">${d.max_pain}</span></div>
                     <div class="m-box"><span class="m-lbl">PCR (OI):</span><span class="m-val">${d.pcr_oi}</span></div>
-                    <div class="m-box"><span class="m-lbl">Final Signal:</span><span class="m-val">${sig}</span></div>
+                    <div class="m-box"><span class="m-lbl">PCR (vol):</span><span class="m-val">${d.pcr_volume || '0.0'}</span></div>
+                    <div class="m-box"><span class="m-lbl">Final signal:</span><span class="m-val">${sig}</span></div>
                 </div>
 
                 <div class="card-custom analysis-block">
                     <div class="analysis-row"><strong>Market read:</strong> <span>${d.combined_sentiment_read}</span></div>
                     <div class="analysis-row"><strong>Chart structure:</strong> <span>${d.price_structure?.pattern || 'Range'}</span></div>
-                    <div class="analysis-row"><strong>Detected Pattern:</strong> <span class="text-info fw-bold">${d.price_structure?.chart_pattern || 'Analyzing...'}</span></div>
+                    <div class="analysis-row"><strong>Detected Pattern:</strong> <span class="text-info fw-bold" style="background:rgba(56, 189, 248, 0.1); padding:2px 6px; border-radius:4px;">${d.price_structure?.chart_pattern || 'Analyzing...'}</span></div>
                     <div class="analysis-row"><strong>Support:</strong> <span>${(d.support_zones||[]).join(', ')}</span> <strong>Resist:</strong> <span>${(d.resistance_zones||[]).join(', ')}</span></div>
-                    <div class="analysis-row"><strong>Flow:</strong> <span>${d.market_read || 'Neutral'}</span></div>
+                    <div class="analysis-row"><strong>Flow:</strong> <span>${d.vol_flow || 'Neutral'}</span></div>
                     <div class="analysis-row"><strong>Trend Logic:</strong> <span>${d.decision_note || '-'}</span></div>
+
+                    <div class="mt-2 pt-2 border-top">
+                        <div class="analysis-row text-primary"><strong>Call Buy Strike:</strong> <span class="fw-bold">${d.delta_recommendations?.call?.buy_strike || '--'}</span></div>
+                        <div class="analysis-row text-danger"><strong>Put Buy Strike:</strong> <span class="fw-bold">${d.delta_recommendations?.put?.buy_strike || '--'}</span></div>
+                        <div class="small muted"><em>*ITM strikes selected for maximum Delta impact.</em></div>
+                    </div>
+
+                    <div class="countdown" style="color:#b32727; font-weight:800; margin-top:5px;">Next trend analysis active.</div>
+
+                    <!-- Additional Technical Deltas (Hidden in screenshot, but kept for depth) -->
+                    <div class="analysis-row mt-2 small muted"><strong>OI buildup:</strong> ${d.oi_buildup_overall || 'Neutral'}</div>
+                    <div class="analysis-row small muted"><strong>OI trend:</strong> ${d.oi_trend || 'N/A'}</div>
+                    <div class="analysis-row small muted"><strong>OI directional read:</strong> ${d.oi_directional_read || ''}</div>
+                    <div class="analysis-row small muted"><strong>Manipulation risk:</strong> ${d.manipulation_risk || 'Low'}</div>
                 </div>
 
+                <div class="card-custom"><span class="card-title">Price Action</span><div class="metrics-grid"><div class="m-box"><span class="m-lbl">Close:</span><span class="m-val">${p.close||'-'}</span></div><div class="m-box"><span class="m-lbl">Daily change:</span><span class="m-val">${p.change||'0'} (${p.change_pct||'0'}%)</span></div><div class="m-box"><span class="m-lbl">20-SMA:</span><span class="m-val">${p.sma20||'--'}</span></div><div class="m-box"><span class="m-lbl">Read:</span><span class="m-val small">${p.reading||'Mixed'}</span></div><div class="m-box"><span class="m-lbl">Intraday read:</span><span class="m-val small">${p.intraday_read || 'Mixed'}</span></div></div></div>
+                <div class="card-custom"><span class="card-title">ATM Greeks</span><div class="metrics-grid"><div class="m-box"><span class="m-lbl">Strike:</span><span class="m-val">${g.strike||'--'}</span></div><div class="m-box"><span class="m-lbl">Call delta:</span><span class="m-val">${g.call_delta||'0'}</span></div><div class="m-box"><span class="m-lbl">Put delta:</span><span class="m-val">${g.put_delta||'0'}</span></div><div class="m-box"><span class="m-lbl">Gamma:</span><span class="m-val">${g.gamma||'0'}</span></div><div class="m-box"><span class="m-lbl">Vega / 1%:</span><span class="m-val">${g.vega_per_1pct||'0'}</span></div><div class="m-box"><span class="m-lbl">Trend:</span><span class="m-val small">${g.trend||'--'}</span></div><div class="m-box"><span class="m-lbl">Read:</span><span class="m-val small">${g.reading||'--'}</span></div></div></div>
+
                 <div class="card-custom"><span class="card-title">Live 5-minute candlestick chart</span><div class="tf-ctrls"><button class="tf-btn ${tf===5?'active':''}" onclick="setTF(5)">5m</button><button class="tf-btn ${tf===15?'active':''}" onclick="setTF(15)">15m</button><button class="tf-btn ${tf===30?'active':''}" onclick="setTF(30)">30m</button><button class="tf-btn ${tf===60?'active':''}" onclick="setTF(60)">1h</button></div><div id="chart" class="chart-box"></div></div>
-                <div class="card-custom"><span class="card-title">Top strikes</span><div class="table-wrap"><table class="table-pro"><thead><tr><th>Strike</th><th>C-OI</th><th>P-OI</th><th>Total</th><th>C-Bld</th><th>P-Bld</th><th>Side</th></tr></thead><tbody>${oi}</tbody></table></div></div>
+                <div class="card-custom"><span class="card-title">Top strikes by total OI</span><div class="table-wrap"><table class="table-pro"><thead><tr><th>Strike</th><th>Call OI</th><th>Put OI</th><th>Total OI</th><th>Call OI build</th><th>Put OI build</th><th>OI side</th></tr></thead><tbody>${oi}</tbody></table></div></div>
             `;
             if((d.spot_history || []).length > 1) {
                 requestAnimationFrame(() => {

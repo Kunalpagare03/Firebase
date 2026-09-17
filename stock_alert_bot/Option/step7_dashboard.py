@@ -64,6 +64,23 @@ def build_dashboard(df_prev, df_curr, spot_curr):
     # New Field: OI Trend Strength
     oi_trend = "Strong" if abs(pcr["pcr_oi"] - 1) > 0.15 else "Moderate" if abs(pcr["pcr_oi"] - 1) > 0.05 else "Stable"
 
+    # High Delta Strike Recommendations (Buy-side institutional choice)
+    step = 50 if spot_curr < 30000 else 100 # Nifty vs BankNifty step
+    atm_strike = round(spot_curr / step) * step
+
+    delta_reco = {
+        "call": {
+            "buy_strike": int(atm_strike - step), # Slightly ITM for high delta buying
+            "sell_strike": int(atm_strike + step), # Slightly OTM for premium decay
+            "note": "Buy strike provides ~0.6-0.7 Delta for max move."
+        },
+        "put": {
+            "buy_strike": int(atm_strike + step), # Slightly ITM for high delta buying
+            "sell_strike": int(atm_strike - step), # Slightly OTM for premium decay
+            "note": "Buy strike provides ~(-0.6) Delta for sharp drop."
+        }
+    }
+
     dashboard = {
         "spot_price": spot_curr,
         "pcr_oi": round(pcr["pcr_oi"], 3) if pcr["pcr_oi"] else 0,
@@ -76,6 +93,7 @@ def build_dashboard(df_prev, df_curr, spot_curr):
         "combined_sentiment_read": f"Leaning {final_signal}" if final_signal != "Neutral" else "Neutral",
         "oi_directional_read": oi_dir,
         "oi_trend": oi_trend,
+        "delta_recommendations": delta_reco,
         "deep_dive": perform_deep_dive(df_curr, spot_curr),
         "oi_buildup_overall": buildup_summary["overall_read"]
     }

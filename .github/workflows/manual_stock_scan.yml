@@ -1,4 +1,4 @@
-name: Manual Stock Scan (Triggered from App)
+name: Manual Cloud Terminal Sync
 
 on:
   repository_dispatch:
@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  scan:
+  terminal-sync:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -19,18 +19,23 @@ jobs:
 
       - name: Install dependencies
         run: |
-          cd stock_alert_bot/stock
-          pip install yfinance pandas numpy firebase-admin requests openpyxl
+          pip install yfinance pandas numpy firebase-admin requests openpyxl pyotp SmartApi-python
 
       - name: Create service-account.json
         run: echo '${{ secrets.FIREBASE_SERVICE_ACCOUNT }}' > stock_alert_bot/service-account.json
 
-      - name: Run Global Parallel Scan
+      - name: Run Global Cloud Sync
         env:
-          PYTHONPATH: ${{ github.workspace }}/stock_alert_bot/stock
+          PYTHONPATH: ${{ github.workspace }}/stock_alert_bot/Option:${{ github.workspace }}/stock_alert_bot/stock
+          ANGEL_API_KEY: ${{ secrets.ANGEL_API_KEY }}
+          ANGEL_CLIENT_CODE: ${{ secrets.ANGEL_CLIENT_CODE }}
+          ANGEL_PIN: ${{ secrets.ANGEL_PIN }}
+          ANGEL_TOTP_SECRET: ${{ secrets.ANGEL_TOTP_SECRET }}
         run: |
-          cd stock_alert_bot/stock
-          # Set status to scanning
-          python -c "import firebase_admin; from firebase_admin import credentials, firestore; cred = credentials.Certificate('../service-account.json'); firebase_admin.initialize_app(cred); db = firestore.client(); db.collection('stock_scans').document('status').set({'status': 'Cloud Scanning...', 'progress': 'Working'})"
-          # Run the actual scanner
+          # 1. Update Option Sentiment First (Fast)
+          cd stock_alert_bot/Option
+          python step7_dashboard.py
+          
+          # 2. Run Full Stock Scanner (Comprehensive)
+          cd ../stock
           python live_stock_scanner.py

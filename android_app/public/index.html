@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>StockPro | Terminal v58.1</title>
+    <title>StockPro | Terminal v65.0</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
@@ -13,47 +13,45 @@
         .navbar { background: rgba(255,255,255,0.9); border-bottom: 1px solid var(--border); backdrop-filter: blur(10px); position: sticky; top: 0; z-index: 1000; }
         .navbar-brand { color: var(--accent) !important; font-weight: 800; font-size: 1.5rem; }
         .bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; background: #ffffff; display: flex; border-top: 1px solid var(--border); z-index: 1000; height: 65px; box-shadow: 0 -5px 20px rgba(0,0,0,0.05); }
-        .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--txt-dim); font-size: 0.7rem; font-weight: 700; border: none; background: none; outline: none; }
+        .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--txt-dim); font-size: 0.7rem; font-weight: 700; border: none; background: none; outline: none; cursor: pointer; }
         .nav-item.active { color: var(--accent); background: #f1f6f4; }
         .nav-item i { font-size: 1.3rem; margin-bottom: 2px; }
         #main-scroll { padding: 15px; padding-bottom: 85px; max-width: 1200px; margin: 0 auto; }
-        .meta-text { font-size: 0.72rem; color: var(--txt-dim); line-height: 1.6; margin-bottom: 15px; }
         .card-custom { border: 1px solid var(--border); padding: 18px; border-radius: 6px; margin-bottom: 14px; background: rgba(255,255,255,0.88); box-shadow: 0 8px 24px rgba(31,57,64,.08); }
         .sig-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 18px; border: 1px solid #83aab0; border-radius: 8px; background: #153f4c; color: #fff; margin: 10px 0 14px; font-weight: 800; font-size: 1.2rem; }
         .sig-badge { padding: 9px 15px; border-radius: 5px; background: #69777b; color: #fff; min-width: 140px; text-align: center; text-transform: uppercase; }
-        #tradeAction { display: inline-block; padding: 6px 10px; border-radius: 4px; font-weight: 800; font-size: 1rem; margin-bottom: 8px; }
-        .alert-bullish { background: #d9f2e5; color: #12613b; }
-        .alert-bearish { background: #f9dede; color: #8f2020; }
-        .alert-wait { background: #f4ead0; color: #755519; }
+        .bg-bull { background: var(--bull); }
+        .bg-bear { background: var(--bear); }
         .metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; margin-bottom: 10px; }
         .m-box { padding: 10px 12px; background: #f1f6f4; border-left: 4px solid #64a99b; border-radius: 4px; border: 1px solid var(--border); border-left-width: 4px; }
         .m-lbl { font-size: 0.85rem; font-weight: 800; color: #123b4a; margin-right: 5px; }
         .m-val { font-size: 0.95rem; font-weight: 700; color: var(--txt-main); }
         .spot-hl { color: #2563eb !important; font-family: monospace; font-size: 1.15rem; font-weight: 900; }
-        .analysis-block { font-size: 0.85rem; line-height: 1.8; color: var(--txt-main); }
-        .analysis-row { margin-bottom: 2px; }
-        .analysis-row strong { color: var(--accent); }
         .chart-box { background: #fbfcfd; border: 1px solid #c9d9d9; border-radius: 5px; margin-bottom: 1rem; height: 380px; width: 100%; }
-        .table-wrap { overflow-x: auto; border-radius: 8px; border: 1px solid var(--border); margin-top: 10px; }
-        .table-pro { width: 100%; font-size: 0.85rem; border-collapse: collapse; background: #fff; }
-        .table-pro th { background: #f8fbfc; padding: 12px; color: var(--txt-dim); border-bottom: 1px solid var(--border); text-align: left; }
-        .table-pro td { padding: 12px; border-bottom: 1px solid #eee; text-align: left; font-weight: 600; }
         .stk-btn { width: 100%; background: #fff; border: 1px solid var(--border); border-radius: 8px; padding: 15px; margin-bottom: 12px; text-align: left; border-left: 6px solid transparent; }
-        .price-col { font-size: 0.75rem; color: var(--txt-dim); font-weight: 800; text-align: center; }
-        .price-col span { display: block; font-size: 1rem; font-weight: 900; color: var(--accent); }
+        .price-strip { display: flex; justify-content: space-around; margin-top: 10px; padding-top: 10px; border-top: 1px solid #eee; }
+        .price-item { font-size: 0.75rem; color: var(--txt-dim); font-weight: 800; text-align: center; }
+        .price-item span { display: block; font-size: 1rem; font-weight: 900; color: var(--accent); }
         #detail-view { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg-main); z-index: 2000; padding: 20px; overflow-y: auto; }
-        .back-btn { background: var(--accent); color: #fff; border: none; padding: 10px 20px; border-radius: 4px; font-weight: 800; margin-bottom: 20px; }
-        .admin-config { background: #153f4c; color: #fff; padding: 20px; border-radius: 10px; margin-bottom: 15px; }
-        .scan-trigger { background: #10b981; color: #fff; border: none; padding: 18px; border-radius: 8px; font-weight: 900; width: 100%; font-size: 1.1rem; box-shadow: 0 4px 15px rgba(16,185,129,0.3); }
-        #login-overlay { max-width: 450px; margin: 100px auto; padding: 25px; }
-        .dot { height: 7px; width: 7px; background: #10b981; border-radius: 50%; display: inline-block; margin-right: 4px; animation: blink 1.5s infinite; }
-        @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
+        .back-btn { background: var(--accent); color: #fff; border: none; padding: 10px 20px; border-radius: 4px; font-weight: 800; margin-bottom: 20px; cursor: pointer; }
+        .run-ctrls { display: flex; gap: 10px; margin-top: 10px; }
+        .run-btn { flex: 1; padding: 10px; font-weight: 800; border-radius: 6px; border: none; background: var(--accent); color: #fff; font-size: 0.8rem; }
     </style>
 </head>
 <body>
-<div id="login-overlay"><div class="card p-4 text-center shadow-lg"><h2 class="fw-bold mb-4" style="color:var(--accent)">STOCKPRO TERMINAL</h2><input type="email" id="email" class="form-control mb-3" placeholder="Email"><input type="password" id="password" class="form-control mb-4" placeholder="Access Key"><button id="login-btn" class="btn btn-dark w-100 fw-bold py-2">LOGIN</button><div id="login-status" class="mt-3 small" style="display:none"></div></div></div>
-<div id="app-shell" style="display: none;">
-    <nav class="navbar navbar-light sticky-top px-3 py-2"><span class="navbar-brand">Live Option Chain Market Analysis</span></nav>
+
+<div id="login-overlay" style="display:none">
+    <div class="card p-4 text-center shadow-lg" style="max-width:400px; margin:100px auto;">
+        <h2 class="fw-bold mb-4" style="color:var(--accent)">STOCKPRO HUB</h2>
+        <input type="email" id="email" class="form-control mb-3" placeholder="Email">
+        <input type="password" id="password" class="form-control mb-4" placeholder="Terminal Key">
+        <button id="login-btn" class="btn btn-dark w-100 fw-bold py-2">LOGIN</button>
+        <div id="login-error" class="text-danger small mt-2"></div>
+    </div>
+</div>
+
+<div id="app-shell" style="display:none">
+    <nav class="navbar navbar-light sticky-top px-3 py-2"><span class="navbar-brand">Professional Trading Hub</span><button id="logout-btn" class="btn btn-sm btn-outline-secondary"><i class="bi bi-power"></i></button></nav>
     <div id="main-scroll"></div>
     <div class="bottom-nav">
         <button class="nav-item active" onclick="setView('options')"><i class="bi bi-graph-up"></i>OPTIONS</button>
@@ -63,142 +61,165 @@
         <button class="nav-item" onclick="setView('admin')"><i class="bi bi-gear-fill"></i>SCAN</button>
     </div>
 </div>
-<div id="detail-view"><button class="back-btn" onclick="document.getElementById('detail-view').style.display='none'"><i class="bi bi-arrow-left"></i> BACK TO HUB</button><div id="detail-body"></div></div>
+
+<div id="detail-view">
+    <button class="back-btn" onclick="document.getElementById('detail-view').style.display='none'"><i class="bi bi-arrow-left"></i> BACK</button>
+    <div id="detail-body"></div>
+</div>
+
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
     import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
     import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
     const config = { apiKey: "AIzaSyDMEUmFGSJBjGrz7fpDN46OiZlSJ6NTsjE", authDomain: "kunal-analysis.firebaseapp.com", projectId: "kunal-analysis", storageBucket: "kunal-analysis.firebasestorage.app", appId: "1:328297105533:web:3ed3d8d5aa3ec677b88914" };
     const app = initializeApp(config); const auth = getAuth(app); const db = getFirestore(app);
-    let view = 'options'; let symbol = 'NIFTY'; let tf = 5;
-    let master = { opt: {}, stocks: {}, live: { NIFTY: '-', BANKNIFTY: '-' } };
-    let unsub = { opt: null, stocks: null };
-    const STORAGE_KEY = 'stockpro_gh_token';
-    function saveToken(token) { localStorage.setItem(STORAGE_KEY, token); }
-    function getToken() { return localStorage.getItem(STORAGE_KEY) || ""; }
+    let currentView = 'options'; let currentSymbol = 'NIFTY';
+    let masterData = { opt: {}, stocks: {}, live: { NIFTY: '-', BANKNIFTY: '-' } };
+    let unsubscribes = { opt: null, stocks: null, status: null };
 
-    async function fetchSpot() {
-        try {
-            const symCode = symbol === 'NIFTY' ? '%5ENSEI' : '%5ENSEBANK';
-            const r = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${symCode}?interval=1m&range=1d`);
-            const j = await r.json();
-            const p = j.chart.result[0].indicators.quote[0].close.filter(x => x).pop();
-            master.live[symbol] = p.toFixed(2);
-            const el = document.getElementById('live-spot-val'); if(el) { el.innerText = master.live[symbol]; el.classList.add('spot-hl'); }
-        } catch(e) { }
-    }
-    setInterval(fetchSpot, 2000);
+    const STORAGE_KEY = 'stockpro_gh_token';
+    const getToken = () => localStorage.getItem(STORAGE_KEY) || "";
 
     setPersistence(auth, browserLocalPersistence);
     onAuthStateChanged(auth, (user) => {
-        const overlay = document.getElementById('login-overlay'); const shell = document.getElementById('app-shell');
-        if (user) { overlay.style.display = 'none'; shell.style.display = 'block'; start(); } else { overlay.style.display = 'block'; shell.style.display = 'none'; }
+        document.getElementById('login-overlay').style.display = user ? 'none' : 'block';
+        document.getElementById('app-shell').style.display = user ? 'block' : 'none';
+        if(user) start();
     });
+
     document.getElementById('login-btn').onclick = async () => {
-        const e = document.getElementById('email').value.trim(); const p = document.getElementById('password').value;
-        const btn = document.getElementById('login-btn'); btn.innerText = "AUTHENTICATING..."; btn.disabled = true;
-        try { await signInWithEmailAndPassword(auth, e, p); } catch(err) { document.getElementById('login-status').innerText = "Error: " + err.message; document.getElementById('login-status').style.display = 'block'; btn.innerText = "LOGIN"; btn.disabled = false; }
+        const e = document.getElementById('email').value.trim(), p = document.getElementById('password').value;
+        try { await signInWithEmailAndPassword(auth, e, p); } catch(err) { document.getElementById('login-error').innerText = err.message; }
     };
     document.getElementById('logout-btn').onclick = () => signOut(auth);
 
-    window.setView = (v) => { view = v; document.querySelectorAll('.nav-item').forEach(b => b.classList.toggle('active', b.innerText.toLowerCase().includes(v.slice(0,3)))); render(); };
-    window.switchSym = (s) => { symbol = s; fetchSpot(); startOpt(); };
-    window.setTF = (m) => { tf = m; render(); };
-    window.triggerCloudSync = async () => {
-        const t = document.getElementById('gh_token').value.trim(); if(!t) { alert("GitHub Token Required!"); return; }
-        saveToken(t); const btn = event.target; btn.disabled = true; btn.innerText = "TRIGGERING...";
+    async function fetchSpot() {
         try {
-            const r = await fetch('https://api.github.com/repos/Kunalpagare03/Firebase/dispatches', { method: 'POST', headers: { 'Authorization': `Bearer ${t}`, 'Accept': 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28' }, body: JSON.stringify({ event_type: 'manual_scan' }) });
-            if(r.ok || r.status === 204) alert("SUCCESS! Cloud sync triggered."); else alert("Error " + r.status);
+            const sym = currentSymbol === 'NIFTY' ? '%5ENSEI' : '%5ENSEBANK';
+            const r = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${sym}?interval=1m&range=1d`);
+            const j = await r.json();
+            const p = j.chart.result[0].indicators.quote[0].close.filter(x => x).pop();
+            masterData.live[currentSymbol] = p.toFixed(2);
+            const el = document.getElementById('live-spot-val'); if(el) el.innerText = masterData.live[currentSymbol];
+        } catch(e) {}
+    }
+    setInterval(fetchSpot, 2000);
+
+    window.setView = (v) => {
+        currentView = v;
+        document.querySelectorAll('.nav-item').forEach(b => b.classList.toggle('active', b.innerText.toLowerCase().includes(v.slice(0,3))));
+        renderUI();
+    };
+
+    window.switchSym = (s) => { currentSymbol = s; masterData.opt[currentSymbol] = null; renderUI(); fetchSpot(); startOpt(); };
+
+    window.triggerManual = async () => {
+        const t = getToken();
+        if(!t) { setView('admin'); alert("GitHub Token Required in SCAN tab!"); return; }
+        try {
+            const r = await fetch('https://api.github.com/repos/Kunalpagare03/Firebase/dispatches', {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${t}`, 'Accept': 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28' },
+                body: JSON.stringify({ event_type: 'manual_scan' })
+            });
+            if(r.ok || r.status === 204) alert("SUCCESS! Cloud Terminal triggered."); else alert("GitHub Error: " + r.status);
         } catch(e) { alert("Failed: " + e.message); }
-        setTimeout(() => { btn.disabled = false; btn.innerText = "RUN FULL CLOUD SYNC"; }, 5000);
     };
 
     function start() {
         startOpt(); fetchSpot();
         onSnapshot(doc(db, "stock_scans", "comprehensive"), (snap) => {
             const d = snap.data(); if (!d) return;
-            master.stocks = { "intra": d.intraday || [], "swing": d.swing || [], "pos": d.positional || [] };
-            master.stocks_ts = d.timestamp; if(view !== 'options' && view !== 'admin') render();
+            masterData.stocks = { "intra": d.intraday || [], "swing": d.swing || [], "pos": d.positional || [] };
+            masterData.stocks_ts = d.timestamp; if(currentView !== 'options' && currentView !== 'admin') renderUI();
         });
         onSnapshot(doc(db, "stock_scans", "status"), (snap) => {
-            const d = snap.data(); if (d) { master.scanner_status = d; if(view === 'admin') render(); }
+            const d = snap.data(); if (d) { masterData.scanner_status = d; if(currentView === 'admin') renderUI(); }
         });
     }
+
     function startOpt() {
-        if(unsub.opt) unsub.opt();
-        unsub.opt = onSnapshot(doc(db, "option_sentiment", symbol), (snap) => { const d = snap.data(); if (d) { master.opt[symbol] = d; if(view === 'options') render(); } });
+        if(unsubscribes.opt) unsubscribes.opt();
+        unsubscribes.opt = onSnapshot(doc(db, "option_sentiment", currentSymbol), (snap) => {
+            const d = snap.data(); if (d) { masterData.opt[currentSymbol] = d; if(currentView === 'options') renderUI(); }
+        });
     }
-    function render() {
+
+    function renderUI() {
         const container = document.getElementById('main-scroll'); if (!container) return;
-        if (view === 'admin') {
-            const s = master.scanner_status || { status: 'Idle', last_scan_time: '--:--' };
-            container.innerHTML = `<div class="admin-config"><span class="fw-bold small d-block mb-2 text-uppercase text-info">GitHub Cloud Secret (Auto-Saved)</span><input type="password" id="gh_token" class="form-control bg-dark text-white border-0 mb-3" placeholder="Enter GitHub Token" value="${getToken()}"><p class="small opacity-70 mb-0">Saved on your device.</p></div><div class="card-custom text-center"><span class="fw-bold small muted text-uppercase">Status</span><div class="h5 fw-bold my-3" style="color:var(--accent)">${s.status}</div><button class="scan-trigger" onclick="triggerCloudSync()">RUN FULL CLOUD SYNC</button><div class="small muted mt-3">Last Sync Finished: ${s.last_scan_time || '--:--'}</div></div>`;
+
+        if (currentView === 'admin') {
+            const s = masterData.scanner_status || { status: 'Idle', last_scan_time: '--:--' };
+            container.innerHTML = `
+                <div class="card-custom">
+                    <div class="fw-bold mb-3">GitHub Cloud Sync Settings</div>
+                    <input type="password" id="gh_token_input" class="form-control bg-dark text-white mb-3" placeholder="Enter Token" value="${getToken()}">
+                    <button class="btn btn-primary w-100 fw-bold mb-3" onclick="localStorage.setItem('${STORAGE_KEY}', document.getElementById('gh_token_input').value); alert('Saved!');">SAVE TOKEN</button>
+                    <button class="btn btn-success w-100 fw-bold py-3" onclick="triggerManual()">RUN FULL CLOUD SYNC</button>
+                    <div class="mt-3 text-center small muted">Status: ${s.status}<br>Last: ${s.last_scan_time}</div>
+                </div>`;
             return;
         }
-        if (view === 'options') {
-            const d = master.opt[symbol]; if (!d) { container.innerHTML = '<div class="text-center py-5">Syncing Option Chain...</div>'; return; }
-            const liveSpot = master.live[symbol] !== '-' ? master.live[symbol] : (d.spot_price || '0.00');
-            const sig = d.final_signal || 'Neutral'; const alert = d.trade_alert || {}; const tech = alert.technicals || {}; const p = d.price_action || {}; const g = d.greeks || {};
-            let oi = ''; (d.top_strikes || []).forEach(r => { oi += `<tr><td>${r.strike}</td><td>${r.call_oi}</td><td>${r.put_oi}</td><td>${r.total_oi}</td><td>${r.call_buildup||'-'}</td><td>${r.put_buildup||'-'}</td><td>${(r.oi_side||'N/A').split(' ')[0]}</td></tr>`; });
+
+        if (currentView === 'options') {
+            const d = masterData.opt[currentSymbol]; if (!d) { container.innerHTML = '<div class="text-center py-5">Syncing Option Chain...</div>'; return; }
+            const sig = d.final_signal || 'Neutral'; const tech = d.trade_alert?.technicals || {};
+            let oi = ''; (d.top_strikes || []).forEach(r => { oi += `<tr><td>${r.strike}</td><td>${r.call_oi}</td><td>${r.put_oi}</td><td>${(r.oi_side||'').split(' ')[0]}</td></tr>`; });
 
             container.innerHTML = `
-                <div class="meta-text">Chain: nse-fallback | Spot: angel-one-live | <span class="dot"></span> LIVE TICK | refreshed: ${d.fetched_at}<br>Market status: OPEN | market open | ${d.fetched_at}</div>
-                <div class="mb-3 d-flex align-items-center gap-2"><span class="fw-bold">Instrument</span><select class="form-select flex-fill" onchange="switchSym(this.value)"><option value="NIFTY" ${symbol==='NIFTY'?'selected':''}>NIFTY 50</option><option value="BANKNIFTY" ${symbol==='BANKNIFTY'?'selected':''}>BANKNIFTY</option></select></div>
-                <div class="sig-header"><span>Directional signal</span><span class="sig-badge ${sig==='Bullish'?'bg-bull':'bg-bear'}">${sig}</span></div>
-                <div class="card-custom"><strong>Action alert:</strong> <span id="tradeAction" class="${alert.action?.includes('CALL')?'alert-bullish':(alert.action?.includes('PUT')?'alert-bearish':'alert-wait')}">${alert.action || 'WAIT'}</span><br><span class="muted small">Trigger: ${alert.trigger || 'Wait for break'}</span><br><span class="muted small">${alert.note || ''}</span><div class="muted small mt-1">RSI: ${tech.rsi || '-'} | MACD: ${tech.macd || '-'} | Trend: ${tech.trendline || '-'} | Candle: ${tech.candle || '-'}</div></div>
+                <div class="card-custom">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <strong>Instrument</strong>
+                        <select class="form-select w-50" onchange="switchSym(this.value)"><option value="NIFTY">NIFTY</option><option value="BANKNIFTY" ${currentSymbol==='BANKNIFTY'?'selected':''}>BANKNIFTY</option></select>
+                    </div>
+                    <div class="run-ctrls"><button class="run-btn" onclick="triggerManual()">RUN STOCK</button><button class="run-btn" onclick="triggerManual()">RUN OPTION</button></div>
+                </div>
+                <div class="sig-header"><span>Signal</span><span class="sig-badge ${sig==='Bullish'?'bg-bull':'bg-bear'}">${sig}</span></div>
                 <div class="metrics-grid">
-                    <div class="m-box"><span class="m-lbl">Spot:</span><span class="m-val spot-hl" id="live-spot-val">${liveSpot}</span></div>
-                    <div class="m-box"><span class="m-lbl">Max pain:</span><span class="m-val">${d.max_pain}</span></div>
-                    <div class="m-box"><span class="m-lbl">PCR (OI):</span><span class="m-val">${d.pcr_oi}</span></div>
-                    <div class="m-box"><span class="m-lbl">PCR (vol):</span><span class="m-val">${d.pcr_volume || '0.0'}</span></div>
-                    <div class="m-box"><span class="m-lbl">Final signal:</span><span class="m-val">${sig}</span></div>
+                    <div class="m-box"><span class="m-lbl">Spot:</span><span class="m-val spot-hl" id="live-spot-val">${masterData.live[currentSymbol]}</span></div>
+                    <div class="m-box"><span class="m-lbl">PCR:</span><span class="m-val">${d.pcr_oi}</span></div>
+                    <div class="m-box"><span class="m-lbl">RSI:</span><span class="m-val">${tech.rsi||'-'}</span></div>
                 </div>
-                <div class="card-custom analysis-block">
-                    <div class="analysis-row"><strong>Market read:</strong> <span>${d.combined_sentiment_read}</span></div>
-                    <div class="analysis-row"><strong>Chart structure:</strong> <span>${d.price_structure?.pattern || 'Range'}</span></div>
-                    <div class="analysis-row"><strong>Detected Pattern:</strong> <span class="text-info fw-bold">${d.price_structure?.chart_pattern || 'Analyzing...'}</span></div>
-                    <div class="analysis-row"><strong>Support:</strong> <span>${(d.support_zones||[]).join(', ')}</span> <strong>Resistance:</strong> <span>${(d.resistance_zones||[]).join(', ')}</span></div>
-                    <div class="analysis-row"><strong>OI buildup:</strong> <span>${d.oi_buildup_overall || 'Neutral'}</span></div>
-                    <div class="analysis-row"><strong>OI trend:</strong> <span>${d.oi_trend || 'N/A'}</span></div>
-                    <div class="analysis-row"><strong>OI directional read:</strong> <span>${d.flow || 'Neutral'}</span></div>
-                    <div class="analysis-row"><strong>Flow:</strong> <span>${d.market_read || 'Neutral'}</span></div>
-                    <div class="analysis-row"><strong>Manipulation risk:</strong> <span>Low</span></div>
-                    <div class="analysis-row"><strong>Trend Logic:</strong> <span>${d.decision_note || '-'}</span></div>
-                </div>
-                <div class="card-custom"><span class="card-title">Price Action</span><div class="metrics-grid"><div class="m-box"><span class="m-lbl">Close:</span><span class="m-val">${p.close||'-'}</span></div><div class="m-box"><span class="m-lbl">Daily change:</span><span class="m-val">${p.change||'0'} (${p.change_pct||'0'}%)</span></div><div class="m-box"><span class="m-lbl">20-SMA:</span><span class="m-val">${p.sma20||'--'}</span></div><div class="m-box"><span class="m-lbl">Read:</span><span class="m-val small">${p.reading||'Mixed'}</span></div></div></div>
-                <div class="card-custom"><span class="card-title">ATM Greeks</span><div class="metrics-grid"><div class="m-box"><span class="m-lbl">Strike:</span><span class="m-val">${g.strike||'--'}</span></div><div class="m-box"><span class="m-lbl">Call delta:</span><span class="m-val">${g.call_delta||'0'}</span></div><div class="m-box"><span class="m-lbl">Put delta:</span><span class="m-val">${g.put_delta||'0'}</span></div><div class="m-box"><span class="m-lbl">Gamma:</span><span class="m-val">${g.gamma||'0'}</span></div></div></div>
+                <div class="card-custom small">${d.combined_sentiment_read}<br>Pattern: <strong>${d.price_structure?.chart_pattern||'-'}</strong></div>
                 <div id="chart" class="chart-box"></div>
-                <div class="card-custom"><span class="card-title">Top strikes by total OI</span><div class="table-wrap"><table class="table-pro"><thead><tr><th>Strike</th><th>C-OI</th><th>P-OI</th><th>Total</th><th>C-Bld</th><th>P-Bld</th><th>Side</th></tr></thead><tbody>${oi}</tbody></table></div></div>
+                <div class="table-wrap"><table class="table-pro"><thead><tr><th>Strike</th><th>C-OI</th><th>P-OI</th><th>Side</th></tr></thead><tbody>${oi}</tbody></table></div>
             `;
             if((d.spot_history || []).length > 1) {
                 requestAnimationFrame(() => {
-                    const candles = buildCandles(d.spot_history, tf);
-                    if(candles.length > 0) {
-                        const trace = { x: candles.map(c=>c.x), open: candles.map(c=>c.open), high: candles.map(c=>c.high), low: candles.map(c=>c.low), close: candles.map(c=>c.close), type: 'candlestick', increasing: {line: {color: '#1f9d61'}}, decreasing: {line: {color: '#d9485f'}} };
-                        Plotly.react('chart', [trace], { paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:'rgba(0,0,0,0)', margin:{t:10,r:10,b:30,l:40}, xaxis:{showgrid:false, tickfont:{size:8}, rangeslider:{visible:false}}, yaxis:{gridcolor:'#eee', tickfont:{size:8}} }, {responsive:true, displayModeBar:false});
-                    }
+                    Plotly.react('chart', [{ x: d.spot_history.map(h=>new Date(h.time)), y: d.spot_history.map(h=>h.value), type:'scatter', mode:'lines', line:{color:'#153f4c', width:3}, fill:'tozeroy' }], { paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:'rgba(0,0,0,0)', margin:{t:10,r:10,b:30,l:40}, xaxis:{showgrid:false, tickfont:{size:8}}, yaxis:{gridcolor:'#eee', tickfont:{size:8}} }, {responsive:true, displayModeBar:false});
                 });
             }
         } else {
-            const list = master.stocks[view] || []; if (!list.length) { container.innerHTML = '<div class="text-center py-5">Scanning for trades...</div>'; return; }
-            let h = `<div class="small muted mb-3 text-center">Sync: ${master.stocks_ts}</div>`;
+            const list = masterData.stocks[currentView] || [];
+            if (!list.length) {
+                container.innerHTML = `<div class="text-center py-5">
+                    <h5>No ${currentView.toUpperCase()} setups found.</h5>
+                    <p class="small muted">The market may be too volatile for safe entries right now.</p>
+                    <button class="btn btn-sm btn-dark" onclick="triggerManual()">RE-SCAN NOW</button>
+                </div>`;
+                return;
+            }
+            let h = `<div class="small muted mb-3 text-center">Cloud Sync: ${masterData.stocks_ts}</div>`;
             const sectors = {}; list.forEach(s => { if(!sectors[s.sector]) sectors[s.sector] = []; sectors[s.sector].push(s); });
             Object.keys(sectors).sort().forEach(sec => {
-                h += `<div class="fw-bold mb-2 small text-uppercase" style="color:var(--accent); border-bottom:1px solid var(--border)">${sec}</div>`;
-                sectors[sec].forEach(s => { h += `<button class="stk-btn" onclick="openDetails('${s.symbol}', '${view}')"><div class="d-flex justify-content-between align-items-center"><div><div class="fw-bold">${s.symbol.replace('.NS','')}</div><div class="small muted">${s.rating} Score</div></div><div class="text-end"><div class="fw-bold text-${s.change > 0 ? 'success':'danger'}">${s.change}%</div><div class="small muted">${s.price}</div></div></div><div class="price-strip"><div class="price-item">ENTRY<span>${s.entry_price || s.price}</span></div><div class="price-item text-success">TGT<span>${s.target_price}</span></div><div class="price-item text-danger">SL<span>${s.sl_price}</span></div></div></button>`; });
+                h += `<div class="fw-bold mb-2 small text-uppercase" style="border-bottom:1px solid var(--border)">${sec}</div>`;
+                sectors[sec].forEach(s => {
+                    h += `<button class="stk-btn" onclick="openDetails('${s.symbol}', '${currentView}')">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div><div class="fw-bold">${s.symbol.replace('.NS','')}</div><div class="small muted">${s.rating} Score</div></div>
+                            <div class="text-end"><div class="fw-bold ${s.change > 0 ? 'text-success':'text-danger'}">${s.change}%</div><div class="small muted">${s.price}</div></div>
+                        </div>
+                        <div class="price-strip"><div class="price-item">TGT<span>${s.target_price}</span></div><div class="price-item">SL<span>${s.sl_price}</span></div></div>
+                    </button>`;
+                });
             });
             container.innerHTML = h;
         }
     }
-    function buildCandles(history, intervalMin) {
-        const intervalMs = intervalMin * 60 * 1000; const bins = {};
-        history.forEach(tick => { const bucket = Math.floor(tick.time / intervalMs) * intervalMs; if (!bins[bucket]) bins[bucket] = []; bins[bucket].push(tick.value); });
-        return Object.keys(bins).sort().map(time => { const v = bins[time]; return { x: new Date(parseInt(time)), open: v[0], high: Math.max(...v), low: Math.min(...v), close: v[v.length-1] }; });
-    }
     window.openDetails = (s_id, type) => {
-        const s = master.stocks[type].find(x => x.symbol === s_id); if (!s) return;
-        document.getElementById('detail-body').innerHTML = `<div class="sig-header"><span>${s.symbol.replace('.NS','')}</span><span class="sig-badge ${s.change > 0 ? 'bg-bull':'bg-bear'}">${s.recommendation}</span></div><div class="metrics-grid"><div class="m-box"><span class="m-lbl">Price</span><span class="m-val">${s.price}</span></div><div class="m-box"><span class="m-lbl">Target</span><span class="m-val text-success">${s.target_price}</span></div><div class="m-box"><span class="m-lbl">SL</span><span class="m-val text-danger">${s.sl_price}</span></div><div class="m-box"><span class="m-lbl">Rating</span><span class="m-val">${s.rating}</span></div></div><div class="card-custom small">${s.justification}</div>`;
+        const s = masterData.stocks[type].find(x => x.symbol === s_id); if (!s) return;
+        document.getElementById('detail-body').innerHTML = `<div class="sig-header"><span>${s.symbol.replace('.NS','')}</span><span class="sig-badge ${s.change > 0 ? 'bg-bull':'bg-bear'}">${s.recommendation}</span></div><div class="metrics-grid"><div class="m-box"><span class="m-lbl">Price</span><span class="m-val">${s.price}</span></div><div class="m-box"><span class="m-lbl">Target</span><span class="m-val text-success">${s.target_price}</span></div><div class="m-box"><span class="m-lbl">SL</span><span class="m-val text-danger">${s.sl_price}</span></div></div><div class="card-custom small">${s.justification}</div>`;
         document.getElementById('detail-view').style.display = 'block';
     };
 </script>

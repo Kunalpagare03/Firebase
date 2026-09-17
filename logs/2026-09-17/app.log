@@ -5,3 +5,6 @@
 [W 260917 11:33:02 smartWebSocketV2:342] Connection closed due to max retry attempts reached.
 [W 260917 11:33:02 smartWebSocketV2:342] Connection closed due to max retry attempts reached.
 [I 260917 11:45:33 smartConnect:124] in pool
+[I 260917 11:53:34 smartConnect:124] in pool
+[I 260917 12:09:56 smartConnect:124] in pool
+[I 260917 12:41:27 smartConnect:124] in pool

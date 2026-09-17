@@ -73,10 +73,15 @@ def analyze_stock(symbol):
             "strategy": "Breakout" if curr['Close'] > high_52w * 0.95 else "Trend Following"
         }
 
-        # Filtering Logic (Restored to Stable State)
-        intra = {**base_info, "recommendation": "INTRA-DAY BUY"} if change_pct > 1.0 and vol_ratio > 1.2 else None
-        swing = {**base_info, "recommendation": "SWING ACCUMULATE"} if rating >= 7 and curr['Close'] > df['ema20'].iloc[-1] else None
-        pos = {**base_info, "recommendation": "LONG TERM HOLD"} if rating >= 8 and df['ema50'].iloc[-1] > df['ema200'].iloc[-1] else None
+        # Filtering Logic (Optimized for Visibility on Bearish Days)
+        # 1. Intra-Day: Show anything positive with volume
+        intra = {**base_info, "recommendation": "INTRA BUY"} if change_pct > 0.3 and vol_ratio > 1.0 else None
+
+        # 2. Swing: Relative Strength (Above EMA 20)
+        swing = {**base_info, "recommendation": "SWING ENTRY"} if rating >= 5 and curr['Close'] > df['ema20'].iloc[-1] else None
+
+        # 3. Positional: Long term trend
+        pos = {**base_info, "recommendation": "POS ACCUMULATE"} if rating >= 7 and df['ema50'].iloc[-1] > df['ema200'].iloc[-1] * 0.98 else None
 
         return intra, swing, pos
     except: return None, None, None

@@ -61,6 +61,9 @@ def build_dashboard(df_prev, df_curr, spot_curr):
 
     final_signal = "Bullish" if score > 0 else "Bearish" if score < 0 else "Neutral"
 
+    # New Field: OI Trend Strength
+    oi_trend = "Strong" if abs(pcr["pcr_oi"] - 1) > 0.15 else "Moderate" if abs(pcr["pcr_oi"] - 1) > 0.05 else "Stable"
+
     dashboard = {
         "spot_price": spot_curr,
         "pcr_oi": round(pcr["pcr_oi"], 3) if pcr["pcr_oi"] else 0,
@@ -72,6 +75,7 @@ def build_dashboard(df_prev, df_curr, spot_curr):
         "final_signal": final_signal,
         "combined_sentiment_read": f"Leaning {final_signal}" if final_signal != "Neutral" else "Neutral",
         "oi_directional_read": oi_dir,
+        "oi_trend": oi_trend,
         "deep_dive": perform_deep_dive(df_curr, spot_curr),
         "oi_buildup_overall": buildup_summary["overall_read"]
     }

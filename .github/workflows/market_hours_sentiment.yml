@@ -1,16 +1,14 @@
-name: Real-Time Market Sentiment (Continuous)
+name: Automatic Cloud Sync (15 Minutes)
 
 on:
   schedule:
-    # Starts at 03:40 UTC (9:10 AM IST) Monday-Friday
-    - cron: '40 3 * * 1-5'
+    # Runs every 15 minutes during market hours (Monday-Friday)
+    - cron: '*/15 3-10 * * 1-5'
   workflow_dispatch:
 
 jobs:
-  real-time-sync:
+  cloud-sync:
     runs-on: ubuntu-latest
-    # Terminate after 6.5 hours (market close)
-    timeout-minutes: 400
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -22,28 +20,23 @@ jobs:
 
       - name: Install dependencies
         run: |
-          cd stock_alert_bot/Option
-          pip install -r requirements.txt
-          pip install pyotp SmartApi-python # Ensure Angel One SDK is present
+          pip install yfinance pandas numpy firebase-admin requests openpyxl pyotp SmartApi-python
 
       - name: Create service-account.json
         run: echo '${{ secrets.FIREBASE_SERVICE_ACCOUNT }}' > stock_alert_bot/service-account.json
 
-      - name: Start Real-Time Cloud Runner
+      - name: Run Global Cloud Sync
         env:
           PYTHONPATH: ${{ github.workspace }}/stock_alert_bot/Option:${{ github.workspace }}/stock_alert_bot/stock
           ANGEL_API_KEY: ${{ secrets.ANGEL_API_KEY }}
           ANGEL_CLIENT_CODE: ${{ secrets.ANGEL_CLIENT_CODE }}
           ANGEL_PIN: ${{ secrets.ANGEL_PIN }}
           ANGEL_TOTP_SECRET: ${{ secrets.ANGEL_TOTP_SECRET }}
-          SYMBOL: "NIFTY"
         run: |
+          # 1. Update Option Dashboard
           cd stock_alert_bot/Option
-          # Run continuous sentiment runner in background
-          python scripts/cloud_market_runner.py &
-          # Run stock scanner periodically
+          python scripts/cloud_sync_full.py
+          
+          # 2. Run Full Stock Scanner
           cd ../stock
-          while true; do
-            python live_stock_scanner.py
-            sleep 1800 # Every 30 minutes
-          done
+          python live_stock_scanner.py

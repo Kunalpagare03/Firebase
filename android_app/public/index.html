@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>StockPro | Terminal v55.1</title>
+    <title>StockPro | Terminal v58.1</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
@@ -17,11 +17,10 @@
         .nav-item.active { color: var(--accent); background: #f1f6f4; }
         .nav-item i { font-size: 1.3rem; margin-bottom: 2px; }
         #main-scroll { padding: 15px; padding-bottom: 85px; max-width: 1200px; margin: 0 auto; }
+        .meta-text { font-size: 0.72rem; color: var(--txt-dim); line-height: 1.6; margin-bottom: 15px; }
         .card-custom { border: 1px solid var(--border); padding: 18px; border-radius: 6px; margin-bottom: 14px; background: rgba(255,255,255,0.88); box-shadow: 0 8px 24px rgba(31,57,64,.08); }
         .sig-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 18px; border: 1px solid #83aab0; border-radius: 8px; background: #153f4c; color: #fff; margin: 10px 0 14px; font-weight: 800; font-size: 1.2rem; }
         .sig-badge { padding: 9px 15px; border-radius: 5px; background: #69777b; color: #fff; min-width: 140px; text-align: center; text-transform: uppercase; }
-        .bg-bull { background: var(--bull); }
-        .bg-bear { background: var(--bear); }
         #tradeAction { display: inline-block; padding: 6px 10px; border-radius: 4px; font-weight: 800; font-size: 1rem; margin-bottom: 8px; }
         .alert-bullish { background: #d9f2e5; color: #12613b; }
         .alert-bearish { background: #f9dede; color: #8f2020; }
@@ -35,20 +34,15 @@
         .analysis-row { margin-bottom: 2px; }
         .analysis-row strong { color: var(--accent); }
         .chart-box { background: #fbfcfd; border: 1px solid #c9d9d9; border-radius: 5px; margin-bottom: 1rem; height: 380px; width: 100%; }
-        .tf-ctrls { display: flex; gap: 6px; margin-bottom: 8px; }
-        .tf-btn { border: 1px solid #b9c9cd; background: #fff; color: #31525d; border-radius: 4px; padding: 6px 11px; font-size: .88rem; cursor: pointer; }
-        .tf-btn.active { background: #153f4c; color: #fff; border-color: #153f4c; }
         .table-wrap { overflow-x: auto; border-radius: 8px; border: 1px solid var(--border); margin-top: 10px; }
         .table-pro { width: 100%; font-size: 0.85rem; border-collapse: collapse; background: #fff; }
         .table-pro th { background: #f8fbfc; padding: 12px; color: var(--txt-dim); border-bottom: 1px solid var(--border); text-align: left; }
         .table-pro td { padding: 12px; border-bottom: 1px solid #eee; text-align: left; font-weight: 600; }
         .stk-btn { width: 100%; background: #fff; border: 1px solid var(--border); border-radius: 8px; padding: 15px; margin-bottom: 12px; text-align: left; border-left: 6px solid transparent; }
-        .stk-btn:active { background: #f1f6f4; transform: scale(0.98); }
-        .price-row { display: flex; justify-content: space-around; margin-top: 10px; padding-top: 10px; border-top: 1px solid #eee; }
         .price-col { font-size: 0.75rem; color: var(--txt-dim); font-weight: 800; text-align: center; }
         .price-col span { display: block; font-size: 1rem; font-weight: 900; color: var(--accent); }
         #detail-view { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg-main); z-index: 2000; padding: 20px; overflow-y: auto; }
-        .back-btn { background: var(--accent); color: #fff; border: none; padding: 10px 20px; border-radius: 4px; font-weight: 800; cursor: pointer; margin-bottom: 20px; }
+        .back-btn { background: var(--accent); color: #fff; border: none; padding: 10px 20px; border-radius: 4px; font-weight: 800; margin-bottom: 20px; }
         .admin-config { background: #153f4c; color: #fff; padding: 20px; border-radius: 10px; margin-bottom: 15px; }
         .scan-trigger { background: #10b981; color: #fff; border: none; padding: 18px; border-radius: 8px; font-weight: 900; width: 100%; font-size: 1.1rem; box-shadow: 0 4px 15px rgba(16,185,129,0.3); }
         #login-overlay { max-width: 450px; margin: 100px auto; padding: 25px; }
@@ -57,17 +51,9 @@
     </style>
 </head>
 <body>
-<div id="login-overlay">
-    <div class="card p-4 text-center shadow-lg">
-        <h2 class="fw-bold mb-4" style="color:var(--accent)">STOCKPRO TERMINAL</h2>
-        <input type="email" id="email" class="form-control mb-3" placeholder="Email">
-        <input type="password" id="password" class="form-control mb-4" placeholder="Access Key">
-        <button id="login-btn" class="btn btn-dark w-100 fw-bold py-2">LOGIN</button>
-        <div id="login-status" class="mt-3 small" style="display:none"></div>
-    </div>
-</div>
+<div id="login-overlay"><div class="card p-4 text-center shadow-lg"><h2 class="fw-bold mb-4" style="color:var(--accent)">STOCKPRO TERMINAL</h2><input type="email" id="email" class="form-control mb-3" placeholder="Email"><input type="password" id="password" class="form-control mb-4" placeholder="Access Key"><button id="login-btn" class="btn btn-dark w-100 fw-bold py-2">LOGIN</button><div id="login-status" class="mt-3 small" style="display:none"></div></div></div>
 <div id="app-shell" style="display: none;">
-    <nav class="navbar navbar-light sticky-top px-3 py-2"><span class="navbar-brand">Live Option Chain Market Analysis</span><button id="logout-btn" class="btn btn-sm btn-outline-secondary"><i class="bi bi-power"></i></button></nav>
+    <nav class="navbar navbar-light sticky-top px-3 py-2"><span class="navbar-brand">Live Option Chain Market Analysis</span></nav>
     <div id="main-scroll"></div>
     <div class="bottom-nav">
         <button class="nav-item active" onclick="setView('options')"><i class="bi bi-graph-up"></i>OPTIONS</button>
@@ -78,77 +64,19 @@
     </div>
 </div>
 <div id="detail-view"><button class="back-btn" onclick="document.getElementById('detail-view').style.display='none'"><i class="bi bi-arrow-left"></i> BACK TO HUB</button><div id="detail-body"></div></div>
-
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
     import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
     import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-
     const config = { apiKey: "AIzaSyDMEUmFGSJBjGrz7fpDN46OiZlSJ6NTsjE", authDomain: "kunal-analysis.firebaseapp.com", projectId: "kunal-analysis", storageBucket: "kunal-analysis.firebasestorage.app", appId: "1:328297105533:web:3ed3d8d5aa3ec677b88914" };
-    const app = initializeApp(config);
-    const auth = getAuth(app);
-    const db = getFirestore(app);
-
-    let view = 'options';
-    let symbol = 'NIFTY';
-    let tf = 5;
+    const app = initializeApp(config); const auth = getAuth(app); const db = getFirestore(app);
+    let view = 'options'; let symbol = 'NIFTY'; let tf = 5;
     let master = { opt: {}, stocks: {}, live: { NIFTY: '-', BANKNIFTY: '-' } };
     let unsub = { opt: null, stocks: null };
+    const STORAGE_KEY = 'stockpro_gh_token';
+    function saveToken(token) { localStorage.setItem(STORAGE_KEY, token); }
+    function getToken() { return localStorage.getItem(STORAGE_KEY) || ""; }
 
-    const statusEl = document.getElementById('login-status');
-    const loginBtn = document.getElementById('login-btn');
-
-    function updateStatus(msg, isError = false) {
-        statusEl.innerText = msg;
-        statusEl.className = isError ? "text-danger mt-3 small" : "text-info mt-3 small";
-        statusEl.style.display = 'block';
-    }
-
-    // Set persistence to Local
-    setPersistence(auth, browserLocalPersistence);
-
-    onAuthStateChanged(auth, (user) => {
-        const overlay = document.getElementById('login-overlay');
-        const shell = document.getElementById('app-shell');
-        if (user) {
-            console.log("Logged in as:", user.email);
-            overlay.style.display = 'none';
-            shell.style.display = 'block';
-            start();
-        } else {
-            overlay.style.display = 'block';
-            shell.style.display = 'none';
-        }
-    });
-
-    loginBtn.onclick = async () => {
-        const email = document.getElementById('email').value.trim();
-        const password = document.getElementById('password').value;
-        if(!email || !password) { updateStatus("Enter both Email and Key", true); return; }
-
-        loginBtn.innerText = "AUTHENTICATING...";
-        loginBtn.disabled = true;
-        updateStatus("Contacting security server...");
-
-        try {
-            await signInWithEmailAndPassword(auth, email, password);
-        } catch(err) {
-            console.error(err);
-            updateStatus("Error: " + err.message, true);
-            loginBtn.innerText = "LOGIN";
-            loginBtn.disabled = false;
-        }
-    };
-
-    document.getElementById('logout-btn').onclick = () => signOut(auth);
-
-    // Global Error Catcher
-    window.onerror = function(msg, url, line) {
-        updateStatus("Browser Error: " + msg, true);
-        return false;
-    };
-
-    // Laptop-Independent Spot Fetcher
     async function fetchSpot() {
         try {
             const symCode = symbol === 'NIFTY' ? '%5ENSEI' : '%5ENSEBANK';
@@ -161,9 +89,17 @@
     }
     setInterval(fetchSpot, 2000);
 
-    const STORAGE_KEY = 'stockpro_gh_token';
-    function saveToken(token) { localStorage.setItem(STORAGE_KEY, token); }
-    function getToken() { return localStorage.getItem(STORAGE_KEY) || ""; }
+    setPersistence(auth, browserLocalPersistence);
+    onAuthStateChanged(auth, (user) => {
+        const overlay = document.getElementById('login-overlay'); const shell = document.getElementById('app-shell');
+        if (user) { overlay.style.display = 'none'; shell.style.display = 'block'; start(); } else { overlay.style.display = 'block'; shell.style.display = 'none'; }
+    });
+    document.getElementById('login-btn').onclick = async () => {
+        const e = document.getElementById('email').value.trim(); const p = document.getElementById('password').value;
+        const btn = document.getElementById('login-btn'); btn.innerText = "AUTHENTICATING..."; btn.disabled = true;
+        try { await signInWithEmailAndPassword(auth, e, p); } catch(err) { document.getElementById('login-status').innerText = "Error: " + err.message; document.getElementById('login-status').style.display = 'block'; btn.innerText = "LOGIN"; btn.disabled = false; }
+    };
+    document.getElementById('logout-btn').onclick = () => signOut(auth);
 
     window.setView = (v) => { view = v; document.querySelectorAll('.nav-item').forEach(b => b.classList.toggle('active', b.innerText.toLowerCase().includes(v.slice(0,3)))); render(); };
     window.switchSym = (s) => { symbol = s; fetchSpot(); startOpt(); };
@@ -172,11 +108,7 @@
         const t = document.getElementById('gh_token').value.trim(); if(!t) { alert("GitHub Token Required!"); return; }
         saveToken(t); const btn = event.target; btn.disabled = true; btn.innerText = "TRIGGERING...";
         try {
-            const r = await fetch('https://api.github.com/repos/Kunalpagare03/Firebase/dispatches', {
-                method: 'POST',
-                headers: { 'Authorization': `Bearer ${t}`, 'Accept': 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28' },
-                body: JSON.stringify({ event_type: 'manual_scan' })
-            });
+            const r = await fetch('https://api.github.com/repos/Kunalpagare03/Firebase/dispatches', { method: 'POST', headers: { 'Authorization': `Bearer ${t}`, 'Accept': 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28' }, body: JSON.stringify({ event_type: 'manual_scan' }) });
             if(r.ok || r.status === 204) alert("SUCCESS! Cloud sync triggered."); else alert("Error " + r.status);
         } catch(e) { alert("Failed: " + e.message); }
         setTimeout(() => { btn.disabled = false; btn.innerText = "RUN FULL CLOUD SYNC"; }, 5000);
@@ -193,19 +125,15 @@
             const d = snap.data(); if (d) { master.scanner_status = d; if(view === 'admin') render(); }
         });
     }
-
     function startOpt() {
         if(unsub.opt) unsub.opt();
-        unsub.opt = onSnapshot(doc(db, "option_sentiment", symbol), (snap) => {
-            const d = snap.data(); if (d) { master.opt[symbol] = d; if(view === 'options') render(); }
-        });
+        unsub.opt = onSnapshot(doc(db, "option_sentiment", symbol), (snap) => { const d = snap.data(); if (d) { master.opt[symbol] = d; if(view === 'options') render(); } });
     }
-
     function render() {
         const container = document.getElementById('main-scroll'); if (!container) return;
         if (view === 'admin') {
             const s = master.scanner_status || { status: 'Idle', last_scan_time: '--:--' };
-            container.innerHTML = `<div class="admin-config"><span class="fw-bold small d-block mb-2 text-uppercase text-info">GitHub Cloud Secret (Auto-Saved)</span><input type="password" id="gh_token" class="form-control bg-dark text-white border-0 mb-3" placeholder="Enter GitHub Token" value="${getToken()}"><p class="small opacity-70 mb-0">Saved on your device. Never re-type again.</p></div><div class="card-custom text-center"><span class="fw-bold small muted text-uppercase">Status</span><div class="h5 fw-bold my-3" style="color:var(--accent)">${s.status}</div><button class="scan-trigger" onclick="triggerCloudSync()">RUN FULL CLOUD SYNC</button><div class="small muted mt-3">Last Sync: ${s.last_scan_time || '--:--'}</div></div>`;
+            container.innerHTML = `<div class="admin-config"><span class="fw-bold small d-block mb-2 text-uppercase text-info">GitHub Cloud Secret (Auto-Saved)</span><input type="password" id="gh_token" class="form-control bg-dark text-white border-0 mb-3" placeholder="Enter GitHub Token" value="${getToken()}"><p class="small opacity-70 mb-0">Saved on your device.</p></div><div class="card-custom text-center"><span class="fw-bold small muted text-uppercase">Status</span><div class="h5 fw-bold my-3" style="color:var(--accent)">${s.status}</div><button class="scan-trigger" onclick="triggerCloudSync()">RUN FULL CLOUD SYNC</button><div class="small muted mt-3">Last Sync Finished: ${s.last_scan_time || '--:--'}</div></div>`;
             return;
         }
         if (view === 'options') {
@@ -213,6 +141,7 @@
             const liveSpot = master.live[symbol] !== '-' ? master.live[symbol] : (d.spot_price || '0.00');
             const sig = d.final_signal || 'Neutral'; const alert = d.trade_alert || {}; const tech = alert.technicals || {}; const p = d.price_action || {}; const g = d.greeks || {};
             let oi = ''; (d.top_strikes || []).forEach(r => { oi += `<tr><td>${r.strike}</td><td>${r.call_oi}</td><td>${r.put_oi}</td><td>${r.total_oi}</td><td>${r.call_buildup||'-'}</td><td>${r.put_buildup||'-'}</td><td>${(r.oi_side||'N/A').split(' ')[0]}</td></tr>`; });
+
             container.innerHTML = `
                 <div class="meta-text">Chain: nse-fallback | Spot: angel-one-live | <span class="dot"></span> LIVE TICK | refreshed: ${d.fetched_at}<br>Market status: OPEN | market open | ${d.fetched_at}</div>
                 <div class="mb-3 d-flex align-items-center gap-2"><span class="fw-bold">Instrument</span><select class="form-select flex-fill" onchange="switchSym(this.value)"><option value="NIFTY" ${symbol==='NIFTY'?'selected':''}>NIFTY 50</option><option value="BANKNIFTY" ${symbol==='BANKNIFTY'?'selected':''}>BANKNIFTY</option></select></div>
@@ -232,13 +161,14 @@
                     <div class="analysis-row"><strong>Support:</strong> <span>${(d.support_zones||[]).join(', ')}</span> <strong>Resistance:</strong> <span>${(d.resistance_zones||[]).join(', ')}</span></div>
                     <div class="analysis-row"><strong>OI buildup:</strong> <span>${d.oi_buildup_overall || 'Neutral'}</span></div>
                     <div class="analysis-row"><strong>OI trend:</strong> <span>${d.oi_trend || 'N/A'}</span></div>
+                    <div class="analysis-row"><strong>OI directional read:</strong> <span>${d.flow || 'Neutral'}</span></div>
                     <div class="analysis-row"><strong>Flow:</strong> <span>${d.market_read || 'Neutral'}</span></div>
+                    <div class="analysis-row"><strong>Manipulation risk:</strong> <span>Low</span></div>
                     <div class="analysis-row"><strong>Trend Logic:</strong> <span>${d.decision_note || '-'}</span></div>
-                    <div class="countdown">Next trend analysis active.</div>
                 </div>
                 <div class="card-custom"><span class="card-title">Price Action</span><div class="metrics-grid"><div class="m-box"><span class="m-lbl">Close:</span><span class="m-val">${p.close||'-'}</span></div><div class="m-box"><span class="m-lbl">Daily change:</span><span class="m-val">${p.change||'0'} (${p.change_pct||'0'}%)</span></div><div class="m-box"><span class="m-lbl">20-SMA:</span><span class="m-val">${p.sma20||'--'}</span></div><div class="m-box"><span class="m-lbl">Read:</span><span class="m-val small">${p.reading||'Mixed'}</span></div></div></div>
                 <div class="card-custom"><span class="card-title">ATM Greeks</span><div class="metrics-grid"><div class="m-box"><span class="m-lbl">Strike:</span><span class="m-val">${g.strike||'--'}</span></div><div class="m-box"><span class="m-lbl">Call delta:</span><span class="m-val">${g.call_delta||'0'}</span></div><div class="m-box"><span class="m-lbl">Put delta:</span><span class="m-val">${g.put_delta||'0'}</span></div><div class="m-box"><span class="m-lbl">Gamma:</span><span class="m-val">${g.gamma||'0'}</span></div></div></div>
-                <div class="card-custom"><span class="card-title">Live Candlestick Chart</span><div class="tf-ctrls"><button class="tf-btn ${tf===5?'active':''}" onclick="setTF(5)">5m</button><button class="tf-btn ${tf===15?'active':''}" onclick="setTF(15)">15m</button><button class="tf-btn ${tf===30?'active':''}" onclick="setTF(30)">30m</button><button class="tf-btn ${tf===60?'active':''}" onclick="setTF(60)">1h</button></div><div id="chart" class="chart-box"></div></div>
+                <div id="chart" class="chart-box"></div>
                 <div class="card-custom"><span class="card-title">Top strikes by total OI</span><div class="table-wrap"><table class="table-pro"><thead><tr><th>Strike</th><th>C-OI</th><th>P-OI</th><th>Total</th><th>C-Bld</th><th>P-Bld</th><th>Side</th></tr></thead><tbody>${oi}</tbody></table></div></div>
             `;
             if((d.spot_history || []).length > 1) {
@@ -246,7 +176,7 @@
                     const candles = buildCandles(d.spot_history, tf);
                     if(candles.length > 0) {
                         const trace = { x: candles.map(c=>c.x), open: candles.map(c=>c.open), high: candles.map(c=>c.high), low: candles.map(c=>c.low), close: candles.map(c=>c.close), type: 'candlestick', increasing: {line: {color: '#1f9d61'}}, decreasing: {line: {color: '#d9485f'}} };
-                        Plotly.newPlot('chart', [trace], { paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:'rgba(0,0,0,0)', margin:{t:10,r:10,b:30,l:40}, xaxis:{showgrid:false, tickfont:{size:8}, rangeslider:{visible:false}}, yaxis:{gridcolor:'#eee', tickfont:{size:8}} }, {responsive:true, displayModeBar:false});
+                        Plotly.react('chart', [trace], { paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:'rgba(0,0,0,0)', margin:{t:10,r:10,b:30,l:40}, xaxis:{showgrid:false, tickfont:{size:8}, rangeslider:{visible:false}}, yaxis:{gridcolor:'#eee', tickfont:{size:8}} }, {responsive:true, displayModeBar:false});
                     }
                 });
             }

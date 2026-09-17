@@ -5,7 +5,9 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="0d4bcccf-e067-48b7-9b85-e9a5ae4bda87" name="Changes" comment="Add multi-index instrument selector">
-      <change beforePath="$PROJECT_DIR$/.github/workflows/manual_stock_scan.yml" beforeDir="false" afterPath="$PROJECT_DIR$/.github/workflows/manual_stock_scan.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/android_app/.firebase/hosting.cHVibGlj.cache" beforeDir="false" afterPath="$PROJECT_DIR$/android_app/.firebase/hosting.cHVibGlj.cache" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/android_app/public/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/android_app/public/index.html" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />

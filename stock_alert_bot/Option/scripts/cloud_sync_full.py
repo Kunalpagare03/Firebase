@@ -1,6 +1,7 @@
 import os
 import sys
 import pandas as pd
+import numpy as np
 from datetime import datetime
 import firebase_admin
 from firebase_admin import credentials, firestore
@@ -18,6 +19,41 @@ from utils.firebase_sync import sync_to_firestore
 from stock_alert.price_action import analyze_price_action
 from stock_alert.greeks import analyze_chain_greeks
 from src.trend_detector import analyze_price_structure
+
+def calculate_technicals(prices):
+    if len(prices) < 14:
+        return {"rsi": "-", "macd": "-", "trendline": "N/A", "candle": "N/A"}
+
+    # RSI calculation
+    deltas = np.diff(prices)
+    gain = np.where(deltas > 0, deltas, 0)
+    loss = np.where(deltas < 0, -deltas, 0)
+    avg_gain = np.mean(gain[-14:])
+    avg_loss = np.mean(loss[-14:])
+    if avg_loss == 0: rsi = 100
+    else:
+        rs = avg_gain / avg_loss
+        rsi = 100 - (100 / (1 + rs))
+
+    # MACD (Simplified)
+    ema12 = pd.Series(prices).ewm(span=12).mean().iloc[-1]
+    ema26 = pd.Series(prices).ewm(span=26).mean().iloc[-1]
+    macd = ema12 - ema26
+
+    # Trend & Candle
+    slope = (prices[-1] - prices[0]) / len(prices)
+    trend = "Bullish" if slope > 0 else "Bearish"
+    candle = "Bullish" if prices[-1] > prices[-2] else "Bearish"
+
+    return {"rsi": round(rsi, 1), "macd": round(macd, 2), "trendline": trend, "candle": candle}
+
+def _get_trade_decision(data, tech):
+    sig = data.get('final_signal', 'Neutral')
+    if sig == 'Bullish' and tech['trendline'] == 'Bullish':
+        return f"Bullish confirmation: Price holding above support with strong OI build."
+    elif sig == 'Bearish' and tech['trendline'] == 'Bearish':
+        return f"Bearish confirmation: Resistance BUILDING. Target lower levels."
+    return f"Wait for clean break. Price and OI are mixed."
 
 def sync_all():
     SYMBOLS = ["NIFTY", "BANKNIFTY"]
@@ -49,12 +85,23 @@ def sync_all():
             if len(history) > 1000: history = history[-1000:]
 
             prices = [h["value"] for h in history]
+            tech = calculate_technicals(prices)
 
             # 3. Full Analysis with History
             data = build_dashboard(df, df, spot)
+
+            # Inject Trade Alert & Decision note
+            data["trade_alert"] = {
+                "action": data.get("final_signal", "WAIT"),
+                "trigger": "Wait for break" if data.get("final_signal") == "Neutral" else f"Trigger active @ {spot}",
+                "note": "Cloud Sync Active",
+                "technicals": tech
+            }
+            data["decision_note"] = _get_trade_decision(data, tech)
+
             data["greeks"] = analyze_chain_greeks(df, spot)
             data["price_action"] = analyze_price_action(symbol)
-            data["price_structure"] = analyze_price_structure(prices) # Now has history!
+            data["price_structure"] = analyze_price_structure(prices)
             data["deep_dive"] = perform_deep_dive(df, spot)
             data["spot_history"] = history
             data["fetched_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")

@@ -48,6 +48,41 @@ def load_initial_history(db, symbols):
         except Exception as e:
             log.warning(f"Failed to load history for {sym}: {e}")
 
+def calculate_technicals(prices):
+    if len(prices) < 14:
+        return {"rsi": "-", "macd": "-", "trendline": "N/A", "candle": "N/A"}
+
+    # RSI calculation
+    deltas = np.diff(prices)
+    gain = np.where(deltas > 0, deltas, 0)
+    loss = np.where(deltas < 0, -deltas, 0)
+    avg_gain = np.mean(gain[-14:])
+    avg_loss = np.mean(loss[-14:])
+    if avg_loss == 0: rsi = 100
+    else:
+        rs = avg_gain / avg_loss
+        rsi = 100 - (100 / (1 + rs))
+
+    # MACD (Simplified)
+    ema12 = pd.Series(prices).ewm(span=12).mean().iloc[-1]
+    ema26 = pd.Series(prices).ewm(span=26).mean().iloc[-1]
+    macd = ema12 - ema26
+
+    # Trend & Candle
+    slope = (prices[-1] - prices[0]) / len(prices)
+    trend = "Bullish" if slope > 0 else "Bearish"
+    candle = "Bullish" if prices[-1] > prices[-2] else "Bearish"
+
+    return {"rsi": round(rsi, 1), "macd": round(macd, 2), "trendline": trend, "candle": candle}
+
+def _get_trade_decision(data, tech):
+    sig = data.get('final_signal', 'Neutral')
+    if sig == 'Bullish' and tech['trendline'] == 'Bullish':
+        return f"Bullish confirmation: Price holding above support with strong OI build."
+    elif sig == 'Bearish' and tech['trendline'] == 'Bearish':
+        return f"Bearish confirmation: Resistance BUILDING. Target lower levels."
+    return f"Wait for clean break. Price and OI are mixed."
+
 def build_full_analysis(symbol):
     try:
         now = time.time()
@@ -72,7 +107,17 @@ def build_full_analysis(symbol):
             prices = [s['value'] for s in _chart_history[symbol]]
             spot = live_spot if live_spot else prices[-1] if prices else 23400
 
+            tech = calculate_technicals(prices)
             data = build_dashboard(df_prev, df, spot)
+
+            # Inject Trade Alert & Decision note
+            data["trade_alert"] = {
+                "action": data.get("final_signal", "WAIT"),
+                "trigger": "Wait for break" if data.get("final_signal") == "Neutral" else f"Trigger active @ {spot}",
+                "note": f"Heartbeat active ({len(prices)} ticks)",
+                "technicals": tech
+            }
+            data["decision_note"] = _get_trade_decision(data, tech)
 
             # Pattern Recognition (High Priority)
             data["price_structure"] = analyze_price_structure(prices)
@@ -90,7 +135,7 @@ def build_full_analysis(symbol):
         log.error(f"Sync error for {symbol}: {e}")
 
 def main_loop():
-    log.info("==== STARTING v56 PATTERN RUNNER ====")
+    log.info("==== STARTING v57 FULL RUNNER ====")
     SYMBOLS = ["NIFTY", "BANKNIFTY"]
 
     # Init Firebase and load history

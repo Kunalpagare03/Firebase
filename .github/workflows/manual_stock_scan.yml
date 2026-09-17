@@ -32,10 +32,10 @@ jobs:
           ANGEL_PIN: ${{ secrets.ANGEL_PIN }}
           ANGEL_TOTP_SECRET: ${{ secrets.ANGEL_TOTP_SECRET }}
         run: |
-          # 1. Update Option Sentiment First (Fast)
+          # 1. Update Option Dashboard with Full Telemetry (Greeks, PA, etc)
           cd stock_alert_bot/Option
-          python step7_dashboard.py
+          python scripts/cloud_sync_full.py
           
-          # 2. Run Full Stock Scanner (Comprehensive)
+          # 2. Run Full Stock Scanner
           cd ../stock
           python live_stock_scanner.py

@@ -45,6 +45,13 @@ def build_dashboard(df_prev, df_curr, spot_curr):
 
     top_strikes = top_strikes.nlargest(5, "total_oi")
 
+    put_change = int(top_strikes["window_put_oi_change"].sum())
+    call_change = int(top_strikes["window_call_oi_change"].sum())
+
+    oi_dir = "Call and put OI balanced"
+    if put_change > call_change * 1.2: oi_dir = "Put writing (Bullish)"
+    elif call_change > put_change * 1.2: oi_dir = "Call writing (Bearish)"
+
     score = 0
     if pcr["pcr_oi"] and pcr["pcr_oi"] > 1.1: score += 2
     elif pcr["pcr_oi"] and pcr["pcr_oi"] < 0.9: score -= 2
@@ -64,6 +71,7 @@ def build_dashboard(df_prev, df_curr, spot_curr):
         "top_strikes": top_strikes[["strike", "call_oi", "put_oi", "total_oi", "call_buildup", "put_buildup", "oi_side"]].to_dict("records"),
         "final_signal": final_signal,
         "combined_sentiment_read": f"Leaning {final_signal}" if final_signal != "Neutral" else "Neutral",
+        "oi_directional_read": oi_dir,
         "deep_dive": perform_deep_dive(df_curr, spot_curr),
         "oi_buildup_overall": buildup_summary["overall_read"]
     }

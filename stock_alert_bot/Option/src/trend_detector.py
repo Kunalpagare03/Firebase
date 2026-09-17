@@ -2,85 +2,104 @@
 import pandas as pd
 import numpy as np
 
-
 def analyze_price_structure(values):
-    """Classify trend from recent price structure, not just the latest candle."""
+    """Detect high-probability institutional chart patterns."""
     prices = [float(value) for value in values if value is not None and pd.notna(value)]
-    if len(prices) < 5:
+    if len(prices) < 20:
         return {
             "trend": "Neutral",
-            "pattern": "Insufficient price history",
-            "higher_high": None,
-            "higher_low": None,
-            "lower_high": None,
-            "lower_low": None,
-            "confidence": 0,
+            "pattern": "Analyzing Candles...",
+            "chart_pattern": "Building Data",
+            "confidence": 0
         }
 
-    prices = prices[-60:]
-    window = max(2, len(prices) // 3)
-    previous = prices[-(window * 2):-window]
-    recent = prices[-window:]
-    threshold = max((max(prices) - min(prices)) * 0.001, 0.5)
+    prices_arr = np.array(prices[-100:])
+    n = len(prices_arr)
 
-    previous_high, recent_high = max(previous), max(recent)
-    previous_low, recent_low = min(previous), min(recent)
-    higher_high = recent_high > previous_high + threshold
-    higher_low = recent_low > previous_low + threshold
-    lower_high = recent_high < previous_high - threshold
-    lower_low = recent_low < previous_low - threshold
+    # Peak and Trough detection
+    # Split into 5 segments to find swings
+    chunk = n // 5
+    s1, s2, s3, s4, s5 = prices_arr[0:chunk], prices_arr[chunk:chunk*2], prices_arr[chunk*2:chunk*3], prices_arr[chunk*3:chunk*4], prices_arr[chunk*4:]
 
-    if lower_high and lower_low:
-        trend = "Bearish"
-        pattern = "Lower highs and lower lows"
-    elif higher_high and higher_low:
-        trend = "Bullish"
-        pattern = "Higher highs and higher lows"
-    elif lower_low or (prices[-1] < prices[0] - threshold):
-        trend = "Bearish"
-        pattern = "Bearish structure: lower low"
-    elif higher_high or (prices[-1] > prices[0] + threshold):
-        trend = "Bullish"
-        pattern = "Bullish structure: higher high"
-    else:
-        trend = "Neutral"
-        pattern = "Range-bound / mixed structure"
+    h = [np.max(s1), np.max(s2), np.max(s3), np.max(s4), np.max(s5)]
+    l = [np.min(s1), np.min(s2), np.min(s3), np.min(s4), np.min(s5)]
 
-    confirmations = sum((lower_high, lower_low)) if trend == "Bearish" else sum((higher_high, higher_low)) if trend == "Bullish" else 0
+    # Calculate average volatility for thresholds
+    volatility = (np.max(prices_arr) - np.min(prices_arr))
+    thr = max(volatility * 0.05, 1.0) # 5% of range or 1 point
+
+    detected = "Consolidating"
+    confidence = 0.5
+
+    # --- POWER PATTERNS (Most Reliable) ---
+
+    # 1. Double Bottom (W-Pattern) - Reversal
+    if abs(l[1] - l[3]) < thr and h[2] > l[1] + thr and prices_arr[-1] > h[2]:
+        detected = "Double Bottom (W-Pattern)"
+        confidence = 0.85
+
+    # 2. Double Top (M-Pattern) - Reversal
+    elif abs(h[1] - h[3]) < thr and l[2] < h[1] - thr and prices_arr[-1] < l[2]:
+        detected = "Double Top (M-Pattern)"
+        confidence = 0.85
+
+    # 3. Bull Flag - Continuation
+    elif h[2] > h[1] and h[4] < h[3] and l[4] < l[3] and prices_arr[-1] > h[4]:
+        detected = "Bull Flag (Breakout)"
+        confidence = 0.90
+
+    # 4. Bear Flag - Continuation
+    elif l[2] < l[1] and h[4] > h[3] and l[4] > l[3] and prices_arr[-1] < l[4]:
+        detected = "Bear Flag (Breakdown)"
+        confidence = 0.90
+
+    # 5. Head & Shoulders - Major Reversal
+    elif h[2] > h[1] + thr and h[2] > h[3] + thr and abs(h[1] - h[3]) < thr:
+        detected = "Head & Shoulders"
+        confidence = 0.88
+
+    # 6. Inverse Head & Shoulders - Major Reversal
+    elif l[2] < l[1] - thr and l[2] < l[3] - thr and abs(l[1] - l[3]) < thr:
+        detected = "Inverse Head & Shoulders"
+        confidence = 0.88
+
+    # 7. Ascending Triangle - Bullish Breakout
+    elif abs(h[1] - h[3]) < thr and l[3] > l[1] + thr:
+        detected = "Ascending Triangle"
+        confidence = 0.82
+
+    # 8. Descending Triangle - Bearish Breakdown
+    elif abs(l[1] - l[3]) < thr and h[3] < h[1] - thr:
+        detected = "Descending Triangle"
+        confidence = 0.82
+
+    # 9. Cup and Handle
+    elif h[0] > h[2] and abs(h[0] - h[4]) < thr and l[2] < l[1] and l[2] < l[3]:
+        detected = "Cup and Handle"
+        confidence = 0.80
+
+    # 10. Rectangle Channel
+    elif abs(h[1] - h[3]) < thr and abs(l[1] - l[3]) < thr:
+        detected = "Rectangle Channel"
+        confidence = 0.75
+
+    # Trend Logic
+    trend = "Neutral"
+    if prices_arr[-1] > prices_arr[0]: trend = "Bullish"
+    elif prices_arr[-1] < prices_arr[0]: trend = "Bearish"
+
     return {
         "trend": trend,
-        "pattern": pattern,
-        "higher_high": higher_high,
-        "higher_low": higher_low,
-        "lower_high": lower_high,
-        "lower_low": lower_low,
-        "confidence": round(confirmations / 2, 2),
-        "previous_high": round(previous_high, 2),
-        "recent_high": round(recent_high, 2),
-        "previous_low": round(previous_low, 2),
-        "recent_low": round(recent_low, 2),
+        "pattern": f"{trend} structure",
+        "chart_pattern": detected,
+        "confidence": confidence,
+        "recent_high": round(float(np.max(prices_arr[-10:])), 2),
+        "recent_low": round(float(np.min(prices_arr[-10:])), 2)
     }
 
-
 def analyze_option_chain(file_path):
-    """Analyze option chain data and detect trend changes."""
     df = pd.read_csv(file_path)
     df['captured_at'] = pd.to_datetime(df['captured_at'])
     df.sort_values('captured_at', inplace=True)
-
-    summary = df.groupby('captured_at').agg({
-        'spot_price': 'mean',
-        'call_oi': 'sum',
-        'put_oi': 'sum',
-        'call_iv': 'mean',
-        'put_iv': 'mean'
-    }).reset_index()
-
-    # Derived metrics
-    summary['OI_ratio'] = summary['put_oi'] / summary['call_oi']
-    summary['IV_diff'] = summary['call_iv'] - summary['put_iv']
-    summary['Trend'] = np.where(summary['OI_ratio'] > 1.1, 'Bullish',
-                         np.where(summary['OI_ratio'] < 0.9, 'Bearish', 'Neutral'))
-    summary['Trend_Change'] = summary['Trend'].ne(summary['Trend'].shift())
-
+    summary = df.groupby('captured_at').agg({'spot_price': 'mean', 'call_oi': 'sum', 'put_oi': 'sum'}).reset_index()
     return summary

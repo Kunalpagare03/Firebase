@@ -53,13 +53,21 @@ def analyze_stock(symbol):
         rating = min(10, score)
         base_info = {
             "symbol": symbol, "sector": get_sector(symbol), "price": entry,
-            "target_price": round(entry * 1.05, 2), "sl_price": round(entry * 0.97, 2),
-            "change": round(change_pct, 2), "rating": f"{rating}/10", "vol_ratio": round(vol_ratio, 1)
+            "target_price": round(entry * 1.10, 2), "sl_price": round(entry * 0.94, 2), # Wider targets
+            "change": round(change_pct, 2), "rating": f"{rating}/10", "vol_ratio": round(vol_ratio, 1),
+            "ema20": round(df['ema20'].iloc[-1], 2), "ema200": round(df['ema200'].iloc[-1], 2),
+            "justification": f"Relative Strength: Stock is {round(change_pct, 2)}% green with {round(vol_ratio, 1)}x volume."
         }
 
-        intra = {**base_info, "recommendation": "INTRA BUY"} if change_pct > 0.5 and vol_ratio > 1.2 else None
-        swing = {**base_info, "recommendation": "SWING ENTRY"} if rating >= 7 and curr['Close'] > df['ema20'].iloc[-1] else None
-        pos = {**base_info, "recommendation": "POS HOLD"} if rating >= 8 and df['ema50'].iloc[-1] > df['ema200'].iloc[-1] else None
+        # --- RELAXED FILTERING LOGIC ---
+        # 1. Intra-Day: Show anything positive with volume
+        intra = {**base_info, "recommendation": "INTRA BUY"} if change_pct > 0.1 and vol_ratio > 0.8 else None
+
+        # 2. Swing: Rating >= 4 and Price > EMA 20
+        swing = {**base_info, "recommendation": "SWING ENTRY"} if rating >= 4 and curr['Close'] > df['ema20'].iloc[-1] else None
+
+        # 3. Positional: Rating >= 6
+        pos = {**base_info, "recommendation": "POS ACCUMULATE"} if rating >= 6 and df['ema50'].iloc[-1] > df['ema200'].iloc[-1] * 0.95 else None
 
         return intra, swing, pos
     except: return None, None, None

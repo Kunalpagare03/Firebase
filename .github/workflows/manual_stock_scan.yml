@@ -8,7 +8,7 @@ on:
 jobs:
   terminal-sync:
     runs-on: ubuntu-latest
-    timeout-minutes: 400 # Stay alive for the full market session
+    timeout-minutes: 400
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -25,7 +25,7 @@ jobs:
       - name: Create service-account.json
         run: echo '${{ secrets.FIREBASE_SERVICE_ACCOUNT }}' > stock_alert_bot/service-account.json
 
-      - name: Run Continuous Master Engine
+      - name: Run Full Market Scan & Continuous Hub
         env:
           PYTHONPATH: ${{ github.workspace }}/stock_alert_bot/Option:${{ github.workspace }}/stock_alert_bot/stock
           ANGEL_API_KEY: ${{ secrets.ANGEL_API_KEY }}
@@ -33,6 +33,10 @@ jobs:
           ANGEL_PIN: ${{ secrets.ANGEL_PIN }}
           ANGEL_TOTP_SECRET: ${{ secrets.ANGEL_TOTP_SECRET }}
         run: |
-          # This starts the high-speed loop that updates your phone all day
-          cd stock_alert_bot/Option
+          # 1. Run Stock Scanner Once (Updates History & Rotates Scans)
+          cd stock_alert_bot/stock
+          python live_stock_scanner.py
+          
+          # 2. Start Continuous Options Hub (Keeps phone live all day)
+          cd ../Option
           python scripts/cloud_market_runner.py

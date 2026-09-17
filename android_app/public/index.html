@@ -3,68 +3,71 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>StockPro | Terminal v47.0</title>
+    <title>StockPro | Cloud Terminal v48.0</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
     <style>
-        :root { --bg-main: #e8eef0; --bg-card: rgba(255, 255, 255, 0.88); --accent: #153f4c; --bull: #1d8f5a; --bear: #b32727; --border: #c5d3d5; --txt-main: #17212b; --txt-dim: #587078; }
+        :root { --bg-main: #e8eef0; --bg-card: #ffffff; --accent: #153f4c; --bull: #1d8f5a; --bear: #b32727; --border: #c5d3d5; --txt-main: #17212b; --txt-dim: #587078; }
         body { background: radial-gradient(circle at 15% 0%,#d9f1eb 0,#e8eef0 38%,#f5efe4 100%); color: var(--txt-main); font-family: Georgia, 'Times New Roman', serif; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-        .navbar { background: rgba(255,255,255,0.9); border-bottom: 1px solid var(--border); backdrop-filter: blur(10px); position: sticky; top: 0; z-index: 1000; }
+
+        /* Persistent Nav */
         .bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; background: #ffffff; display: flex; border-top: 1px solid var(--border); z-index: 1000; height: 65px; box-shadow: 0 -5px 20px rgba(0,0,0,0.05); }
-        .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--txt-dim); font-size: 0.7rem; font-weight: 700; border: none; background: none; outline: none; }
+        .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--txt-dim); font-size: 0.7rem; font-weight: 700; border: none; background: none; }
         .nav-item.active { color: var(--accent); background: #f1f6f4; }
         .nav-item i { font-size: 1.3rem; margin-bottom: 2px; }
-        #main-scroll { padding: 15px; padding-bottom: 85px; max-width: 1200px; margin: 0 auto; }
-        .meta-line { font-size: 0.7rem; color: var(--txt-dim); margin-bottom: 5px; line-height: 1.5; }
-        .card-custom { border: 1px solid var(--border); padding: 18px; border-radius: 8px; margin-bottom: 14px; background: var(--bg-card); box-shadow: 0 8px 24px rgba(31,57,64,.08); }
-        .headline { display: flex; align-items: center; justify-content: space-between; padding: 16px 18px; border: 1px solid #83aab0; border-radius: 8px; background: #153f4c; color: #fff; margin: 10px 0 14px; font-weight: 800; font-size: 1.2rem; }
-        .sig-badge { padding: 9px 15px; border-radius: 5px; background: #69777b; color: #fff; min-width: 140px; text-align: center; text-transform: uppercase; }
-        .sig-bullish { background: var(--bull); }
-        .sig-bearish { background: var(--bear); }
-        .alert-lbl { display: inline-block; padding: 7px 10px; border-radius: 4px; font-weight: 800; font-size: 1rem; margin-bottom: 5px; text-transform: uppercase; }
-        .alert-bullish { background: #d9f2e5; color: #12613b; }
-        .alert-bearish { background: #f9dede; color: #8f2020; }
-        .alert-wait { background: #f4ead0; color: #755519; }
-        .metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; margin-bottom: 10px; }
-        .m-box { padding: 10px 12px; background: #f1f6f4; border-left: 4px solid #64a99b; border-radius: 4px; border: 1px solid var(--border); border-left-width: 4px; }
-        .m-lbl { font-size: 0.8rem; font-weight: 800; color: #2c3e50; }
-        .m-val { font-size: 1rem; font-weight: 700; color: var(--txt-main); }
-        .spot-highlight { color: #2563eb !important; font-family: monospace; }
-        .analysis-row { font-size: 0.82rem; line-height: 1.8; margin-bottom: 2px; }
-        .chart-box { background: #fbfcfd; border-radius: 5px; border: 1px solid #c9d9d9; margin-bottom: 1.5rem; height: 350px; width: 100%; }
-        .table-wrap { overflow-x: auto; margin-top: 10px; border-radius: 8px; border: 1px solid var(--border); }
-        .table-pro { width: 100%; font-size: 0.85rem; border-collapse: collapse; background: #fff; }
-        .table-pro th { background: #f8fbfc; padding: 10px; border-bottom: 2px solid var(--border); text-align: center; }
-        .table-pro td { padding: 10px; border-bottom: 1px solid #eee; text-align: center; font-weight: 600; }
-        .stk-btn { width: 100%; background: #fff; border: 1px solid var(--border); border-radius: 8px; padding: 15px; margin-bottom: 12px; text-align: left; border-left: 6px solid transparent; }
-        .price-strip { display: flex; justify-content: space-around; margin-top: 10px; padding-top: 10px; border-top: 1px solid #eee; }
-        .price-item { font-size: 0.7rem; color: var(--txt-dim); font-weight: 800; text-align: center; }
-        .price-item span { display: block; font-size: 0.95rem; font-weight: 900; color: var(--accent); }
+
+        #main-scroll { padding: 15px; padding-bottom: 85px; max-width: 900px; margin: 0 auto; }
+
+        /* Real-Time Live Header */
+        .cloud-bar { font-size: 0.65rem; color: var(--txt-dim); margin-bottom: 8px; display: flex; justify-content: space-between; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; }
+        .live-dot { height: 7px; width: 7px; background: #10b981; border-radius: 50%; display: inline-block; margin-right: 4px; animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0% { opacity: 1; transform: scale(1); } 50% { opacity: 0.4; transform: scale(0.8); } 100% { opacity: 1; transform: scale(1); } }
+
+        /* Institutional Signal */
+        .sig-banner { padding: 1rem; border-radius: 8px; background: var(--accent); color: #fff; font-weight: 800; display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        .sig-badge { padding: 6px 14px; border-radius: 4px; text-transform: uppercase; font-size: 0.85rem; }
+        .bg-bull { background: var(--bull); }
+        .bg-bear { background: var(--bear); }
+
+        .alert-card { border: 1px solid var(--border); padding: 18px; border-radius: 8px; margin-bottom: 12px; background: rgba(255,255,255,0.9); box-shadow: 0 4px 15px rgba(0,0,0,0.03); }
+        .m-strip { display: flex; flex-wrap: wrap; border: 1px solid var(--border); border-radius: 6px; background: #f1f6f4; margin-bottom: 12px; overflow: hidden; }
+        .m-item { flex: 1; min-width: 110px; padding: 12px; border-right: 1px solid var(--border); border-left: 4px solid #64a99b; }
+        .m-lbl { font-size: 0.7rem; font-weight: 800; color: var(--accent); display: block; }
+        .m-val { font-size: 1rem; font-weight: 900; color: var(--txt-main); font-family: monospace; }
+        .spot-highlight { color: #2563eb !important; font-size: 1.1rem; }
+
+        .chart-box { background: #fbfcfd; border-radius: 6px; border: 1px solid #c9d9d9; margin-bottom: 1rem; height: 320px; width: 100%; }
+
+        /* SCAN Tab */
+        .config-box { background: #153f4c; color: #fff; padding: 15px; border-radius: 8px; margin-bottom: 15px; }
+        .scan-btn { background: #10b981; color: #fff; border: none; padding: 15px; border-radius: 8px; font-weight: 900; width: 100%; font-size: 1.1rem; margin-top: 10px; }
+
+        /* Detail Screen */
         #detail-view { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg-main); z-index: 2000; padding: 20px; overflow-y: auto; }
-        .back-btn { background: var(--accent); color: #fff; border: none; padding: 10px 20px; border-radius: 5px; font-weight: 800; margin-bottom: 20px; }
+        .back-btn { background: var(--accent); color: #fff; border: none; padding: 8px 18px; border-radius: 4px; font-weight: 800; margin-bottom: 20px; }
     </style>
 </head>
 <body>
 
 <div id="login-overlay">
-    <div class="card p-4 text-center shadow-lg" style="max-width: 400px; margin: 100px auto;">
-        <h3 class="fw-bold mb-4" style="color:var(--accent)">STOCKPRO HUB</h3>
+    <div class="card p-4 text-center" style="max-width: 400px; margin: 100px auto;">
+        <h3 class="fw-bold mb-4" style="color:var(--accent)">CLOUD TERMINAL</h3>
         <input type="email" id="email" class="form-control mb-3" placeholder="Email">
-        <input type="password" id="password" class="form-control mb-4" placeholder="Terminal Key">
-        <button id="login-btn" class="btn btn-dark w-100 fw-bold py-2">ACCESS TERMINAL</button>
+        <input type="password" id="password" class="form-control mb-4" placeholder="Access Key">
+        <button id="login-btn" class="btn btn-dark w-100 fw-bold py-2">LOGIN</button>
     </div>
 </div>
 
 <div id="app-shell" style="display: none;">
-    <nav class="navbar navbar-light sticky-top px-3 py-2"><span class="navbar-brand">Live Option Chain Market Analysis</span><button id="logout-btn" class="btn btn-sm btn-outline-secondary"><i class="bi bi-power"></i></button></nav>
+    <nav class="navbar navbar-light sticky-top px-3 py-2"><span class="navbar-brand">PRO HUB v48.0 (CLOUD)</span></nav>
     <div id="main-scroll"></div>
     <div class="bottom-nav">
         <button class="nav-item active" onclick="setView('options')"><i class="bi bi-graph-up"></i>OPTIONS</button>
         <button class="nav-item" onclick="setView('intra')"><i class="bi bi-lightning-charge"></i>INTRA</button>
         <button class="nav-item" onclick="setView('swing')"><i class="bi bi-calendar-event"></i>SWING</button>
         <button class="nav-item" onclick="setView('pos')"><i class="bi bi-shield-check"></i>POS</button>
-        <button class="nav-item" onclick="setView('admin')"><i class="bi bi-gear-fill"></i>SCAN</button>
+        <button class="nav-item" onclick="setView('admin')"><i class="bi bi-cloud-arrow-up-fill"></i>SCAN</button>
     </div>
 </div>
 
@@ -80,13 +83,25 @@
 
     const config = { apiKey: "AIzaSyDMEUmFGSJBjGrz7fpDN46OiZlSJ6NTsjE", authDomain: "kunal-analysis.firebaseapp.com", projectId: "kunal-analysis", storageBucket: "kunal-analysis.firebasestorage.app", appId: "1:328297105533:web:3ed3d8d5aa3ec677b88914" };
     const app = initializeApp(config); const auth = getAuth(app); const db = getFirestore(app);
-    let view = 'options'; let sym = 'NIFTY'; let master = { opt: {}, stocks: {}, live: {} }; let unsub = { opt: null, live: null, stocks: null };
+    let view = 'options'; let symbol = 'NIFTY';
+    let master = { opt: {}, stocks: {}, live: { NIFTY: '-', BANKNIFTY: '-' } };
+    let unsub = { opt: null, stocks: null };
 
-    document.getElementById('login-btn').onclick = async () => {
-        const e = document.getElementById('email').value, p = document.getElementById('password').value;
-        try { await signInWithEmailAndPassword(auth, e, p); } catch(err) { alert("Access Denied"); }
-    };
-    document.getElementById('logout-btn').onclick = () => signOut(auth);
+    // Native Browser Live Fetcher (Laptop Independent)
+    async function fetchSpotDirect() {
+        try {
+            const sym = symbol === 'NIFTY' ? '%5ENSEI' : '%5ENSEBANK';
+            const r = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${sym}?interval=1m&range=1d`);
+            const j = await r.json();
+            const price = j.chart.result[0].indicators.quote[0].close.filter(x => x).pop();
+            master.live[symbol] = price.toFixed(2);
+            if(view === 'options') {
+                const el = document.getElementById('live-spot-val');
+                if(el) el.innerText = master.live[symbol];
+            }
+        } catch(e) {}
+    }
+    setInterval(fetchSpotDirect, 2000);
 
     onAuthStateChanged(auth, (user) => {
         if (user) { document.getElementById('login-overlay').style.display='none'; document.getElementById('app-shell').style.display='block'; start(); }
@@ -94,17 +109,28 @@
     });
 
     window.setView = (v) => { view = v; document.querySelectorAll('.nav-item').forEach(b => b.classList.toggle('active', b.innerText.toLowerCase().includes(v.slice(0,3)))); render(); };
-    window.switchSym = (s) => { sym = s; startOpt(); startLive(); };
-    window.triggerScan = async (type) => {
+    window.switchSym = (s) => { symbol = s; fetchSpotDirect(); startOpt(); };
+
+    window.triggerCloudScan = async () => {
+        const token = document.getElementById('gh_token').value;
+        if(!token) { alert("Please enter GitHub Token first!"); return; }
+        const btn = event.target; btn.disabled = true; btn.innerText = "STARTING CLOUD SERVER...";
+
         try {
-            await setDoc(doc(db, "commands", "latest"), { command: type, timestamp: new Date().toISOString(), processed: false });
-            alert("Scan Command Sent!");
-        } catch (e) { alert(e.message); }
+            const r = await fetch('https://api.github.com/repos/Kunalpagare03/Firebase/dispatches', {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/vnd.github.v3+json' },
+                body: JSON.stringify({ event_type: 'manual_scan' })
+            });
+            if(r.ok) alert("GitHub Cloud Scanner Started! Wait 5 mins.");
+            else alert("GitHub Error: " + r.statusText);
+        } catch(e) { alert("Failed: " + e.message); }
+        setTimeout(() => { btn.disabled = false; btn.innerText = "RUN FULL CLOUD SCAN"; }, 5000);
     };
 
     function start() {
-        startOpt(); startLive();
-        unsub.stocks = onSnapshot(doc(db, "stock_scans", "comprehensive"), (snap) => {
+        startOpt(); fetchSpotDirect();
+        onSnapshot(doc(db, "stock_scans", "comprehensive"), (snap) => {
             const d = snap.data(); if (!d) return;
             master.stocks = { "intra": d.intraday || [], "swing": d.swing || [], "pos": d.positional || [] };
             master.stocks_ts = d.timestamp;
@@ -117,88 +143,46 @@
 
     function startOpt() {
         if(unsub.opt) unsub.opt();
-        unsub.opt = onSnapshot(doc(db, "option_sentiment", sym), (snap) => {
-            const d = snap.data(); if (d) { master.opt[sym] = d; if(view === 'options') render(); }
-        });
-    }
-
-    function startLive() {
-        if(unsub.live) unsub.live();
-        unsub.live = onSnapshot(doc(db, "live_quotes", sym), (snap) => {
-            const d = snap.data();
-            if (d) {
-                master.live[sym] = d;
-                const spotEl = document.getElementById('hb-spot'); if(spotEl) spotEl.innerText = d.spot_price;
-                const timeEl = document.getElementById('hb-time'); if(timeEl) timeEl.innerText = d.updated_at;
-            }
+        unsub.opt = onSnapshot(doc(db, "option_sentiment", symbol), (snap) => {
+            const d = snap.data(); if (d) { master.opt[symbol] = d; if(view === 'options') render(); }
         });
     }
 
     function render() {
-        const container = document.getElementById('main-scroll'); if (!container) return;
+        const container = document.getElementById('main-scroll');
         if (view === 'admin') {
-            const s = master.scanner_status || { status: 'Idle', last_scan_time: '--:--', results: '0' };
+            const s = master.scanner_status || { status: 'Idle', last_scan_time: '--:--' };
             container.innerHTML = `
+                <div class="config-box">
+                    <span class="fw-bold small d-block mb-2 text-uppercase">GitHub Cloud Integration</span>
+                    <input type="password" id="gh_token" class="form-control form-control-sm bg-dark text-white border-0 mb-3" placeholder="Enter GitHub Token for No-Laptop Scan">
+                    <p class="small opacity-70">This allows your phone to trigger the GitHub cloud server independently.</p>
+                </div>
                 <div class="card-alert text-center">
-                    <h4>Scanner Command Center</h4>
-                    <div class="my-4">
-                        <div class="small fw-bold text-uppercase muted mb-1">Current Status</div>
-                        <div class="h5 fw-bold" style="color:var(--accent)">${s.status}</div>
-                        <div class="small text-info">${s.results || ''}</div>
-                    </div>
-                    <button class="btn btn-dark w-100 fw-bold py-3 mb-3" onclick="triggerScan('stock')">RUN FULL SCAN (2,800+ STOCKS)</button>
-                    <div class="small muted">Last Scan Finished: ${s.last_scan_time || '--:--'}</div>
+                    <span class="fw-bold small muted text-uppercase">Cloud Status</span>
+                    <div class="h5 fw-bold mb-4" style="color:var(--accent)">${s.status}</div>
+                    <button class="scan-btn" onclick="triggerCloudScan()">RUN FULL CLOUD SCAN</button>
+                    <div class="small muted mt-3">Last Sync: ${s.last_scan_time || '--:--'}</div>
                 </div>`;
             return;
         }
         if (view === 'options') {
-            const d = master.opt[sym]; if (!d) { container.innerHTML = '<div class="text-center py-5">Syncing Option Chain...</div>'; return; }
-            const live = master.live[sym] || { spot_price: d.spot_price, updated_at: d.fetched_at };
-            const sig = d.final_signal || 'Neutral'; const alert = d.trade_alert || {}; const tech = alert.technicals || {};
-            let oi = ''; (d.top_strikes || []).forEach(r => { oi += `<tr><td>${r.strike}</td><td>${r.call_oi}</td><td>${r.put_oi}</td><td>${r.total_oi}</td><td>${r.call_buildup||'-'}</td><td>${r.put_buildup||'-'}</td><td>${(r.oi_side||'N/A').split(' ')[0]}</td></tr>`; });
-
+            const d = master.opt[symbol]; if (!d) { container.innerHTML = '<div class="text-center py-5">Syncing Option Chain...</div>'; return; }
+            const sig = d.final_signal || 'Neutral'; const alert = d.trade_alert || {};
             container.innerHTML = `
-                <div class="meta-line">
-                    Chain: NSE | Spot: AngelOne Live | Refreshed: <span id="hb-time">${live.updated_at}</span><br>
-                    Market status: ${d.market_status_str || 'OPEN'}
+                <div class="cloud-bar"><span><span class="live-dot"></span> LIVE TICK (INDEPENDENT)</span><span>SYNC: ${d.fetched_at}</span></div>
+                <select class="form-select mb-3" onchange="switchSym(this.value)"><option value="NIFTY" ${symbol==='NIFTY'?'selected':''}>NIFTY 50</option><option value="BANKNIFTY" ${symbol==='BANKNIFTY'?'selected':''}>BANKNIFTY</option></select>
+                <div class="sig-banner"><span>Directional Signal</span><span class="sig-badge ${sig==='Bullish'?'bg-bull':'bg-bear'}">${sig}</span></div>
+                <div class="m-strip">
+                    <div class="m-item"><span class="m-lbl">Live Spot</span><span class="m-val spot-highlight" id="live-spot-val">${master.live[symbol]}</span></div>
+                    <div class="m-item"><span class="m-lbl">Max Pain</span><span class="m-val">${d.max_pain}</span></div>
+                    <div class="m-item"><span class="m-lbl">PCR (OI)</span><span class="m-val">${d.pcr_oi}</span></div>
                 </div>
-                <div class="mb-3 d-flex align-items-center gap-2"><span class="fw-bold">Instrument</span><select class="form-select flex-fill" onchange="switchSym(this.value)"><option value="NIFTY" ${sym==='NIFTY'?'selected':''}>NIFTY 50</option><option value="BANKNIFTY" ${sym==='BANKNIFTY'?'selected':''}>BANKNIFTY</option></select></div>
-
-                <div class="headline"><span>Directional signal</span><span class="sig-badge ${sig==='Bullish'?'sig-bullish':'sig-bearish'}">${sig}</span></div>
-
-                <div class="card-custom">
-                    <strong>Action alert:</strong> <span class="alert-lbl ${alert.action?.includes('CALL')?'alert-bullish':(alert.action?.includes('PUT')?'alert-bearish':'alert-wait')}">${alert.action || 'WAIT'}</span><br>
-                    <span class="muted small">Trigger: ${alert.trigger || 'Wait for break'}</span><br>
-                    <div class="muted small mt-1">RSI: ${tech.rsi || '-'} | MACD: ${tech.macd || '-'} | Trend: ${tech.trendline || '-'} | Candle: ${tech.candle || '-'}</div>
-                </div>
-
-                <div class="metrics-grid">
-                    <div class="m-box"><span class="m-lbl">Spot</span><span class="m-val spot-highlight" id="hb-spot">${live.spot_price}</span></div>
-                    <div class="m-box"><span class="m-lbl">Max pain</span><span class="m-val">${d.max_pain}</span></div>
-                    <div class="m-box"><span class="m-lbl">PCR (OI)</span><span class="m-val">${d.pcr_oi}</span></div>
-                    <div class="m-box"><span class="m-lbl">PCR (vol)</span><span class="m-val">${d.pcr_volume || '0.0'}</span></div>
-                    <div class="m-box"><span class="m-lbl">Final Signal</span><span class="m-val">${sig}</span></div>
-                </div>
-
-                <div class="card-custom analysis-row">
-                    <div><strong>Market read:</strong> ${d.combined_sentiment_read}</div>
-                    <div><strong>Chart structure:</strong> ${d.price_structure?.trend || 'Range'}</div>
-                    <div><strong>Support:</strong> ${(d.support_zones||[]).join(', ')} <strong>Resistance:</strong> ${(d.resistance_zones||[]).join(', ')}</div>
-                    <div><strong>OI buildup:</strong> ${d.oi_buildup_overall || 'Neutral'}</div>
-                    <div><strong>OI trend:</strong> ${d.oi_trend || 'N/A'}</div>
-                    <div><strong>Flow:</strong> ${d.market_read || 'Neutral'}</div>
-                    <div><strong>Trend using price + OI buildup:</strong> ${d.decision_note || '-'}</div>
-                </div>
-
                 <div id="chart" class="chart-box"></div>
-
-                <div class="table-wrap"><table class="table-pro"><thead><tr><th>Strike</th><th>C-OI</th><th>P-OI</th><th>Total</th><th>C-Build</th><th>P-Build</th><th>Side</th></tr></thead><tbody>${oi}</tbody></table></div>
-                <div class="text-center small muted mb-4">Dashboard Sync: ${d.fetched_at}</div>`;
-
+                <div class="card-custom small"><strong>Market read:</strong> ${d.combined_sentiment_read}</div>
+            `;
             if((d.spot_history || []).length > 1) {
-                requestAnimationFrame(() => {
-                    Plotly.react('chart', [{ x: d.spot_history.map(h=>new Date(h.time)), y: d.spot_history.map(h=>h.value), type:'scatter', mode:'lines', line:{color:'#153f4c', width:3}, fill:'tozeroy', fillcolor:'rgba(21,63,76,0.1)' }], { paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:'rgba(0,0,0,0)', margin:{t:10,r:15,b:30,l:45}, xaxis:{showgrid:false, tickfont:{size:8}}, yaxis:{gridcolor:'#eee', tickfont:{size:8}} }, {responsive:true, displayModeBar:false});
-                });
+                requestAnimationFrame(() => { Plotly.react('chart', [{ x: d.spot_history.map(h=>new Date(h.time)), y: d.spot_history.map(h=>h.value), type:'scatter', mode:'lines', line:{color:'#153f4c', width:3}, fill:'tozeroy', fillcolor:'rgba(21,63,76,0.1)' }], { paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:'rgba(0,0,0,0)', margin:{t:10,r:10,b:30,l:45}, xaxis:{showgrid:false, tickfont:{size:8}}, yaxis:{gridcolor:'#eee', tickfont:{size:8}} }, {responsive:true, displayModeBar:false}); });
             }
         } else {
             const list = master.stocks[view] || []; if (!list.length) { container.innerHTML = '<div class="text-center py-5">Scanning for trades...</div>'; return; }
@@ -213,7 +197,7 @@
     }
     window.openDetails = (s_id, type) => {
         const s = master.stocks[type].find(x => x.symbol === s_id); if (!s) return;
-        document.getElementById('detail-body').innerHTML = `<div class="sig-banner"><span>${s.symbol.replace('.NS','')}</span><span class="sig-badge ${s.change > 0 ? 'bg-bull':'bg-bear'}">${s.recommendation}</span></div><div class="metrics-grid"><div class="m-box"><span class="m-lbl">Price</span><span class="m-val">${s.price}</span></div><div class="m-box"><span class="m-lbl">Target</span><span class="m-val text-success">${s.target_price}</span></div><div class="m-box"><span class="m-lbl">SL</span><span class="m-val text-danger">${s.sl_price}</span></div></div><div class="card-custom small">${s.justification}</div>`;
+        document.getElementById('detail-body').innerHTML = `<div class="sig-banner"><span>${s.symbol.replace('.NS','')}</span><span class="sig-badge ${s.change > 0 ? 'bg-bull':'bg-bear'}">${s.recommendation}</span></div><div class="m-strip"><div class="m-item"><span class="m-lbl">Price</span><span class="m-val">${s.price}</span></div><div class="m-item"><span class="m-lbl">Target</span><span class="m-val text-success">${s.target_price}</span></div><div class="m-item"><span class="m-lbl">SL</span><span class="m-val text-danger">${s.sl_price}</span></div></div><div class="card-custom small">${s.justification}</div>`;
         document.getElementById('detail-view').style.display = 'block';
     };
 </script>

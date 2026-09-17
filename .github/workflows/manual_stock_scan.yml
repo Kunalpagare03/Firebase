@@ -1,0 +1,36 @@
+name: Manual Stock Scan (Triggered from App)
+
+on:
+  repository_dispatch:
+    types: [manual_scan]
+  workflow_dispatch:
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: |
+          cd stock_alert_bot/stock
+          pip install yfinance pandas numpy firebase-admin requests openpyxl
+
+      - name: Create service-account.json
+        run: echo '${{ secrets.FIREBASE_SERVICE_ACCOUNT }}' > stock_alert_bot/service-account.json
+
+      - name: Run Global Parallel Scan
+        env:
+          PYTHONPATH: ${{ github.workspace }}/stock_alert_bot/stock
+        run: |
+          cd stock_alert_bot/stock
+          # Set status to scanning
+          python -c "import firebase_admin; from firebase_admin import credentials, firestore; cred = credentials.Certificate('../service-account.json'); firebase_admin.initialize_app(cred); db = firestore.client(); db.collection('stock_scans').document('status').set({'status': 'Cloud Scanning...', 'progress': 'Working'})"
+          # Run the actual scanner
+          python live_stock_scanner.py

@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>StockPro | Stock Hub</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <style>
+        :root { --bg-main: #e8eef0; --bg-card: #ffffff; --accent: #153f4c; --bull: #1d8f5a; --bear: #b32727; --border: #c5d3d5; --txt-main: #17212b; --txt-dim: #587078; }
+        body { background: radial-gradient(circle at 15% 0%,#d9f1eb 0,#e8eef0 38%,#f5efe4 100%); color: var(--txt-main); font-family: Georgia, 'Times New Roman', serif; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+        .navbar { background: rgba(255,255,255,0.9); border-bottom: 1px solid var(--border); backdrop-filter: blur(10px); position: sticky; top: 0; z-index: 1000; padding: 10px 15px; }
+        .navbar-brand { color: var(--accent) !important; font-weight: 800; font-size: 1.3rem; }
+        .hub-btn { background: var(--accent); color: #fff; border: none; padding: 6px 12px; border-radius: 6px; font-weight: 700; font-size: 0.75rem; text-decoration: none; }
+        .bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; background: #ffffff; display: flex; border-top: 1px solid var(--border); z-index: 1000; height: 65px; box-shadow: 0 -5px 20px rgba(0,0,0,0.05); }
+        .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--txt-dim); font-size: 0.7rem; font-weight: 700; border: none; background: none; outline: none; cursor: pointer; text-decoration: none; }
+        .nav-item.active { color: var(--accent); background: #f1f6f4; }
+        .nav-item i { font-size: 1.3rem; margin-bottom: 2px; }
+        #main-scroll { padding: 15px; padding-bottom: 85px; max-width: 1200px; margin: 0 auto; }
+        .card-custom { border: 1px solid var(--border); padding: 18px; border-radius: 6px; margin-bottom: 14px; background: rgba(255,255,255,0.88); box-shadow: 0 8px 24px rgba(31,57,64,.08); }
+        .stk-btn { width: 100%; background: #fff; border: 1px solid var(--border); border-radius: 8px; padding: 15px; margin-bottom: 12px; text-align: left; border-left: 6px solid transparent; }
+        .price-strip { display: flex; justify-content: space-around; margin-top: 10px; padding-top: 10px; border-top: 1px solid #eee; }
+        .price-item { font-size: 0.75rem; color: var(--txt-dim); font-weight: 800; text-align: center; }
+        .price-item span { display: block; font-size: 1rem; font-weight: 900; color: var(--accent); }
+    </style>
+</head>
+<body>
+<div id="app-shell">
+    <nav class="navbar d-flex justify-content-between align-items-center">
+        <span class="navbar-brand">Professional Stock Hub</span>
+        <a href="index.html" class="hub-btn">OPTION MIRROR</a>
+    </nav>
+    <div id="main-scroll"></div>
+    <div class="bottom-nav">
+        <button class="nav-item active" id="btn-intra" onclick="setView('intra')"><i class="bi bi-lightning-charge"></i>INTRA</button>
+        <button class="nav-item" id="btn-swing" onclick="setView('swing')"><i class="bi bi-calendar-event"></i>SWING</button>
+        <button class="nav-item" id="btn-pos" onclick="setView('pos')"><i class="bi bi-shield-check"></i>POS</button>
+        <a href="index.html?view=admin" class="nav-item"><i class="bi bi-gear-fill"></i>SCAN</a>
+    </div>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+    import { getFirestore, doc, onSnapshot, collection, query, orderBy, limit, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+    const config = { apiKey: "AIzaSyDMEUmFGSJBjGrz7fpDN46OiZlSJ6NTsjE", authDomain: "kunal-analysis.firebaseapp.com", projectId: "kunal-analysis", storageBucket: "kunal-analysis.firebasestorage.app", appId: "1:328297105533:web:3ed3d8d5aa3ec677b88914" };
+    const app = initializeApp(config); const auth = getAuth(app); const db = getFirestore(app);
+    let view = 'intra'; let master = { stocks: {}, history_list: [] }; let activeHistoryId = 'comprehensive';
+
+    onAuthStateChanged(auth, (user) => { if(!user) window.location.href = 'index.html'; else start(); });
+
+    window.setView = (v) => { view = v; document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active')); document.getElementById('btn-'+v).classList.add('active'); render(); };
+    window.switchHistory = async (id) => { activeHistoryId = id; if(id !== 'comprehensive') { const snap = await getDocs(query(collection(db, "stock_history"), orderBy("timestamp", "desc"))); const docData = snap.docs.find(d => d.id === id); if(docData) master.stocks[id] = docData.data(); } render(); };
+
+    function start() {
+        onSnapshot(doc(db, "stock_scans", "comprehensive"), (snap) => { const d = snap.data(); if (d) { master.stocks['comprehensive'] = d; render(); } });
+        const q = query(collection(db, "stock_history"), orderBy("timestamp", "desc"), limit(20));
+        getDocs(q).then(snap => { master.history_list = snap.docs.map(d => ({ id: d.id, ts: d.data().timestamp })); render(); });
+    }
+
+    function render() {
+        const container = document.getElementById('main-scroll'); if (!container) return;
+        const data = master.stocks[activeHistoryId] || {};
+        const list = data[view] || [];
+        let options = '<option value="comprehensive">Latest Scan</option>';
+        master.history_list.forEach(h => { options += `<option value="${h.id}" ${activeHistoryId===h.id?'selected':''}>Scan: ${h.ts}</option>`; });
+
+        let historyHtml = `<div class="mb-3"><select class="form-select form-select-sm fw-bold" onchange="switchHistory(this.value)">${options}</select></div>`;
+        if (!list.length) { container.innerHTML = historyHtml + '<div class="text-center py-5 card-custom">No trades found.</div>'; return; }
+
+        let h = historyHtml;
+        const sectors = {}; list.forEach(s => { if(!sectors[s.sector]) sectors[s.sector] = []; sectors[s.sector].push(s); });
+        Object.keys(sectors).sort().forEach(sec => {
+            h += `<div class="fw-bold mb-2 small text-uppercase text-muted">${sec}</div>`;
+            sectors[sec].forEach(s => {
+                h += `<button class="stk-btn"><div class="d-flex justify-content-between"><div><div class="fw-bold">${s.symbol.replace('.NS','')}</div><div class="small muted">${s.rating} Score</div></div><div class="text-end"><div class="fw-bold text-${s.change > 0 ? 'success':'danger'}">${s.change}%</div><div class="small muted">${s.price}</div></div></div><div class="price-strip"><div class="price-item">TGT<span>${s.target_price}</span></div><div class="price-item">SL<span>${s.sl_price}</span></div></div></button>`;
+            });
+        });
+        container.innerHTML = h;
+    }
+</script>
+</body>
+</html>

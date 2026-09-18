@@ -137,18 +137,35 @@ def main_loop():
         cred = credentials.Certificate(os.path.join(ROOT, "..", "service-account.json"))
         firebase_admin.initialize_app(cred)
     db = firestore.client()
+
+    # Push immediate start signal
+    sync_to_firestore("stock_scans", "status", {
+        "status": "Cloud Server Waking Up...",
+        "last_scan_time": datetime.now().strftime("%H:%M:%S"),
+        "server_live": True
+    })
+
     load_initial_history(db, SYMBOLS)
     for s in SYMBOLS: start_live_feed(s)
 
     while True:
         try:
             status = market_status()
+
+            # Update Heartbeat
+            sync_to_firestore("stock_scans", "status", {
+                "status": f"Live - {status.get('reason')}",
+                "last_scan_time": datetime.now().strftime("%H:%M:%S"),
+                "server_live": True
+            })
+
             if status.get("reason") == "after market close": break
             for sym in SYMBOLS:
                 build_full_analysis(sym)
                 time.sleep(1)
         except Exception as e:
             log.error(f"Crash: {e}")
+            sync_to_firestore("stock_scans", "status", {"status": f"Server Error: {str(e)[:50]}", "server_live": False})
             time.sleep(5)
         time.sleep(3)
 

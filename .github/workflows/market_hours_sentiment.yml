@@ -5,6 +5,8 @@ on:
     # Starts at 03:40 UTC (9:10 AM IST) Monday-Friday
     - cron: '40 3 * * 1-5'
   workflow_dispatch:
+  repository_dispatch:
+    types: [manual_scan]
 
 jobs:
   real-time-hub:

@@ -31,17 +31,18 @@ from src.trend_detector import analyze_price_structure
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 log = logging.getLogger("CloudTerminal")
 
-# Multi-Instrument Memory (Preserved across runs via Firestore)
+# Multi-Instrument Memory
 _chart_history = defaultdict(lambda: deque(maxlen=2000))
 _last_chain_refresh = defaultdict(int)
-_cached_full_data = {} # Last successful full sync data
 _cached_chain = {}
 _cached_df_prev = {}
+_cached_full_data = {}
 
 def get_yahoo_spot(symbol):
     try:
         code = "%5ENSEI" if symbol == "NIFTY" else "%5ENSEBANK"
-        r = requests.get(f"https://query1.finance.yahoo.com/v8/finance/chart/{code}?interval=1m&range=1d", timeout=5)
+        # Explicit timeout to prevent hanging
+        r = requests.get(f"https://query1.finance.yahoo.com/v8/finance/chart/{code}?interval=1m&range=1d", timeout=8)
         j = r.json()
         return float(j['chart']['result'][0]['indicators']['quote'][0]['close'][-1])
     except: return None
@@ -49,45 +50,29 @@ def get_yahoo_spot(symbol):
 def load_initial_state(db, symbols):
     for sym in symbols:
         try:
-            doc_snap = db.collection("option_sentiment").document(sym).get()
+            doc_snap = db.collection("option_sentiment").document(sym).get(timeout=10)
             if doc_snap.exists:
                 d = doc_snap.to_dict()
                 hist = d.get("spot_history", [])
                 for h in hist: _chart_history[sym].append(h)
-                # Cache the last known technical state so we don't start with empty cards
                 _cached_full_data[sym] = d
-                log.info(f"Loaded {len(hist)} history points and last state for {sym}")
+                log.info(f"Restored {len(hist)} history points for {sym}")
         except Exception as e:
-            log.warning(f"Failed to load state for {sym}: {e}")
-
-def calculate_technicals(prices):
-    if len(prices) < 14: return {"rsi": "-", "macd": "-", "trendline": "N/A", "candle": "N/A"}
-    prices_arr = np.array(prices)
-    deltas = np.diff(prices_arr)
-    gain = np.where(deltas > 0, deltas, 0)
-    loss = np.where(deltas < 0, -deltas, 0)
-    avg_gain = np.mean(gain[-14:])
-    avg_loss = np.mean(loss[-14:])
-    rsi = 100 - (100 / (1 + (avg_gain/avg_loss))) if avg_loss != 0 else 100
-    ema12 = pd.Series(prices_arr).ewm(span=12).mean().iloc[-1]
-    ema26 = pd.Series(prices_arr).ewm(span=26).mean().iloc[-1]
-    macd = ema12 - ema26
-    slope = (prices_arr[-1] - prices_arr[0]) / len(prices_arr)
-    return {"rsi": round(rsi, 1), "macd": round(macd, 2), "trendline": "Bullish" if slope > 0 else "Bearish", "candle": "Bullish" if prices_arr[-1] > prices_arr[-2] else "Bearish"}
+            log.warning(f"Initial state load failed: {e}")
 
 def build_full_analysis(symbol, db):
     try:
         now = time.time()
+        # 1. High-Speed Spot (Angel -> Yahoo)
         live_spot = get_latest_spot(symbol) or get_yahoo_spot(symbol)
 
         if live_spot:
             _chart_history[symbol].append({"time": int(now * 1000), "value": float(live_spot)})
-            # Fast Real-Time Ticks
-            sync_to_firestore("live_quotes", symbol, {"spot": float(live_spot), "time": datetime.now().strftime("%H:%M:%S")})
+            # Fast heart-beat update for phone
+            db.collection("live_quotes").document(symbol).set({"spot": float(live_spot), "time": datetime.now().strftime("%H:%M:%S")})
 
-        # Option Chain Logic (Resilient to NSE Blocking)
-        # Attempt refresh every 3 minutes
-        if now - _last_chain_refresh[symbol] > 180 or symbol not in _cached_chain:
+        # 2. Option Chain Sync (Resilient)
+        if now - _last_chain_refresh[symbol] > 150 or symbol not in _cached_chain:
             try:
                 raw = get_option_chain(symbol, retries=1)
                 df, spot_chain = parse_option_chain(raw)
@@ -95,22 +80,16 @@ def build_full_analysis(symbol, db):
                     _cached_df_prev[symbol] = _cached_chain.get(symbol, df)
                     _cached_chain[symbol] = df
                     _last_chain_refresh[symbol] = now
-                    log.info(f"Refreshed {symbol} Option Chain")
+                    log.info(f"SUCCESS: {symbol} Chain Refresh")
             except:
-                log.warning(f"NSE Blocked Cloud Hub for {symbol}. Keeping existing data.")
+                log.warning(f"NSE BLOCK on {symbol}. Using previous chain data.")
 
-        # Build the final data package
+        # 3. Assemble Dashboard
         prices = [s['value'] for s in _chart_history[symbol]]
         spot = live_spot if live_spot else (prices[-1] if prices else 23400)
 
-        # Start with the last known good state
         data = _cached_full_data.get(symbol, {"final_signal": "Neutral"}).copy()
 
-        # Layer on fresh technicals
-        tech = calculate_technicals(prices)
-        structure = analyze_price_structure(prices)
-
-        # If we have chain data, rebuild the institutional dashboard
         if symbol in _cached_chain:
             df = _cached_chain[symbol]
             df_prev = _cached_df_prev.get(symbol, df)
@@ -118,23 +97,27 @@ def build_full_analysis(symbol, db):
             data.update(dashboard_data)
             data["greeks"] = json_safe(analyze_chain_greeks(df, spot))
 
-        # Always update real-time fields
+        # 4. Technical Overlays
+        structure = analyze_price_structure(prices)
         data["spot_price"] = spot
         data["price_structure"] = structure
         data["spot_history"] = list(_chart_history[symbol])
         data["fetched_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        data["market_status_str"] = f"OPEN | MASTER ENGINE | {data['fetched_at']}"
+        data["market_status_str"] = f"OPEN | MASTER SYNC | {data['fetched_at']}"
 
-        if "trade_alert" not in data or not isinstance(data["trade_alert"], dict):
-            data["trade_alert"] = {}
-        data["trade_alert"]["technicals"] = tech
+        # Mapping screenshot labels
+        data["market_read"] = data.get("combined_sentiment_read", "Neutral")
+        data["chart_structure_str"] = f"{structure.get('pattern', 'Range')} ({structure.get('trend', 'Neutral')})"
+        data["support_str"] = ", ".join(map(str, data.get("support_zones", [])))
+        data["resist_str"] = ", ".join(map(str, data.get("resistance_zones", [])))
+        data["oi_buildup"] = data.get("oi_buildup_overall", "Neutral")
+        data["flow_str"] = data.get("vol_flow", "Neutral")
+        data["trend_verdict"] = data.get("decision_note", "Scanning...")
+        data["countdown_sec"] = int(150 - (now - _last_chain_refresh[symbol]))
 
-        # Save to cache so next iteration has something to start with
         _cached_full_data[symbol] = data
-
-        # Push to Phone
-        sync_to_firestore("option_sentiment", symbol, json_safe(data))
-        log.info(f"TICK: {symbol} @ {spot} - Candles: {len(data['spot_history'])}")
+        db.collection("option_sentiment").document(symbol).set(json_safe(data))
+        log.info(f"CLOUD PUSH: {symbol} @ {spot}")
 
     except Exception as e:
         log.error(f"Sync error for {symbol}: {e}")
@@ -143,32 +126,31 @@ def main_loop():
     SYMBOLS = ["NIFTY", "BANKNIFTY"]
     if not firebase_admin._apps:
         cred = credentials.Certificate(os.path.join(ROOT, "..", "service-account.json"))
-        firebase_admin.initialize_app(cred)
-    db = firestore.client()
+        firebase_admin.initialize_app(cred, name='master-hub')
+    db = firestore.client(app=firebase_admin.get_app('master-hub'))
 
-    sync_to_firestore("stock_scans", "status", {"status": "Institutional Hub Waking Up...", "last_scan_time": datetime.now().strftime("%H:%M:%S")})
-
+    log.info("Continuous Master Engine Re-Starting...")
     load_initial_state(db, SYMBOLS)
     for s in SYMBOLS: start_live_feed(s)
 
     while True:
         try:
             status = market_status()
-            # Update Server Heartbeat
-            sync_to_firestore("stock_scans", "status", {
+            # Server Heartbeat
+            db.collection("stock_scans").document("status").set({
                 "status": f"Live - {status['reason']}",
                 "last_scan_time": datetime.now().strftime("%H:%M:%S")
             })
 
             if status["reason"] == "after market close":
-                log.info("Market Closed. Shutting down runner.")
+                log.info("Market Closed. Session Complete.")
                 break
 
             for sym in SYMBOLS:
                 build_full_analysis(sym, db)
-                time.sleep(1) # Frequency limit
+                time.sleep(2)
         except Exception as e:
-            log.error(f"Global Hub Crash: {e}")
+            log.error(f"Global Crash: {e}")
             time.sleep(10)
         time.sleep(5)
 

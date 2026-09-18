@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>StockPro | Options Mirror Hub</title>
+    <title>StockPro | Terminal v82.0</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
@@ -11,51 +11,44 @@
         :root { --bg-main: #e8eef0; --bg-card: #ffffff; --accent: #153f4c; --bull: #1d8f5a; --bear: #b32727; --border: #c5d3d5; --txt-main: #17212b; --txt-dim: #587078; }
         body { background: radial-gradient(circle at 15% 0%,#d9f1eb 0,#e8eef0 38%,#f5efe4 100%); color: var(--txt-main); font-family: Georgia, 'Times New Roman', serif; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
         .navbar { background: rgba(255,255,255,0.9); border-bottom: 1px solid var(--border); backdrop-filter: blur(10px); position: sticky; top: 0; z-index: 1000; padding: 10px 15px; }
-        .navbar-brand { color: var(--accent) !important; font-weight: 800; font-size: 1.3rem; }
-        .hub-btn { background: var(--accent); color: #fff; border: none; padding: 6px 12px; border-radius: 6px; font-weight: 700; font-size: 0.75rem; text-decoration: none; }
+        .navbar-brand { color: var(--accent) !important; font-weight: 800; font-size: 1.5rem; }
         .bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; background: #ffffff; display: flex; border-top: 1px solid var(--border); z-index: 1000; height: 65px; box-shadow: 0 -5px 20px rgba(0,0,0,0.05); }
         .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--txt-dim); font-size: 0.7rem; font-weight: 700; border: none; background: none; outline: none; cursor: pointer; text-decoration: none; }
         .nav-item.active { color: var(--accent); background: #f1f6f4; }
         .nav-item i { font-size: 1.3rem; margin-bottom: 2px; }
-        #main-scroll { padding: 12px; padding-bottom: 85px; max-width: 1200px; margin: 0 auto; }
+        #main-scroll { padding: 15px; padding-bottom: 85px; max-width: 1200px; margin: 0 auto; }
         .meta-text { font-size: 0.68rem; color: var(--txt-dim); line-height: 1.6; margin-bottom: 10px; background: rgba(255,255,255,0.4); padding: 8px; border-radius: 6px; }
-        .live-dot { height: 8px; width: 8px; background: #10b981; border-radius: 50%; display: inline-block; margin-right: 4px; animation: pulse 2s infinite; }
+        .live-dot { height: 8px; width: 8px; background: #10b981; border-radius: 50%; display: inline-block; margin-right: 4px; animation: blink 1.5s infinite; }
         @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
         .card-manual { border: 1px solid var(--border); padding: 15px; border-radius: 10px; margin-bottom: 14px; background: #ffffff; box-shadow: 0 4px 12px rgba(0,0,0,0.03); }
+        .btn-manual-grp { display: flex; gap: 8px; align-items: center; }
+        .btn-ctrl { flex: 1; padding: 10px; font-weight: 800; border: 1px solid #e2e8f0; border-radius: 8px; background: #fff; color: #0f172a; font-size: 0.85rem; text-transform: uppercase; }
         .card-custom { border: 1px solid var(--border); padding: 18px; border-radius: 6px; margin-bottom: 14px; background: rgba(255,255,255,0.88); box-shadow: 0 8px 24px rgba(31,57,64,.08); }
         .sig-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 18px; border: 1px solid #83aab0; border-radius: 8px; background: #153f4c; color: #fff; margin: 10px 0 14px; font-weight: 800; font-size: 1.2rem; }
-        .sig-badge { padding: 9px 15px; border-radius: 5px; background: #69777b; color: #fff; min-width: 140px; text-align: center; text-transform: uppercase; }
+        .sig-badge { padding: 9px 15px; border-radius: 5px; background: #69777b; color: #fff; min-width: 120px; text-align: center; text-transform: uppercase; }
         .bg-bull { background: var(--bull); }
         .bg-bear { background: var(--bear); }
-        .metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; margin-bottom: 10px; }
+        .metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 10px; }
         .m-box { padding: 10px 12px; background: #f1f6f4; border-left: 4px solid #64a99b; border-radius: 4px; border: 1px solid var(--border); }
         .m-lbl { font-size: 0.85rem; font-weight: 800; color: #123b4a; margin-right: 5px; }
         .m-val { font-size: 0.95rem; font-weight: 700; color: var(--txt-main); }
         .spot-hl { color: #2563eb !important; font-family: monospace; font-size: 1.15rem; font-weight: 900; }
         .analysis-block { background: #fff; border: 1px solid var(--border); border-radius: 6px; padding: 18px; font-size: 0.85rem; line-height: 1.8; color: var(--txt-main); margin-bottom: 14px; }
         .analysis-row { margin-bottom: 2px; border-bottom: 1px solid #f5f5f5; padding: 2px 0; display: flex; justify-content: space-between; }
-        .analysis-row strong { color: var(--accent); }
+        .analysis-row strong { color: var(--accent); min-width: 125px; }
         .chart-box { background: #fbfcfd; border: 1px solid #c9d9d9; border-radius: 5px; margin-bottom: 1rem; height: 380px; width: 100%; }
         .vol-chart-box { background: #fbfcfd; border: 1px solid #c9d9d9; border-radius: 5px; margin-bottom: 1rem; height: 250px; width: 100%; }
         .table-pro { width: 100%; font-size: 0.85rem; border-collapse: collapse; background: #fff; }
-        .table-pro th { background: #f8fbfc; padding: 12px; color: var(--txt-dim); border-bottom: 1px solid var(--border); text-align: left; }
-        .table-pro td { padding: 12px; border-bottom: 1px solid #eee; text-align: left; font-weight: 600; }
+        .table-pro th { background: #f8fbfc; padding: 12px; color: #17212b; border-bottom: 1px solid var(--border); text-align: left; font-weight: 800; }
+        .table-pro td { padding: 12px; border-bottom: 1px solid #eee; text-align: left; font-weight: 700; color: #17212b; }
         #login-overlay { position: fixed; inset: 0; background: #e8eef0; z-index: 2000; display: flex; align-items: center; justify-content: center; padding: 20px; }
     </style>
 </head>
 <body>
-<div id="login-overlay" style="display:none">
-    <div class="card p-4 text-center shadow-lg" style="width: 100%; max-width: 400px;">
-        <h2 class="fw-bold mb-4" style="color:var(--accent)">STOCKPRO HUB</h2>
-        <input type="email" id="email" class="form-control mb-3" placeholder="Email">
-        <input type="password" id="password" class="form-control mb-4" placeholder="Access Key">
-        <button id="login-btn" class="btn btn-dark w-100 fw-bold py-2">LOGIN</button>
-        <div id="login-error" class="mt-3 text-danger small"></div>
-    </div>
-</div>
+<div id="login-overlay" style="display:none"><div class="card p-4 text-center shadow-lg" style="width: 100%; max-width: 400px;"><h2 class="fw-bold mb-4" style="color:var(--accent)">STOCKPRO HUB</h2><input type="email" id="email" class="form-control mb-3" placeholder="Email"><input type="password" id="password" class="form-control mb-4" placeholder="Access Key"><button id="login-btn" class="btn btn-dark w-100 fw-bold py-2">LOGIN</button><div id="login-error" class="mt-3 text-danger small"></div></div></div>
 <div id="app-shell" style="display:none">
     <nav class="navbar d-flex justify-content-between align-items-center">
-        <span class="navbar-brand">Professional Mirror</span>
+        <span class="navbar-brand">Professional Mirror Hub</span>
         <a href="stocks.html" class="hub-btn">STOCK HUB <i class="bi bi-arrow-right-circle"></i></a>
     </nav>
     <div id="main-scroll"></div>
@@ -106,20 +99,23 @@
 
     window.setView = (v) => { view = v; document.querySelectorAll('.nav-item').forEach(b => b.classList.toggle('active', b.innerText?.includes(v.toUpperCase()))); render(); };
     window.switchSym = (s) => { symbol = s; master.opt[symbol] = null; render(); fetchSpot(); startOpt(); };
-    window.setTF = (m) => { tf = m; render(); };
+    window.setTF = (m) => { tf = parseInt(m); render(); };
 
     window.triggerManual = async (type) => {
         const t = getToken(); if(!t) { setView('admin'); alert("GitHub Token Required!"); return; }
         try {
             const r = await fetch('https://api.github.com/repos/Kunalpagare03/Firebase/dispatches', { method: 'POST', headers: { 'Authorization': `Bearer ${t}`, 'Accept': 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28' }, body: JSON.stringify({ event_type: 'manual_scan' }) });
-            if(r.ok || r.status === 204) alert("Sync Triggered."); else alert("GitHub Error " + r.status);
+            if(r.ok || r.status === 204) alert("Sync Triggered!"); else alert("GitHub Error " + r.status);
         } catch(e) { alert(e.message); }
     };
 
-    function start() { startOpt(); fetchSpot(); }
+    function start() { startOpt(); fetchSpot();
+        onSnapshot(doc(db, "stock_scans", "status"), (snap) => { const d = snap.data(); if (d) { master.scanner_status = d; if(view === 'options' || view === 'admin') render(); } });
+    }
     function startOpt() { onSnapshot(doc(db, "option_sentiment", symbol), (snap) => { const d = snap.data(); if (d) { master.opt[symbol] = d; if(view === 'options') render(); } }); }
 
     function buildCandles(history, intervalMin) {
+        if(!history || history.length < 2) return [];
         const intervalMs = intervalMin * 60 * 1000; const bins = {};
         history.forEach(tick => { const bucket = Math.floor(tick.time / intervalMs) * intervalMs; if (!bins[bucket]) bins[bucket] = []; bins[bucket].push(tick.value); });
         return Object.keys(bins).sort().map(time => { const v = bins[time]; return { x: new Date(parseInt(time)), open: v[0], high: Math.max(...v), low: Math.min(...v), close: v[v.length-1] }; });
@@ -130,23 +126,25 @@
         const s = master.scanner_status || { status: 'Idle', last_scan_time: '--:--' };
 
         if (view === 'admin') {
-            container.innerHTML = `<div class="card-custom"><h4>Cloud Hub</h4><input type="password" id="gh_token_input" class="form-control bg-dark text-white mb-2" value="${getToken()}"><button class="btn btn-primary w-100 fw-bold mb-3" onclick="localStorage.setItem('${STORAGE_KEY}', document.getElementById('gh_token_input').value); alert('Saved!');">SAVE TOKEN</button><button class="btn btn-success w-100 fw-bold py-3" onclick="triggerManual('full')">RUN CLOUD SCAN</button><div class="mt-4 p-3 bg-light rounded text-center"><div class="small fw-bold text-muted text-uppercase mb-1">Server Status</div><div class="h5 fw-bold" style="color:var(--accent)">${s.status}</div><div class="small text-muted mt-2">Last Heartbeat: ${s.last_scan_time}</div></div></div>`;
+            container.innerHTML = `<div class="card-custom"><h4>Cloud Control Hub</h4><input type="password" id="gh_token_input" class="form-control bg-dark text-white mb-2" value="${getToken()}"><button class="btn btn-primary w-100 fw-bold mb-3" onclick="localStorage.setItem('${STORAGE_KEY}', document.getElementById('gh_token_input').value); alert('Saved!');">SAVE TOKEN</button><button class="btn btn-success w-100 fw-bold py-3" onclick="triggerManual('full')">RUN CLOUD SCAN</button><div class="mt-4 p-3 bg-light rounded text-center"><div class="small fw-bold text-muted text-uppercase mb-1">Server Status</div><div class="h5 fw-bold">${s.status}</div><div class="small text-muted mt-2">Heartbeat: ${s.last_scan_time}</div></div></div>`;
             return;
         }
         if (view === 'options') {
-            const d = master.opt[symbol]; if (!d) { container.innerHTML = `<div class="text-center py-5"><div class="spinner-border text-primary mb-3"></div><br>Syncing ${symbol} Live Hub...<br><div class="small muted mt-2">Cloud Server: ${s.status}</div></div>`; return; }
+            const d = master.opt[symbol]; if (!d) { container.innerHTML = '<div class="text-center py-5">Syncing Option Chain...<br><div class="small muted mt-2">Server: ' + s.status + '</div></div>'; return; }
             const liveSpot = master.live[symbol] !== '-' ? master.live[symbol] : d.spot_price;
             const sig = d.final_signal || 'Neutral'; const tech = d.trade_alert?.technicals || {}; const g = d.greeks || {}; const p = d.price_action || {};
-            let oi = ''; (d.top_strikes || []).forEach(r => { oi += `<tr><td>${r.strike}</td><td>${r.call_oi}</td><td>${r.put_oi}</td><td>${(r.oi_side||'').split(' ')[0]}</td></tr>`; });
+            let oiTable = ''; (d.top_strikes || []).forEach(r => { oiTable += `<tr><td>${r.strike}</td><td>${r.call_oi}</td><td>${r.put_oi}</td><td>${(r.oi_side||'').split(' ')[0]}</td></tr>`; });
+
+            const tfMap = { 1:'1m', 3:'3m', 5:'5m', 15:'15m', 60:'1h' };
 
             container.innerHTML = `
-                <div class="meta-text"><div class="live-dot"></div> LIVE TERMINAL [${symbol}] • SYNC: ${d.fetched_at}</div>
+                <div class="meta-text"><div class="live-dot"></div> LIVE TERMINAL [${symbol}] • SYNC: ${d.fetched_at}<br>Server Status: ${s.status}</div>
                 <div class="card-manual">
                     <select class="form-select mb-3 fw-bold" onchange="switchSym(this.value)"><option value="NIFTY" ${symbol==='NIFTY'?'selected':''}>NIFTY 50</option><option value="BANKNIFTY" ${symbol==='BANKNIFTY'?'selected':''}>BANKNIFTY</option></select>
-                    <div class="d-flex gap-2"><button class="btn btn-outline-dark flex-fill btn-sm fw-bold" onclick="triggerManual('option')">SYNC CHAIN</button><button class="btn btn-outline-dark flex-fill btn-sm fw-bold" onclick="triggerManual('stock')">RUN STOCK</button></div>
+                    <div class="d-flex gap-2"><button class="btn-ctrl" onclick="triggerManual('option')">Sync Chain</button><button class="btn-ctrl" onclick="triggerManual('stock')">Run Stock</button></div>
                 </div>
 
-                <div class="sig-header"><span>Directional Signal</span><span class="sig-badge ${sig==='Bullish'?'bg-bull':'bg-bear'}">${sig}</span></div>
+                <div class="sig-header"><span>Signal</span><span class="sig-badge" style="background:${sig==='Bullish'?'#1d8f5a':'#b32727'}">${sig}</span></div>
 
                 <div class="metrics-grid">
                     <div class="m-box"><span class="m-lbl">Spot:</span><span class="m-val spot-hl" id="live-spot-val">${liveSpot}</span></div>
@@ -157,39 +155,35 @@
                 <div class="analysis-block">
                     <div class="analysis-row"><strong>Market read:</strong> <span>${d.combined_sentiment_read}</span></div>
                     <div class="analysis-row"><strong>Chart structure:</strong> <span>${d.price_structure?.pattern || 'Range'}</span></div>
-                    <div class="analysis-row"><strong>Detected Pattern:</strong> <span style="color:#22d3ee; font-weight:800;">${d.price_structure?.chart_pattern || '--'}</span></div>
+                    <div class="analysis-row"><strong>Detected Pattern:</strong> <span class="pattern-cyan">${d.price_structure?.chart_pattern || '--'}</span></div>
                     <div class="analysis-row"><strong>Support:</strong> <span>${(d.support_zones||[]).join(', ')} <strong>Resist:</strong> ${(d.resistance_zones||[]).join(', ')}</span></div>
                     <div class="analysis-row"><strong>Flow:</strong> <span>${d.vol_flow || 'Neutral'}</span></div>
                     <div class="analysis-row"><strong>Trend Logic:</strong> <span>${d.decision_note || '-'}</span></div>
                     <hr class="my-2 opacity-25">
                     <div class="analysis-row text-primary"><strong>Call Buy Strike:</strong> <span class="fw-bold">${d.delta_recommendations?.call?.buy_strike || '--'}</span></div>
                     <div class="analysis-row text-danger"><strong>Put Buy Strike:</strong> <span class="fw-bold">${d.delta_recommendations?.put?.buy_strike || '--'}</span></div>
-                    <div class="mt-2" style="color:#b32727; font-weight:800;">Next trend analysis active.</div>
+                    <div class="status-red">Next trend analysis active.</div>
                 </div>
 
                 <div class="card-custom">
-                    <span class="card-title">Price Action</span>
-                    <div class="metrics-grid">
-                        <div class="m-box"><span class="m-lbl">Close:</span><span class="m-val">${p.close||'-'}</span></div>
-                        <div class="m-box"><span class="m-lbl">Daily change:</span><span class="m-val">${p.change||'0'} (${p.change_pct||'0'}%)</span></div>
-                        <div class="m-box"><span class="m-lbl">20-SMA:</span><span class="m-val">${p.sma20||'--'}</span></div>
-                        <div class="m-box"><span class="m-lbl">Read:</span><span class="m-val small">${p.reading||'Mixed'}</span></div>
-                    </div>
+                    <div class="card-title">Price Action</div>
+                    <div class="analysis-row"><strong>Close:</strong> <span>${p.close||'-'}</span></div>
+                    <div class="analysis-row"><strong>Daily change:</strong> <span>${p.change||'0'} (${p.change_pct||'0'}%)</span></div>
+                    <div class="analysis-row"><strong>20-session SMA:</strong> <span>${p.sma20||'--'}</span></div>
+                    <div class="analysis-row"><strong>Read:</strong> <span>${p.reading||'Mixed'}</span></div>
                 </div>
 
                 <div class="card-custom">
-                    <span class="card-title">ATM Greeks</span>
-                    <div class="metrics-grid">
-                        <div class="m-box"><span class="m-lbl">Strike:</span><span class="m-val">${g.strike||'--'}</span></div>
-                        <div class="m-box"><span class="m-lbl">Call delta:</span><span class="m-val">${g.call_delta||'0'}</span></div>
-                        <div class="m-box"><span class="m-lbl">Put delta:</span><span class="m-val">${g.put_delta||'0'}</span></div>
-                        <div class="m-box"><span class="m-lbl">Gamma:</span><span class="m-val">${g.gamma||'0'}</span></div>
-                    </div>
+                    <div class="card-title">ATM Greeks</div>
+                    <div class="analysis-row"><strong>Strike:</strong> <span>${g.strike||'--'}</span></div>
+                    <div class="analysis-row"><strong>Call delta:</strong> <span>${g.call_delta||'0'}</span></div>
+                    <div class="analysis-row"><strong>Put delta:</strong> <span>${g.put_delta||'0'}</span></div>
+                    <div class="analysis-row"><strong>Gamma:</strong> <span>${g.gamma||'0'}</span></div>
                 </div>
 
                 <div class="card-custom">
                     <div class="d-flex justify-content-between align-items-center mb-2">
-                        <span class="card-title m-0">Live Candlestick Chart</span>
+                        <span class="card-title m-0">Live ${tfMap[tf]} candlestick chart</span>
                         <select class="form-select form-select-sm w-auto fw-bold" style="font-size:0.75rem" onchange="setTF(this.value)">
                             <option value="1" ${tf==1?'selected':''}>1m</option><option value="5" ${tf==5?'selected':''}>5m</option><option value="15" ${tf==15?'selected':''}>15m</option><option value="60" ${tf==60?'selected':''}>1h</option>
                         </select>
@@ -198,7 +192,11 @@
                 </div>
 
                 <div class="card-custom"><span class="card-title">Volume Based Strength (OI)</span><div id="vol-chart" class="vol-chart-box"></div></div>
-                <div class="card-custom"><span class="card-title">Top strikes</span><div class="table-wrap"><table class="table-pro"><thead><tr><th>Strike</th><th>C-OI</th><th>P-OI</th><th>Side</th></tr></thead><tbody>${oi}</tbody></table></div></div>
+
+                <div class="card-custom">
+                    <span class="card-title">Top strikes</span>
+                    <div class="table-wrap"><table class="table-pro"><thead><tr><th>Strike</th><th>C-OI</th><th>P-OI</th><th>Side</th></tr></thead><tbody>${oiTable}</tbody></table></div>
+                </div>
             `;
             if((d.spot_history || []).length > 1) {
                 requestAnimationFrame(() => {
@@ -206,9 +204,14 @@
                     const shapes = [];
                     (d.resistance_zones || []).forEach(val => { shapes.push({ type: 'line', xref: 'paper', x0: 0, x1: 1, y0: val, y1: val, line: { color: 'rgba(179,39,39,0.4)', width: 1, dash: 'dash' } }); });
                     (d.support_zones || []).forEach(val => { shapes.push({ type: 'line', xref: 'paper', x0: 0, x1: 1, y0: val, y1: val, line: { color: 'rgba(29,143,90,0.4)', width: 1, dash: 'dash' } }); });
-                    Plotly.react('chart', [{ x: candles.map(c=>c.x), open: candles.map(c=>c.open), high: candles.map(c=>c.high), low: candles.map(c=>c.low), close: candles.map(c=>c.close), type: 'candlestick', increasing: {line: {color: '#1f9d61'}}, decreasing: {line: {color: '#d9485f'}} }], { paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:'rgba(0,0,0,0)', margin:{t:10,r:10,b:30,l:40}, xaxis:{showgrid:false, tickfont:{size:8}, rangeslider:{visible:false}}, yaxis:{gridcolor:'#eee', tickfont:{size:8}}, shapes: shapes }, {responsive:true, displayModeBar:false});
+
+                    if(candles.length > 0) {
+                        Plotly.react('chart', [{ x: candles.map(c=>c.x), open: candles.map(c=>c.open), high: candles.map(c=>c.high), low: candles.map(c=>c.low), close: candles.map(c=>c.close), type: 'candlestick', increasing: {line: {color: '#1f9d61'}}, decreasing: {line: {color: '#d9485f'}} }], { paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:'rgba(0,0,0,0)', margin:{t:10,r:10,b:30,l:40}, xaxis:{showgrid:false, tickfont:{size:8}, rangeslider:{visible:false}}, yaxis:{gridcolor:'#eee', tickfont:{size:8}}, shapes: shapes }, {responsive:true, displayModeBar:false});
+                    }
                     const top = d.top_strikes || [];
-                    Plotly.react('vol-chart', [{ x: top.map(s => s.strike), y: top.map(s => s.call_oi), name: 'Call OI', type: 'bar', marker: {color: '#ef4444'} }, { x: top.map(s => s.strike), y: top.map(s => s.put_oi), name: 'Put OI', type: 'bar', marker: {color: '#10b981'} }], { barmode: 'group', paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:'rgba(0,0,0,0)', margin:{t:10,r:10,b:30,l:40}, xaxis:{tickfont:{size:8}}, yaxis:{gridcolor:'#eee', tickfont:{size:8}}, showlegend: false }, {responsive:true, displayModeBar:false});
+                    if(top.length > 0) {
+                        Plotly.react('vol-chart', [{ x: top.map(s => s.strike), y: top.map(s => s.call_oi), name: 'Call OI', type: 'bar', marker: {color: '#ef4444'} }, { x: top.map(s => s.strike), y: top.map(s => s.put_oi), name: 'Put OI', type: 'bar', marker: {color: '#10b981'} }], { barmode: 'group', paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:'rgba(0,0,0,0)', margin:{t:10,r:10,b:30,l:40}, xaxis:{tickfont:{size:8}, type: 'category'}, yaxis:{gridcolor:'#eee', tickfont:{size:8}}, showlegend: false }, {responsive:true, displayModeBar:false});
+                    }
                 });
             }
         }

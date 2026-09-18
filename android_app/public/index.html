@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>StockPro | Master Terminal Hub</title>
+    <title>StockPro | Institutional Terminal</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
@@ -11,23 +11,28 @@
         :root { --bg-main: #e8eef0; --bg-card: #ffffff; --accent: #153f4c; --bull: #1d8f5a; --bear: #b32727; --border: #c5d3d5; --txt-main: #17212b; --txt-dim: #587078; }
         body { background: radial-gradient(circle at 15% 0%,#d9f1eb 0,#e8eef0 38%,#f5efe4 100%); color: var(--txt-main); font-family: Georgia, 'Times New Roman', serif; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
         .navbar { background: rgba(255,255,255,0.9); border-bottom: 1px solid var(--border); backdrop-filter: blur(10px); position: sticky; top: 0; z-index: 1000; padding: 10px 15px; }
-        .navbar-brand { color: var(--accent) !important; font-weight: 800; font-size: 1.3rem; }
+        .navbar-brand { color: var(--accent) !important; font-weight: 800; font-size: 1.4rem; }
         .hub-btn { background: var(--accent); color: #fff; border: none; padding: 6px 12px; border-radius: 6px; font-weight: 700; font-size: 0.75rem; text-decoration: none; }
         .bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; background: #ffffff; display: flex; border-top: 1px solid var(--border); z-index: 1000; height: 65px; box-shadow: 0 -5px 20px rgba(0,0,0,0.05); }
         .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--txt-dim); font-size: 0.7rem; font-weight: 700; border: none; background: none; outline: none; cursor: pointer; text-decoration: none; }
         .nav-item.active { color: var(--accent); background: #f1f6f4; }
         .nav-item i { font-size: 1.3rem; margin-bottom: 2px; }
-        #main-scroll { padding: 12px; padding-bottom: 85px; max-width: 1200px; margin: 0 auto; }
-        .meta-text { font-size: 0.68rem; color: var(--txt-dim); line-height: 1.6; margin-bottom: 10px; background: rgba(255,255,255,0.4); padding: 8px; border-radius: 6px; }
+        #main-scroll { padding: 15px; padding-bottom: 85px; max-width: 1200px; margin: 0 auto; }
+        .meta-text { font-size: 0.7rem; color: var(--txt-dim); line-height: 1.6; margin-bottom: 10px; background: rgba(255,255,255,0.4); padding: 8px; border-radius: 6px; }
         .live-dot { height: 8px; width: 8px; background: #10b981; border-radius: 50%; display: inline-block; margin-right: 4px; animation: pulse 2s infinite; }
         @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
 
         .card-custom { border: 1px solid var(--border); padding: 18px; border-radius: 6px; margin-bottom: 14px; background: rgba(255,255,255,0.88); box-shadow: 0 8px 24px rgba(31,57,64,.08); }
+        .card-title { font-size: 1.15rem; font-weight: 700; color: #285466; margin-bottom: 12px; display: block; border-bottom: 1px solid #eee; padding-bottom: 5px; }
+
+        .alert-card { border: 1px solid var(--border); padding: 18px; border-radius: 6px; margin-bottom: 14px; background: #f8fbfc; box-shadow: 0 4px 12px rgba(0,0,0,0.03); }
+        .alert-tag { background: #f4ead0; color: #755519; padding: 4px 10px; border-radius: 4px; font-weight: 800; font-size: 0.95rem; text-transform: uppercase; }
+
         .sig-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 18px; border: 1px solid #83aab0; border-radius: 8px; background: #153f4c; color: #fff; margin: 10px 0 14px; font-weight: 800; font-size: 1.2rem; }
         .sig-badge { padding: 9px 15px; border-radius: 5px; background: #b32727; color: #fff; min-width: 120px; text-align: center; text-transform: uppercase; }
 
-        .metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-bottom: 14px; }
-        .m-box { padding: 10px 12px; background: #f1f6f4; border-left: 4px solid #64a99b; border-radius: 4px; border: 1px solid var(--border); }
+        .metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 12px; }
+        .m-box { padding: 12px; background: #f1f6f4; border-left: 4px solid #64a99b; border-radius: 4px; border: 1px solid var(--border); border-left-width: 4px; display: flex; align-items: center; }
         .m-lbl { font-size: 0.85rem; font-weight: 800; color: #123b4a; margin-right: 5px; }
         .m-val { font-size: 0.95rem; font-weight: 700; color: var(--txt-main); }
         .spot-hl { color: #2563eb !important; font-family: monospace; font-size: 1.15rem; font-weight: 900; }
@@ -39,7 +44,6 @@
         .pattern-cyan { color: #22d3ee !important; font-weight: 800; }
         .status-timer { color: #b32727; font-weight: 800; margin-top: 10px; display: block; }
 
-        .card-title { font-size: 1.15rem; font-weight: 800; color: #285466; margin-bottom: 12px; display: block; }
         .chart-box { background: #fbfcfd; border: 1px solid #c9d9d9; border-radius: 5px; margin-bottom: 1rem; height: 380px; width: 100%; }
         .vol-chart-box { background: #fbfcfd; border: 1px solid #c9d9d9; border-radius: 5px; margin-bottom: 1rem; height: 250px; width: 100%; }
 
@@ -55,7 +59,7 @@
 <body>
 <div id="login-overlay" style="display:none"><div class="card p-4 text-center shadow-lg" style="width: 100%; max-width: 400px;"><h2 class="fw-bold mb-4" style="color:var(--accent)">STOCKPRO HUB</h2><input type="email" id="email" class="form-control mb-3" placeholder="Email"><input type="password" id="password" class="form-control mb-4" placeholder="Access Key"><button id="login-btn" class="btn btn-dark w-100 fw-bold py-2">LOGIN</button><div id="login-error" class="mt-3 text-danger small"></div></div></div>
 <div id="app-shell" style="display:none">
-    <nav class="navbar d-flex justify-content-between align-items-center"><span class="navbar-brand">Options Mirror Master</span><a href="stocks.html" class="hub-btn">STOCKS <i class="bi bi-arrow-right-circle"></i></a></nav>
+    <nav class="navbar d-flex justify-content-between align-items-center"><span class="navbar-brand">Options Mirror station</span><a href="stocks.html" class="hub-btn">STOCKS <i class="bi bi-arrow-right-circle"></i></a></nav>
     <div id="main-scroll"></div>
     <div class="bottom-nav">
         <button class="nav-item active" onclick="setView('options')"><i class="bi bi-graph-up"></i>OPTIONS</button>
@@ -121,12 +125,12 @@
         const s = master.scanner_status || { status: 'Idle', last_scan_time: '--:--' };
 
         if (view === 'admin') {
-            container.innerHTML = `<div class="card-custom"><h4>Cloud Hub Settings</h4><input type="password" id="gh_token_input" class="form-control bg-dark text-white mb-2" value="${getToken()}"><button class="btn btn-primary w-100 fw-bold mb-3" onclick="localStorage.setItem('${STORAGE_KEY}', document.getElementById('gh_token_input').value); alert('Saved!');">SAVE TOKEN</button><button class="btn btn-success w-100 fw-bold py-3" onclick="triggerManual('full')">RUN CLOUD SCAN</button><div class="mt-4 p-3 bg-light rounded text-center"><div class="small fw-bold text-muted text-uppercase mb-1">Server Status</div><div class="h5 fw-bold">${s.status}</div><div class="small text-muted mt-2">Heartbeat: ${s.last_scan_time}</div></div></div>`;
+            container.innerHTML = `<div class="card-custom"><h4>Cloud Hub settings</h4><input type="password" id="gh_token_input" class="form-control bg-dark text-white mb-2" value="${getToken()}"><button class="btn btn-primary w-100 fw-bold mb-3" onclick="localStorage.setItem('${STORAGE_KEY}', document.getElementById('gh_token_input').value); alert('Saved!');">SAVE TOKEN</button><button class="btn btn-success w-100 fw-bold py-3" onclick="triggerManual('full')">RUN CLOUD SCAN</button><div class="mt-4 p-3 bg-light rounded text-center"><div class="small fw-bold text-muted text-uppercase mb-1">Server Status</div><div class="h5 fw-bold">${s.status}</div><div class="small text-muted mt-2">Heartbeat: ${s.last_scan_time}</div></div></div>`;
             return;
         }
 
         if (view === 'options') {
-            const d = master.opt[symbol]; if (!d) { container.innerHTML = '<div class="text-center py-5">Syncing Option Chain...<br><div class="small muted mt-2">Server: ' + s.status + '</div></div>'; return; }
+            const d = master.opt[symbol]; if (!d) { container.innerHTML = '<div class="text-center py-5">Syncing Option Chain...<br><div class="small muted mt-2">Server Status: ' + s.status + '</div></div>'; return; }
             const liveSpotRaw = master.live[symbol] !== '-' ? master.live[symbol] : d.spot_price;
             const liveSpot = parseFloat(liveSpotRaw) || 0;
             const sig = d.final_signal || 'Neutral'; const alert = d.trade_alert || {}; const tech = alert.technicals || {}; const g = d.greeks || {}; const p = d.price_action || {};
@@ -139,6 +143,7 @@
 
             container.innerHTML = `
                 <div class="meta-text"><div class="live-dot"></div> LIVE TERMINAL [${symbol}] • SYNC: ${d.fetched_at.split(' ')[1] || d.fetched_at}<br>Server Status: ${s.status}</div>
+
                 <div class="card-manual">
                     <div class="mb-3 d-flex align-items-center gap-2">
                         <span class="fw-bold small muted">Instrument</span>
@@ -147,8 +152,8 @@
                     <div class="d-flex gap-2"><button class="btn btn-primary flex-fill btn-sm fw-bold" onclick="triggerManual('option')">START SERVER</button></div>
                 </div>
 
-                <div class="card-custom" style="background:#f8fbfc; padding:15px">
-                    <div class="d-flex justify-content-between mb-2 align-items-center"><strong>Action alert:</strong> <span style="background:#f4ead0; color:#755519; padding:4px 10px; border-radius:4px; font-weight:800">${alert.action || 'WAIT'}</span></div>
+                <div class="alert-card shadow-sm">
+                    <div class="d-flex justify-content-between mb-2 align-items-center"><strong>Action alert:</strong> <span class="alert-tag">${alert.action || 'WAIT / NO TRADE'}</span></div>
                     <div class="small mb-1"><strong>Trigger:</strong> ${alert.trigger || '-'}</div>
                     <div class="small mb-1"><strong>Confirmations:</strong> ${alert.confirmations || '-'}</div>
                     <div class="small mt-2 pt-2 border-top border-secondary border-opacity-10" style="font-family:monospace">RSI: ${tech.rsi || '-'} | MACD: ${tech.macd || '-'} | ${tech.trendline || '-'} trendline | ${tech.candle || '-'} momentum candle</div>
@@ -220,6 +225,7 @@
                     const shapes = [];
                     (d.resistance_zones || []).forEach(val => { shapes.push({ type: 'line', xref: 'paper', x0: 0, x1: 1, y0: val, y1: val, line: { color: 'rgba(179,39,39,0.4)', width: 1, dash: 'dash' } }); });
                     (d.support_zones || []).forEach(val => { shapes.push({ type: 'line', xref: 'paper', x0: 0, x1: 1, y0: val, y1: val, line: { color: 'rgba(29,143,90,0.4)', width: 1, dash: 'dash' } }); });
+
                     if(candles.length > 0) {
                         Plotly.react('chart', [{ x: candles.map(c=>c.x), open: candles.map(c=>c.open), high: candles.map(c=>c.high), low: candles.map(c=>c.low), close: candles.map(c=>c.close), type: 'candlestick', increasing: {line: {color: '#1f9d61'}}, decreasing: {line: {color: '#d9485f'}} }], { paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:'rgba(0,0,0,0)', margin:{t:10,r:10,b:30,l:40}, xaxis:{showgrid:false, tickfont:{size:8}, rangeslider:{visible:false}}, yaxis:{gridcolor:'#eee', tickfont:{size:8}}, shapes: shapes }, {responsive:true, displayModeBar:false});
                     }

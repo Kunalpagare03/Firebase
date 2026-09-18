@@ -1,7 +1,7 @@
 import yfinance as yf
 import pandas as pd
 import numpy as np
-from datetime import datetime
+from datetime import datetime, timedelta
 import os
 import concurrent.futures
 from utils.firebase_sync import sync_to_firestore
@@ -11,10 +11,8 @@ import time
 import firebase_admin
 from firebase_admin import credentials, firestore
 
-# Global Settings
+# Institutional Watchlist (2,800+ stocks)
 WATCHLIST = [sym for sector in SECTOR_MAP.values() for sym in sector]
-# Limit to 500 top stocks if we are being rate-limited, but user wants all 2800.
-# We will use fewer workers to stay under the radar.
 
 def calculate_rsi(series, period=14):
     if len(series) < period + 1: return 50
@@ -26,68 +24,78 @@ def calculate_rsi(series, period=14):
 
 def analyze_stock(symbol):
     try:
-        # Optimization: Use 1mo period for faster scanning on large watchlists
         ticker = yf.Ticker(symbol)
         df = ticker.history(period="6mo", interval="1d")
-        if df.empty or len(df) < 20: return None, None, None
+        if df.empty or len(df) < 50: return None, None, None
 
         curr = df.iloc[-1]
         prev = df.iloc[-2]
 
-        # Core Technicals
+        # Technical Indicators
         df['ema20'] = df['Close'].ewm(span=20, adjust=False).mean()
         df['ema50'] = df['Close'].ewm(span=50, adjust=False).mean()
+        df['ema200'] = df['Close'].ewm(span=200, adjust=False).mean()
+        rsi_val = calculate_rsi(df['Close'])
 
-        # Momentum
         change_pct = ((curr['Close'] - prev['Close']) / prev['Close']) * 100
         avg_vol = df['Volume'].tail(20).mean()
         vol_ratio = curr['Volume'] / avg_vol if avg_vol > 0 else 0
 
-        # Rating Logic
+        # --- Institutional Conviction Logic ---
         score = 0
         if curr['Close'] > df['ema20'].iloc[-1]: score += 2
-        if change_pct > 0: score += 2
-        if vol_ratio > 1.1: score += 2
-        if curr['Close'] > df['ema50'].iloc[-1]: score += 2
+        if curr['Close'] > df['ema200'].iloc[-1]: score += 2
+        if vol_ratio > 1.5: score += 2
+        if rsi_val > 60: score += 2
+        if change_pct > 1.0: score += 2
 
         rating = min(10, score)
+        conviction = "High" if rating >= 8 else "Medium" if rating >= 5 else "Normal"
+
+        # Pattern Detection
+        pattern = "Consolidating"
+        if curr['Close'] > df['High'].tail(10).max() * 0.99: pattern = "Breakout Zone"
+        if rsi_val > 70 and vol_ratio > 2: pattern = "Bullish Blast"
 
         base_info = {
             "symbol": symbol,
             "sector": get_sector(symbol),
             "price": round(curr['Close'], 2),
-            "entry_price": round(curr['Close'], 2),
-            "target_price": round(curr['Close'] * 1.05, 2),
-            "sl_price": round(curr['Close'] * 0.97, 2),
+            "target_price": round(curr['Close'] * 1.06, 2),
+            "sl_price": round(curr['Close'] * 0.96, 2),
             "change": round(change_pct, 2),
             "rating": f"{rating}/10",
+            "conviction": conviction,
+            "pattern": pattern,
             "vol_ratio": round(vol_ratio, 1),
-            "justification": f"Stock showing {round(change_pct, 2)}% move with {round(vol_ratio, 1)}x volume."
+            "justification": f"{conviction} conviction: {pattern}. Vol spike {round(vol_ratio,1)}x with RSI {round(rsi_val,1)}."
         }
 
-        # Filtering (Very relaxed to ensure output)
-        intra = {**base_info, "recommendation": "INTRA BUY"} if change_pct > 0.05 and vol_ratio > 0.5 else None
-        swing = {**base_info, "recommendation": "SWING ENTRY"} if rating >= 4 and curr['Close'] > df['ema20'].iloc[-1] else None
-        pos = {**base_info, "recommendation": "POS HOLD"} if rating >= 6 else None
+        # Filtering
+        intra = {**base_info, "recommendation": "BEST BUY"} if rating >= 7 and vol_ratio > 1.2 else None
+        swing = {**base_info, "recommendation": "SWING ENTRY"} if rating >= 6 and curr['Close'] > df['ema20'].iloc[-1] else None
+        pos = {**base_info, "recommendation": "CORE HOLD"} if rating >= 8 and df['ema50'].iloc[-1] > df['ema200'].iloc[-1] else None
 
         return intra, swing, pos
     except:
         return None, None, None
 
 def run_live_scan():
-    start_time = time.time()
-
     if not firebase_admin._apps:
         cred = credentials.Certificate(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "service-account.json")))
         firebase_admin.initialize_app(cred)
     db = firestore.client()
 
-    sync_to_firestore("stock_scans", "status", {"status": "Scanning 2,800 Stocks...", "start_time": datetime.now().strftime("%H:%M:%S")})
+    ts_now = datetime.now()
+    ts_str = ts_now.strftime("%d-%m-%Y %H:%M:%S")
+    doc_id = ts_now.strftime("%Y%m%d_%H%M")
 
+    sync_to_firestore("stock_scans", "status", {"status": "Full Week Sync Active...", "start_time": ts_str})
+
+    print(f"Executing Global Scan: {len(WATCHLIST)} symbols...")
     intra_list, swing_list, pos_list = [], [], []
 
-    # Use 8 workers to avoid 'Too Many Requests' error from Yahoo
-    with concurrent.futures.ThreadPoolExecutor(max_workers=8) as executor:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
         futures = {executor.submit(analyze_stock, sym): sym for sym in WATCHLIST}
         for future in concurrent.futures.as_completed(futures):
             try:
@@ -100,32 +108,38 @@ def run_live_scan():
             except: pass
 
     # Sort
-    intra_list = sorted(intra_list, key=lambda x: float(x['change']), reverse=True)[:50]
-    swing_list = sorted(swing_list, key=lambda x: int(x['rating'].split('/')[0]), reverse=True)[:50]
-    pos_list = sorted(pos_list, key=lambda x: int(x['rating'].split('/')[0]), reverse=True)[:50]
+    def sort_key(x): return (x['conviction'] == 'High', int(x['rating'].split('/')[0]))
+    intra_list = sorted(intra_list, key=sort_key, reverse=True)[:40]
+    swing_list = sorted(swing_list, key=sort_key, reverse=True)[:40]
+    pos_list = sorted(pos_list, key=sort_key, reverse=True)[:40]
 
     report = {
-        "timestamp": datetime.now().strftime("%d-%m-%Y %H:%M:%S"),
+        "timestamp": ts_str,
+        "doc_id": doc_id,
         "intraday": intra_list,
         "swing": swing_list,
         "positional": pos_list
     }
 
-    # Rotation
-    try:
-        cur_latest = db.collection("stock_scans").document("comprehensive").get().to_dict()
-        cur_h1 = db.collection("stock_scans").document("history_1").get().to_dict()
-        if cur_h1: db.collection("stock_scans").document("history_2").set(cur_h1)
-        if cur_latest: db.collection("stock_scans").document("history_1").set(cur_latest)
-    except: pass
-
+    # --- WEEKLY HISTORY RETENTION ---
+    # 1. Save Current to Main
     sync_to_firestore("stock_scans", "comprehensive", report)
+    # 2. Save Current to History Archive
+    db.collection("stock_history").document(doc_id).set(report)
+
+    # 3. Clean up older than 7 days
+    one_week_ago = ts_now - timedelta(days=7)
+    old_docs = db.collection("stock_history").where("timestamp", "<", one_week_ago.strftime("%d-%m-%Y %H:%M:%S")).stream()
+    for old in old_docs:
+        old.reference.delete()
+    # --------------------------------
+
     sync_to_firestore("stock_scans", "status", {
-        "status": "Idle / Complete",
-        "last_scan_time": report["timestamp"],
-        "results": f"{len(intra_list)} Intra, {len(swing_list)} Swing"
+        "status": "Idle / Ready",
+        "last_scan_time": ts_str,
+        "results": f"{len(intra_list)} High-Conviction saved to 7-Day History"
     })
-    print(f"Scan complete: Found {len(intra_list)} stocks.")
+    print(f"Weekly History Scan Complete: {ts_str}")
 
 if __name__ == "__main__":
     run_live_scan()

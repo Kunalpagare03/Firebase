@@ -31,9 +31,10 @@ from src.trend_detector import analyze_price_structure
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 log = logging.getLogger("CloudTerminal")
 
-# Multi-Instrument Memory
+# Multi-Instrument Memory (Preserved across runs via Firestore)
 _chart_history = defaultdict(lambda: deque(maxlen=2000))
 _last_chain_refresh = defaultdict(int)
+_cached_full_data = {} # Last successful full sync data
 _cached_chain = {}
 _cached_df_prev = {}
 
@@ -45,7 +46,7 @@ def get_yahoo_spot(symbol):
         return float(j['chart']['result'][0]['indicators']['quote'][0]['close'][-1])
     except: return None
 
-def load_initial_history(db, symbols):
+def load_initial_state(db, symbols):
     for sym in symbols:
         try:
             doc_snap = db.collection("option_sentiment").document(sym).get()
@@ -53,11 +54,11 @@ def load_initial_history(db, symbols):
                 d = doc_snap.to_dict()
                 hist = d.get("spot_history", [])
                 for h in hist: _chart_history[sym].append(h)
-
-                # Load last successful chain as fallback for Cloud (NSE Block)
-                # Note: We can't easily store the whole DF, but we can try to reuse the last sync
-                log.info(f"Loaded {len(hist)} history points for {sym}")
-        except: pass
+                # Cache the last known technical state so we don't start with empty cards
+                _cached_full_data[sym] = d
+                log.info(f"Loaded {len(hist)} history points and last state for {sym}")
+        except Exception as e:
+            log.warning(f"Failed to load state for {sym}: {e}")
 
 def calculate_technicals(prices):
     if len(prices) < 14: return {"rsi": "-", "macd": "-", "trendline": "N/A", "candle": "N/A"}
@@ -77,58 +78,63 @@ def calculate_technicals(prices):
 def build_full_analysis(symbol, db):
     try:
         now = time.time()
-        # High-res Spot (Yahoo fallback for Cloud)
         live_spot = get_latest_spot(symbol) or get_yahoo_spot(symbol)
 
         if live_spot:
             _chart_history[symbol].append({"time": int(now * 1000), "value": float(live_spot)})
-            # Fast Quote Sync
+            # Fast Real-Time Ticks
             sync_to_firestore("live_quotes", symbol, {"spot": float(live_spot), "time": datetime.now().strftime("%H:%M:%S")})
 
         # Option Chain Logic (Resilient to NSE Blocking)
+        # Attempt refresh every 3 minutes
         if now - _last_chain_refresh[symbol] > 180 or symbol not in _cached_chain:
             try:
-                raw = get_option_chain(symbol, retries=1) # Fast fail for NSE block
+                raw = get_option_chain(symbol, retries=1)
                 df, spot_chain = parse_option_chain(raw)
-                _cached_df_prev[symbol] = _cached_chain.get(symbol, df)
-                _cached_chain[symbol] = df
-                _last_chain_refresh[symbol] = now
+                if not df.empty:
+                    _cached_df_prev[symbol] = _cached_chain.get(symbol, df)
+                    _cached_chain[symbol] = df
+                    _last_chain_refresh[symbol] = now
+                    log.info(f"Refreshed {symbol} Option Chain")
             except:
-                log.warning(f"NSE Blocked Cloud for {symbol}. Using cached chain data.")
-                # If we have no cache, try to fetch the DF from the last Firestore update
-                if symbol not in _cached_chain:
-                    try:
-                        # Fallback strike data if NSE is completely dead
-                        pass
-                    except: pass
+                log.warning(f"NSE Blocked Cloud Hub for {symbol}. Keeping existing data.")
 
-        if symbol in _cached_chain or live_spot:
-            df = _cached_chain.get(symbol, pd.DataFrame())
+        # Build the final data package
+        prices = [s['value'] for s in _chart_history[symbol]]
+        spot = live_spot if live_spot else (prices[-1] if prices else 23400)
+
+        # Start with the last known good state
+        data = _cached_full_data.get(symbol, {"final_signal": "Neutral"}).copy()
+
+        # Layer on fresh technicals
+        tech = calculate_technicals(prices)
+        structure = analyze_price_structure(prices)
+
+        # If we have chain data, rebuild the institutional dashboard
+        if symbol in _cached_chain:
+            df = _cached_chain[symbol]
             df_prev = _cached_df_prev.get(symbol, df)
-            prices = [s['value'] for s in _chart_history[symbol]]
-            spot = live_spot if live_spot else prices[-1] if prices else 23400
+            dashboard_data = build_dashboard(df_prev, df, spot)
+            data.update(dashboard_data)
+            data["greeks"] = json_safe(analyze_chain_greeks(df, spot))
 
-            tech = calculate_technicals(prices)
-            structure = analyze_price_structure(prices)
+        # Always update real-time fields
+        data["spot_price"] = spot
+        data["price_structure"] = structure
+        data["spot_history"] = list(_chart_history[symbol])
+        data["fetched_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        data["market_status_str"] = f"OPEN | MASTER ENGINE | {data['fetched_at']}"
 
-            # Dashboard build
-            if not df.empty:
-                data = build_dashboard(df_prev, df, spot)
-                data["greeks"] = json_safe(analyze_chain_greeks(df, spot))
-            else:
-                # Fallback structure if only spot is moving
-                data = {"final_signal": "Neutral", "combined_sentiment_read": "Cloud Standby"}
+        if "trade_alert" not in data or not isinstance(data["trade_alert"], dict):
+            data["trade_alert"] = {}
+        data["trade_alert"]["technicals"] = tech
 
-            data["price_structure"] = structure
-            data["price_action"] = json_safe(analyze_price_action(symbol))
-            data["spot_history"] = list(_chart_history[symbol])
-            data["fetched_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            data["market_status_str"] = f"OPEN | CLOUD LIVE | {data['fetched_at']}"
-            if "trade_alert" not in data: data["trade_alert"] = {}
-            data["trade_alert"]["technicals"] = tech
+        # Save to cache so next iteration has something to start with
+        _cached_full_data[symbol] = data
 
-            sync_to_firestore("option_sentiment", symbol, json_safe(data))
-            log.info(f"CLOUD PUSH: {symbol} @ {live_spot}")
+        # Push to Phone
+        sync_to_firestore("option_sentiment", symbol, json_safe(data))
+        log.info(f"TICK: {symbol} @ {spot} - Candles: {len(data['spot_history'])}")
 
     except Exception as e:
         log.error(f"Sync error for {symbol}: {e}")
@@ -140,22 +146,29 @@ def main_loop():
         firebase_admin.initialize_app(cred)
     db = firestore.client()
 
-    sync_to_firestore("stock_scans", "status", {"status": "Cloud Hub Starting...", "last_scan_time": datetime.now().strftime("%H:%M:%S")})
+    sync_to_firestore("stock_scans", "status", {"status": "Institutional Hub Waking Up...", "last_scan_time": datetime.now().strftime("%H:%M:%S")})
 
-    load_initial_history(db, SYMBOLS)
+    load_initial_state(db, SYMBOLS)
     for s in SYMBOLS: start_live_feed(s)
 
     while True:
         try:
             status = market_status()
-            sync_to_firestore("stock_scans", "status", {"status": f"Live - {status['reason']}", "last_scan_time": datetime.now().strftime("%H:%M:%S")})
+            # Update Server Heartbeat
+            sync_to_firestore("stock_scans", "status", {
+                "status": f"Live - {status['reason']}",
+                "last_scan_time": datetime.now().strftime("%H:%M:%S")
+            })
 
-            if status["reason"] == "after market close": break
+            if status["reason"] == "after market close":
+                log.info("Market Closed. Shutting down runner.")
+                break
+
             for sym in SYMBOLS:
                 build_full_analysis(sym, db)
-                time.sleep(2)
+                time.sleep(1) # Frequency limit
         except Exception as e:
-            log.error(f"Global Crash: {e}")
+            log.error(f"Global Hub Crash: {e}")
             time.sleep(10)
         time.sleep(5)
 

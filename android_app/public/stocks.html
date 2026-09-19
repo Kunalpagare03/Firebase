@@ -3,175 +3,203 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>StockPro | Stock Hub</title>
+    <title>StockPro | Institutional Analytics</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <style>
-        :root { --bg-main: #e8eef0; --bg-card: #ffffff; --accent: #153f4c; --bull: #1d8f5a; --bear: #b32727; --border: #c5d3d5; --txt-main: #17212b; --txt-dim: #587078; }
-        body { background: radial-gradient(circle at 15% 0%,#d9f1eb 0,#e8eef0 38%,#f5efe4 100%); color: var(--txt-main); font-family: Georgia, 'Times New Roman', serif; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-        .navbar { background: rgba(255,255,255,0.9); border-bottom: 1px solid var(--border); backdrop-filter: blur(10px); position: sticky; top: 0; z-index: 1000; padding: 10px 15px; }
-        .navbar-brand { color: var(--accent) !important; font-weight: 800; font-size: 1.3rem; }
-        .hub-btn { background: var(--accent); color: #fff; border: none; padding: 6px 12px; border-radius: 6px; font-weight: 700; font-size: 0.75rem; text-decoration: none; }
-        .bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; background: #ffffff; display: flex; border-top: 1px solid var(--border); z-index: 1000; height: 65px; box-shadow: 0 -5px 20px rgba(0,0,0,0.05); }
-        .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--txt-dim); font-size: 0.65rem; font-weight: 700; border: none; background: none; outline: none; cursor: pointer; text-decoration: none; }
-        .nav-item.active { color: var(--accent); background: #f1f6f4; }
-        .nav-item i { font-size: 1.2rem; margin-bottom: 2px; }
-        #main-scroll { padding: 15px; padding-bottom: 85px; max-width: 1200px; margin: 0 auto; }
-        .card-custom { border: 1px solid var(--border); padding: 18px; border-radius: 6px; margin-bottom: 14px; background: rgba(255,255,255,0.88); box-shadow: 0 8px 24px rgba(31,57,64,.08); }
-        .stk-btn { width: 100%; background: #fff; border: 1px solid var(--border); border-radius: 8px; padding: 15px; margin-bottom: 12px; text-align: left; transition: transform 0.1s; cursor: pointer; border-left: 6px solid #153f4c; }
-        .stk-btn:active { transform: scale(0.98); }
-        .price-strip { display: flex; justify-content: space-around; margin-top: 10px; padding-top: 10px; border-top: 1px solid #eee; }
-        .price-item { font-size: 0.75rem; color: var(--txt-dim); font-weight: 800; text-align: center; }
-        .price-item span { display: block; font-size: 1rem; font-weight: 900; color: var(--accent); }
+        :root { --bg-main: #f4f7f9; --bg-sidebar: #ffffff; --accent: #243b53; --primary: #3b82f6; --bull: #1d8f5a; --bear: #b32727; --border: #e5e7eb; --txt-main: #1f2937; --txt-dim: #6b7280; }
+        body { background: var(--bg-main); color: var(--txt-main); font-family: 'Inter', -apple-system, sans-serif; margin: 0; padding: 0; }
 
-        #detail-view { display: none; position: fixed; inset: 0; background: var(--bg-main); z-index: 2000; padding: 20px; overflow-y: auto; }
-        .back-btn { background: var(--accent); color: #fff; border: none; padding: 10px 20px; border-radius: 4px; font-weight: 800; margin-bottom: 20px; cursor: pointer; }
-        .sig-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 18px; border: 1px solid #83aab0; border-radius: 8px; background: #153f4c; color: #fff; margin: 10px 0 14px; font-weight: 800; font-size: 1.2rem; }
-        .sig-badge { padding: 9px 15px; border-radius: 5px; color: #fff; min-width: 120px; text-align: center; text-transform: uppercase; }
-        .metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-bottom: 10px; }
-        .m-box { padding: 10px 12px; background: #f1f6f4; border-radius: 4px; border: 1px solid var(--border); }
-        .m-lbl { font-size: 0.75rem; font-weight: 800; color: #123b4a; margin-right: 5px; }
-        .m-val { font-size: 0.85rem; font-weight: 700; color: var(--txt-main); }
+        /* Top Search Bar */
+        .top-header { background: #ffffff; border-bottom: 1px solid var(--border); padding: 10px 20px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 1000; }
+        .search-box { background: #f3f4f6; border-radius: 8px; padding: 8px 15px; width: 100%; max-width: 500px; display: flex; align-items: center; gap: 10px; border: 1px solid #e5e7eb; }
+        .search-box input { border: none; background: transparent; outline: none; width: 100%; font-size: 0.9rem; }
+
+        /* Main Layout */
+        .app-container { display: flex; min-height: calc(100vh - 60px); }
+        .sidebar { width: 260px; background: #ffffff; border-right: 1px solid var(--border); padding: 20px 0; display: none; } /* Desktop Sidebar */
+        @media (min-width: 992px) { .sidebar { display: block; } }
+
+        .nav-link-custom { padding: 12px 25px; display: flex; align-items: center; gap: 12px; color: var(--txt-main); text-decoration: none; font-weight: 600; font-size: 0.9rem; border-left: 4px solid transparent; }
+        .nav-link-custom.active { background: #f0f7ff; color: var(--primary); border-left-color: var(--primary); }
+        .nav-link-custom i { font-size: 1.1rem; }
+
+        /* Content Area */
+        .content-area { flex: 1; padding: 20px; max-width: 1200px; margin: 0 auto; width: 100%; }
+        .page-title { display: flex; align-items: center; gap: 15px; margin-bottom: 20px; font-weight: 800; color: var(--accent); }
+        .back-circle { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: #fff; border: 1px solid var(--border); cursor: pointer; }
+
+        /* Strategy Grid - Screenshot 2 */
+        .strategy-list { background: #ffffff; border: 1px solid var(--border); border-radius: 4px; overflow: hidden; }
+        .strategy-item { display: flex; align-items: center; padding: 15px 20px; border-bottom: 1px solid var(--border); cursor: pointer; transition: background 0.2s; }
+        .strategy-item:hover { background: #f9fafb; }
+        .strategy-icon { width: 45px; height: 45px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; color: #fff; margin-right: 20px; }
+        .strategy-info { flex: 1; }
+        .strategy-name { font-weight: 700; font-size: 1rem; margin-bottom: 2px; }
+        .strategy-desc { font-size: 0.75rem; color: var(--txt-dim); }
+        .strategy-count { font-size: 0.85rem; font-weight: 600; color: var(--txt-dim); }
+
+        /* Stock Table - Screenshot 1 */
+        .stock-table { width: 100%; background: #fff; border-radius: 4px; border: 1px solid var(--border); overflow: hidden; margin-top: 15px; }
+        .table-header { background: #f9fafb; border-bottom: 1px solid var(--border); padding: 12px 20px; display: grid; grid-template-columns: 2fr 1.5fr 1fr 1fr 1fr; font-size: 0.75rem; font-weight: 800; color: var(--txt-dim); text-transform: uppercase; }
+        .stock-row { display: grid; grid-template-columns: 2fr 1.5fr 1fr 1fr 1fr; padding: 15px 20px; border-bottom: 1px solid var(--border); align-items: center; transition: background 0.1s; cursor: pointer; }
+        .stock-row:hover { background: #f0f7ff; }
+        .stock-main { display: flex; align-items: center; gap: 12px; }
+        .stock-logo { width: 35px; height: 35px; border-radius: 50%; background: #f3f4f6; display: flex; align-items: center; justify-content: center; font-weight: 800; color: var(--accent); border: 1px solid var(--border); font-size: 0.7rem; }
+        .stock-name { font-weight: 700; font-size: 0.9rem; }
+        .stock-type { font-size: 0.8rem; color: var(--txt-dim); font-weight: 500; }
+        .pattern-visual { width: 40px; height: 25px; background: #e0e7ff; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 0.6rem; color: var(--primary); font-weight: 800; }
+        .stock-price { font-weight: 700; font-size: 0.9rem; text-align: right; }
+        .stock-date { font-size: 0.75rem; color: var(--txt-dim); font-weight: 500; }
+
+        /* Bottom Nav (Mobile) */
+        .bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; background: #ffffff; display: flex; border-top: 1px solid var(--border); z-index: 1000; height: 65px; box-shadow: 0 -5px 15px rgba(0,0,0,0.05); }
+        .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--txt-dim); font-size: 0.65rem; font-weight: 700; border: none; background: none; outline: none; text-decoration: none; }
+        .nav-item.active { color: var(--primary); background: #f8fafc; }
+        .nav-item i { font-size: 1.2rem; margin-bottom: 2px; }
+
+        #detail-view { display: none; position: fixed; inset: 0; background: #fff; z-index: 2000; padding: 20px; overflow-y: auto; }
+        .back-btn-top { background: transparent; border: none; color: var(--primary); font-weight: 800; margin-bottom: 20px; display: flex; align-items: center; gap: 8px; }
+
+        .tag-major { background: #eff6ff; color: var(--primary); padding: 2px 10px; border-radius: 20px; font-size: 0.7rem; font-weight: 800; }
     </style>
 </head>
 <body>
-<div id="app-shell">
-    <nav class="navbar d-flex justify-content-between align-items-center">
-        <span class="navbar-brand">Institutional Stock Hub</span>
-        <a href="index.html" class="hub-btn">OPTION MIRROR</a>
-    </nav>
-    <div id="main-scroll"></div>
-    <div class="bottom-nav">
-        <button class="nav-item active" id="btn-intra" onclick="setView('intraday')"><i class="bi bi-lightning-charge"></i>INTRA</button>
-        <button class="nav-item" id="btn-swing" onclick="setView('swing')"><i class="bi bi-calendar-event"></i>SWING</button>
-        <button class="nav-item" id="btn-pos" onclick="setView('positional')"><i class="bi bi-shield-check"></i>POS</button>
-        <button class="nav-item" id="btn-hist" onclick="setView('history')"><i class="bi bi-clock-history"></i>HISTORY</button>
-        <a href="index.html?view=admin" class="nav-item"><i class="bi bi-gear-fill"></i>SCAN</a>
+
+<div class="top-header">
+    <div class="d-flex align-items-center gap-3">
+        <img src="https://stockedge.com/assets/img/logo.png" height="25" alt="logo" onerror="this.style.display='none'">
+        <span class="fw-bold d-none d-md-inline" style="color:var(--accent)">Institutional Analytics</span>
+    </div>
+    <div class="search-box">
+        <i class="bi bi-search text-muted"></i>
+        <input type="text" placeholder="Search for Stocks, Strategies and more...">
+    </div>
+    <div class="d-flex align-items-center gap-2">
+        <a href="index.html" class="btn btn-sm btn-outline-primary fw-bold">MIRROR HUB</a>
     </div>
 </div>
 
+<div class="app-container">
+    <div class="sidebar">
+        <a href="#" class="nav-link-custom active" onclick="setView('home')"><i class="bi bi-house-door"></i> Analytics Home</a>
+        <a href="#" class="nav-link-custom" onclick="setView('intra')"><i class="bi bi-lightning"></i> Intraday Scans</a>
+        <a href="#" class="nav-item" onclick="setView('swing')"><i class="bi bi-calendar-event"></i> Swing Strategies</a>
+        <a href="#" class="nav-item" onclick="setView('pos')"><i class="bi bi-shield-check"></i> Positional Hub</a>
+    </div>
+
+    <div class="content-area" id="main-content"></div>
+</div>
+
 <div id="detail-view">
-    <button class="back-btn" onclick="document.getElementById('detail-view').style.display='none'"><i class="bi bi-arrow-left"></i> BACK TO HUB</button>
+    <button class="back-btn-top" onclick="document.getElementById('detail-view').style.display='none'"><i class="bi bi-arrow-left"></i> BACK TO SCAN</button>
     <div id="detail-body"></div>
+</div>
+
+<div class="bottom-nav d-flex d-md-none">
+    <button class="nav-item active" id="btn-home" onclick="showHub()"><i class="bi bi-grid-fill"></i>STRATEGY</button>
+    <button class="nav-item" id="btn-intra" onclick="loadList('intraday')"><i class="bi bi-lightning-charge"></i>INTRA</button>
+    <button class="nav-item" id="btn-swing" onclick="loadList('swing')"><i class="bi bi-calendar-check"></i>SWING</button>
+    <button class="nav-item" id="btn-pos" onclick="loadList('positional')"><i class="bi bi-shield-fill"></i>POS</button>
 </div>
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
     import { getFirestore, doc, onSnapshot, collection, query, orderBy, limit, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
     const config = { apiKey: "AIzaSyDMEUmFGSJBjGrz7fpDN46OiZlSJ6NTsjE", authDomain: "kunal-analysis.firebaseapp.com", projectId: "kunal-analysis", storageBucket: "kunal-analysis.firebasestorage.app", appId: "1:328297105533:web:3ed3d8d5aa3ec677b88914" };
-    const app = initializeApp(config); const auth = getAuth(app); const db = getFirestore(app);
-    let view = 'intraday'; let master = { stocks: {}, history_full: [] }; let activeHistoryId = 'comprehensive';
+    const app = initializeApp(config); const db = getFirestore(app);
+    let masterData = { comprehensive: {} };
 
-    onAuthStateChanged(auth, (user) => { if(!user) window.location.href = 'index.html'; else start(); });
-
-    window.setView = (v) => {
-        view = v;
-        document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
-        const idMap = { 'intraday': 'btn-intra', 'swing': 'btn-swing', 'positional': 'btn-pos', 'history': 'btn-hist' };
-        document.getElementById(idMap[v]).classList.add('active');
-        render();
-    };
-
-    window.switchHistory = async (id) => {
-        activeHistoryId = id;
-        if(id !== 'comprehensive' && !master.stocks[id]) {
-            const snap = await getDocs(query(collection(db, "stock_history")));
-            const docData = snap.docs.find(d => d.id === id);
-            if(docData) master.stocks[id] = docData.data();
-        }
-        render();
-    };
-
-    async function start() {
-        onSnapshot(doc(db, "stock_scans", "comprehensive"), (snap) => { const d = snap.data(); if (d) { master.stocks['comprehensive'] = d; render(); } });
-        const q = query(collection(db, "stock_history"), orderBy("timestamp", "desc"), limit(30));
-        const snap = await getDocs(q);
-        master.history_full = snap.docs.map(d => d.data());
-        render();
+    function start() {
+        onSnapshot(doc(db, "stock_scans", "comprehensive"), (snap) => {
+            const d = snap.data();
+            if (d) {
+                masterData.comprehensive = d;
+                showHub();
+            }
+        });
     }
+    start();
 
-    window.openDetails = (symbol, historyId, type) => {
-        let list = [];
-        if(type === 'history') {
-            master.history_full.forEach(h => {
-                list = list.concat(h.intraday || [], h.swing || [], h.positional || []);
-            });
-        } else {
-            list = master.stocks[historyId]?.[type] || [];
-        }
-        const s = list.find(x => x.symbol === symbol);
-        if (!s) return;
+    window.showHub = () => {
+        const content = document.getElementById('main-content');
+        const date = new Date().toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric'});
 
-        document.getElementById('detail-body').innerHTML = `
-            <div class="sig-header"><span>${s.symbol.replace('.NS','')}</span><span class="sig-badge" style="background:${s.change > 0 ? 'var(--bull)':'var(--bear)'}">${s.recommendation || 'WATCH'}</span></div>
-            <div class="metrics-grid">
-                <div class="m-box"><span class="m-lbl">Price</span><span class="m-val">₹${s.price}</span></div>
-                <div class="m-box"><span class="m-lbl">Target</span><span class="m-val text-success">₹${s.target_price}</span></div>
-                <div class="m-box"><span class="m-lbl">StopLoss</span><span class="m-val text-danger">₹${s.sl_price}</span></div>
-                <div class="m-box"><span class="m-lbl">Rating</span><span class="m-val">${s.rating}</span></div>
+        content.innerHTML = `
+            <div class="page-title"><div class="back-circle"><i class="bi bi-arrow-left"></i></div> <span>Trading Strategies</span></div>
+            <div class="d-flex align-items-center gap-2 mb-3"><span class="small fw-bold text-muted">${date}</span> <span class="tag-major">Major Stocks <i class="bi bi-x"></i></span></div>
+
+            <div class="strategy-list shadow-sm">
+                <div class="strategy-item" onclick="loadList('intraday')">
+                    <div class="strategy-icon" style="background:#1e3a8a"><i class="bi bi-graph-up-arrow"></i></div>
+                    <div class="strategy-info"><div class="strategy-name">One Day Bullish Strategies</div><div class="strategy-desc">Focus on high volume and immediate momentum.</div></div>
+                    <div class="strategy-count">${masterData.comprehensive.intraday?.length || 0} Stocks</div>
+                </div>
+                <div class="strategy-item" onclick="loadList('swing')">
+                    <div class="strategy-icon" style="background:#dc2626"><i class="bi bi-bullseye"></i></div>
+                    <div class="strategy-info"><div class="strategy-name">Swing Bullish Strategies</div><div class="strategy-desc">Filters for momentum breakout over next few days.</div></div>
+                    <div class="strategy-count">${masterData.comprehensive.swing?.length || 0} Stocks</div>
+                </div>
+                <div class="strategy-item" onclick="loadList('positional')">
+                    <div class="strategy-icon" style="background:#991b1b"><i class="bi bi-shield-fill-check"></i></div>
+                    <div class="strategy-info"><div class="strategy-name">Positional Bullish Strategies</div><div class="strategy-desc">Long term structural growth candidates.</div></div>
+                    <div class="strategy-count">${masterData.comprehensive.positional?.length || 0} Stocks</div>
+                </div>
             </div>
-            <div class="card-custom"><div class="fw-bold mb-2">Institutional Justification:</div><div class="small">${s.justification || 'Technical setup building for breakout.'}</div></div>
+        `;
+        document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+        document.getElementById('btn-home').classList.add('active');
+    };
+
+    window.loadList = (type) => {
+        const content = document.getElementById('main-content');
+        const list = masterData.comprehensive[type] || [];
+        const titleMap = { intraday: 'One Day Bullish', swing: 'Swing Bullish', positional: 'Positional Bullish' };
+
+        content.innerHTML = `
+            <div class="page-title"><div class="back-circle" onclick="showHub()"><i class="bi bi-arrow-left"></i></div> <span>${titleMap[type]}</span></div>
+            <div class="stock-table shadow-sm">
+                <div class="table-header">
+                    <span>Stock Name</span><span>Type</span><span>Patterns</span><span class="text-end">LTP</span>
+                </div>
+                ${list.map(s => `
+                    <div class="stock-row" onclick="openStock('${s.symbol}', '${type}')">
+                        <div class="stock-main">
+                            <div class="stock-logo">${s.symbol.slice(0,2)}</div>
+                            <div><div class="stock-name">${s.symbol.replace('.NS','')}</div><div class="small muted">${s.sector}</div></div>
+                        </div>
+                        <div class="stock-type">${s.pattern || 'Trend Continuity'}</div>
+                        <div><div class="pattern-visual">${(s.pattern||'').includes('Break')?'BREAK':'ZONE'}</div></div>
+                        <div class="stock-price text-${s.change > 0 ? 'success':'danger'}">₹${s.price}</div>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+        document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+        const id = type === 'intraday' ? 'btn-intra' : (type === 'swing' ? 'btn-swing' : 'btn-pos');
+        const el = document.getElementById(id); if(el) el.classList.add('active');
+    };
+
+    window.openStock = (sym, type) => {
+        const s = masterData.comprehensive[type].find(x => x.symbol === sym);
+        if(!s) return;
+        document.getElementById('detail-body').innerHTML = `
+            <div class="card p-3 mb-3" style="border-left:5px solid var(--primary)">
+                <h4 class="fw-bold">${s.symbol.replace('.NS','')}</h4>
+                <div class="text-muted small">${s.sector} | ${s.recommendation}</div>
+            </div>
+            <div class="row g-2 mb-3">
+                <div class="col-6"><div class="card p-3 text-center"><strong>LTP</strong><br><span class="h5">₹${s.price}</span></div></div>
+                <div class="col-6"><div class="card p-3 text-center"><strong>TARGET</strong><br><span class="h5 text-success">₹${s.target_price}</span></div></div>
+                <div class="col-6"><div class="card p-3 text-center"><strong>STOP LOSS</strong><br><span class="h5 text-danger">₹${s.sl_price}</span></div></div>
+                <div class="col-6"><div class="card p-3 text-center"><strong>RATING</strong><br><span class="h5">${s.rating}</span></div></div>
+            </div>
+            <div class="card p-3"><strong>Justification:</strong><br><p class="small mt-2">${s.justification}</p></div>
         `;
         document.getElementById('detail-view').style.display = 'block';
     };
 
-    function render() {
-        const container = document.getElementById('main-scroll'); if (!container) return;
-
-        if(view === 'history') {
-            container.innerHTML = `<div class="fw-bold mb-3 small text-uppercase text-muted" style="letter-spacing:1px; border-bottom:1px solid var(--border)">7-Day Institutional Archive</div>`;
-            const uniqueStocks = {};
-            master.history_full.forEach(scan => {
-                const all = (scan.intraday || []).concat(scan.swing || [], scan.positional || []);
-                all.forEach(s => {
-                    if(!uniqueStocks[s.symbol]) {
-                        uniqueStocks[s.symbol] = {...s, count: 1, last_seen: scan.timestamp};
-                    } else {
-                        uniqueStocks[s.symbol].count++;
-                    }
-                });
-            });
-            const list = Object.values(uniqueStocks).sort((a,b) => b.count - a.count);
-            if(!list.length) { container.innerHTML += '<div class="text-center py-5 card-custom">History loading...</div>'; return; }
-            list.forEach(s => {
-                container.innerHTML += `
-                <div class="stk-btn" onclick="openDetails('${s.symbol}', 'none', 'history')">
-                    <div class="d-flex justify-content-between px-3 pt-3">
-                        <div><div class="fw-bold">${s.symbol.replace('.NS','')} <span class="badge bg-info" style="font-size:0.6rem">${s.count} Scans</span></div><div class="small muted">Last Seen: ${s.last_seen.split(' ')[0]}</div></div>
-                        <div class="text-end"><div class="fw-bold text-${s.change > 0 ? 'success':'danger'}">${s.change}%</div><div class="small muted">₹${s.price}</div></div>
-                    </div>
-                </div>`;
-            });
-            return;
-        }
-
-        const data = master.stocks[activeHistoryId] || {};
-        const list = data[view] || [];
-        let options = '<option value="comprehensive">Latest Scan</option>';
-        master.history_full.forEach(h => { options += `<option value="${h.doc_id}" ${activeHistoryId===h.doc_id?'selected':''}>Scan: ${h.timestamp}</option>`; });
-
-        let historyHtml = `<div class="mb-3"><select class="form-select form-select-sm fw-bold" onchange="switchHistory(this.value)">${options}</select></div>`;
-        if (!list.length) { container.innerHTML = historyHtml + '<div class="text-center py-5 card-custom">No trades found in this category.</div>'; return; }
-
-        let h = historyHtml;
-        const sectors = {}; list.forEach(s => { if(!sectors[s.sector]) sectors[s.sector] = []; sectors[s.sector].push(s); });
-        Object.keys(sectors).sort().forEach(sec => {
-            h += `<div class="fw-bold mb-2 small text-uppercase text-muted" style="letter-spacing:1px;">${sec}</div>`;
-            sectors[sec].forEach(s => {
-                h += `
-                <div class="stk-btn" onclick="openDetails('${s.symbol}', '${activeHistoryId}', '${view}')">
-                    <div class="d-flex justify-content-between px-3 pt-3">
-                        <div><div class="fw-bold d-flex align-items-center gap-2">${s.symbol.replace('.NS','')}${s.conviction==='High' ? '<span class="badge bg-warning text-dark" style="font-size:0.6rem">HIGH</span>' : ''}</div><div class="small muted">${s.rating} Score</div></div>
-                        <div class="text-end"><div class="fw-bold text-${s.change > 0 ? 'success':'danger'}">${s.change}%</div><div class="small muted">₹${s.price}</div></div>
-                    </div>
-                    <div class="price-strip"><div class="price-item">TGT<span>${s.target_price}</span></div><div class="price-item">SL<span>${s.sl_price}</span></div></div>
-                </div>`;
-            });
-        });
-        container.innerHTML = h;
-    }
 </script>
 </body>
 </html>

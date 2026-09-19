@@ -3,75 +3,125 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>StockPro | Master Terminal Hub</title>
+    <title>StockPro | Institutional Master Hub</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
     <style>
-        :root { --bg-main: #e8eef0; --bg-card: #ffffff; --accent: #153f4c; --bull: #1d8f5a; --bear: #b32727; --border: #c5d3d5; --txt-main: #17212b; --txt-dim: #587078; }
-        body { background: radial-gradient(circle at 15% 0%,#d9f1eb 0,#e8eef0 38%,#f5efe4 100%); color: var(--txt-main); font-family: Georgia, 'Times New Roman', serif; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-        .navbar { background: rgba(255,255,255,0.9); border-bottom: 1px solid var(--border); backdrop-filter: blur(10px); position: sticky; top: 0; z-index: 1000; padding: 10px 15px; }
-        .navbar-brand { color: var(--accent) !important; font-weight: 800; font-size: 1.1rem; }
+        :root { --se-blue: #1b3152; --se-active: #3b82f6; --se-bg: #f4f7f9; --se-border: #e5e7eb; --txt-main: #1f2937; --txt-dim: #6b7280; --bull: #1d8f5a; --bear: #b32727; --primary: #2563eb; }
+        body { background: var(--se-bg); color: var(--txt-main); font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; }
 
-        .bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; background: #ffffff; display: flex; border-top: 1px solid var(--border); z-index: 1000; height: 65px; box-shadow: 0 -5px 20px rgba(0,0,0,0.05); }
-        .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--txt-dim); font-size: 0.6rem; font-weight: 700; border: none; background: none; outline: none; cursor: pointer; text-decoration: none; }
-        .nav-item.active { color: var(--accent); background: #f1f6f4; }
-        .nav-item i { font-size: 1.1rem; margin-bottom: 2px; }
+        /* Top Header */
+        .se-header { background: #ffffff; border-bottom: 1px solid var(--se-border); height: 60px; display: flex; align-items: center; padding: 0 20px; position: sticky; top: 0; z-index: 1100; justify-content: space-between; }
+        .se-layout { display: flex; }
+        .se-sidebar { width: 240px; background: #ffffff; border-right: 1px solid var(--se-border); height: calc(100vh - 60px); position: sticky; top: 60px; overflow-y: auto; }
+        .se-nav-group-title { padding: 15px 20px 5px; font-size: 0.75rem; font-weight: 800; color: var(--txt-dim); text-transform: uppercase; letter-spacing: 1px; }
+        .se-nav-item { padding: 12px 20px; display: flex; align-items: center; gap: 15px; color: var(--txt-main); text-decoration: none; font-weight: 600; font-size: 0.9rem; border-left: 4px solid transparent; cursor: pointer; }
+        .se-nav-item:hover { background: #f9fafb; }
+        .se-nav-item.active { background: #eff6ff; color: var(--se-active); border-left-color: var(--se-active); }
 
-        #main-scroll { padding: 12px; padding-bottom: 85px; max-width: 1200px; margin: 0 auto; }
-        .meta-text { font-size: 0.68rem; color: var(--txt-dim); line-height: 1.6; margin-bottom: 10px; background: rgba(255,255,255,0.4); padding: 8px; border-radius: 6px; }
-        .live-dot { height: 8px; width: 8px; background: #10b981; border-radius: 50%; display: inline-block; margin-right: 4px; animation: pulse 2s infinite; }
+        .se-content { flex: 1; padding: 25px; max-width: 1200px; margin: 0 auto; width: 100%; min-height: calc(100vh - 60px); }
+        .card-pro { background: #fff; border: 1px solid var(--se-border); border-radius: 4px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.02); }
+        .card-title-pro { font-size: 1.1rem; font-weight: 800; color: var(--se-blue); margin-bottom: 15px; display: block; }
+
+        .meta-header { font-size: 0.75rem; color: var(--txt-dim); margin-bottom: 12px; font-weight: 800; text-transform: uppercase; background: #fff; padding: 10px; border: 1px solid var(--se-border); border-radius: 4px; display: flex; align-items: center; gap: 10px; }
+        .live-dot { height: 8px; width: 8px; background: #10b981; border-radius: 50%; display: inline-block; animation: pulse 2s infinite; }
         @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.4; } 100% { opacity: 1; } }
 
-        .card-custom { border: 1px solid var(--border); padding: 18px; border-radius: 6px; margin-bottom: 14px; background: rgba(255,255,255,0.88); box-shadow: 0 8px 24px rgba(31,57,64,.08); }
-        .sig-header { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; border: 1px solid #83aab0; border-radius: 8px; background: #153f4c; color: #fff; margin: 10px 0 14px; font-weight: 800; font-size: 1.1rem; }
-        .sig-badge { padding: 8px 12px; border-radius: 5px; background: #b32727; color: #fff; min-width: 100px; text-align: center; text-transform: uppercase; font-size: 0.9rem; }
+        .alert-box { background: #f8fbfc; border: 1px solid var(--se-border); border-radius: 4px; padding: 18px; margin-bottom: 20px; }
+        .alert-tag { background: #f4ead0; color: #755519; padding: 4px 12px; border-radius: 4px; font-weight: 800; font-size: 0.9rem; }
 
-        .metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px; margin-bottom: 10px; }
-        .m-box { padding: 10px; background: #f1f6f4; border-left: 4px solid #64a99b; border-radius: 4px; border: 1px solid var(--border); }
-        .m-lbl { font-size: 0.75rem; font-weight: 800; color: #123b4a; margin-right: 5px; }
-        .m-val { font-size: 0.85rem; font-weight: 700; color: var(--txt-main); }
-        .spot-hl { color: #2563eb !important; font-family: monospace; font-size: 1.1rem; font-weight: 900; }
+        .sig-box { background: #1b3152; color: white; padding: 16px 20px; border-radius: 4px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .sig-val-badge { padding: 6px 15px; border-radius: 4px; font-weight: 900; text-transform: uppercase; font-size: 1rem; }
 
-        .analysis-block { background: #fff; border: 1px solid var(--border); border-radius: 6px; padding: 15px; font-size: 0.85rem; line-height: 1.8; color: var(--txt-main); margin-bottom: 14px; }
-        .a-row { display: flex; justify-content: space-between; border-bottom: 1px solid #f5f5f5; padding: 4px 0; }
-        .a-lbl { font-weight: 800; color: #17212b; min-width: 140px; }
-        .a-val { text-align: right; font-weight: 600; flex: 1; }
+        .metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 20px; }
+        .m-box { padding: 12px; background: #f8fafc; border-left: 4px solid var(--se-active); border-radius: 4px; border: 1px solid var(--se-border); }
+        .m-lbl { font-size: 0.8rem; font-weight: 800; color: var(--txt-dim); text-transform: uppercase; margin-bottom: 4px; display: block; }
+        .m-val { font-size: 1.1rem; font-weight: 700; color: var(--txt-main); }
+        .spot-hl { color: #2563eb !important; font-family: monospace; font-weight: 900; }
+
+        .se-analysis-block { line-height: 2.2; font-size: 0.92rem; }
+        .a-row { display: flex; justify-content: space-between; border-bottom: 1px solid #f3f4f6; padding: 5px 0; }
+        .a-lbl { font-weight: 700; color: var(--se-blue); min-width: 160px; }
+        .a-val { text-align: right; flex: 1; font-weight: 500; }
         .pattern-cyan { color: #22d3ee !important; font-weight: 800; }
-        .status-red { color: #b32727; font-weight: 800; margin-top: 10px; display: block; }
+        .status-timer { color: #b32727; font-weight: 800; margin-top: 10px; display: block; }
 
-        .chart-box { background: #fbfcfd; border: 1px solid #c9d9d9; border-radius: 5px; margin-bottom: 1rem; height: 380px; width: 100%; }
-        .table-pro { width: 100%; font-size: 0.82rem; border-collapse: collapse; background: #fff; }
-        .table-pro th { background: #f8fbfc; padding: 12px; color: #17212b; border-bottom: 1px solid var(--border); text-align: left; font-weight: 800; }
-        .table-pro td { padding: 12px; border-bottom: 1px solid #eee; text-align: left; font-weight: 700; color: #17212b; }
+        .chart-container { width: 100%; overflow: hidden; position: relative; }
+        .chart-box { background: #fbfcfd; border: 1px solid #c9d9d9; border-radius: 4px; margin-bottom: 5px; height: 400px; width: 100%; }
+        .vol-chart-box { background: #fbfcfd; border: 1px solid #c9d9d9; border-radius: 4px; height: 280px; width: 100%; }
 
-        .stk-btn { width: 100%; background: #fff; border: 1px solid var(--border); border-radius: 8px; padding: 15px; margin-bottom: 12px; text-align: left; transition: transform 0.1s; cursor: pointer; border-left: 6px solid #153f4c; }
-        #detail-view { display: none; position: fixed; inset: 0; background: var(--bg-main); z-index: 2000; padding: 20px; overflow-y: auto; }
-        .back-btn { background: var(--accent); color: #fff; border: none; padding: 10px 20px; border-radius: 4px; font-weight: 800; margin-bottom: 20px; cursor: pointer; }
+        .se-table { width: 100%; background: #fff; border: 1px solid var(--se-border); border-radius: 4px; overflow: hidden; }
+        .se-th { background: #f9fafb; border-bottom: 1px solid var(--se-border); padding: 12px 20px; display: grid; grid-template-columns: 2.5fr 1fr 1.2fr 1fr; font-size: 0.75rem; font-weight: 800; color: var(--txt-dim); text-transform: uppercase; }
+        .se-tr { display: grid; grid-template-columns: 2.5fr 1fr 1.2fr 1fr; padding: 15px 20px; border-bottom: 1px solid var(--se-border); align-items: center; cursor: pointer; transition: background 0.1s; }
+        .se-tr:hover { background: #f8fafc; }
+        .se-logo { width: 35px; height: 35px; border-radius: 50%; background: #f3f4f6; display: flex; align-items: center; justify-content: center; font-weight: 800; color: var(--se-blue); border: 1px solid var(--se-border); font-size: 0.7rem; }
+        .se-symbol { font-weight: 700; font-size: 0.95rem; }
+        .se-pattern-box { background: #e0e7ff; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 0.6rem; color: var(--se-active); font-weight: 800; text-transform: uppercase; padding: 5px 8px; text-align: center; }
 
-        #login-overlay { position: fixed; inset: 0; background: #e8eef0; z-index: 2000; display: flex; align-items: center; justify-content: center; padding: 20px; }
+        .se-strat-card { background: #ffffff; border: 1px solid var(--se-border); border-radius: 4px; display: flex; align-items: center; padding: 18px 20px; margin-bottom: 1px; cursor: pointer; }
+        .se-strat-card:hover { background: #f9fafb; }
+        .se-strat-icon { width: 45px; height: 45px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; color: #fff; margin-right: 20px; }
+
+        .bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; background: #ffffff; display: flex; border-top: 1px solid var(--se-border); z-index: 1000; height: 65px; box-shadow: 0 -5px 15px rgba(0,0,0,0.05); }
+        .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--txt-dim); font-size: 0.58rem; font-weight: 700; border: none; background: none; outline: none; text-decoration: none; }
+        .nav-item.active { color: var(--se-active); background: #f8fafc; }
+        .nav-item i { font-size: 1.15rem; margin-bottom: 2px; }
+
+        /* Top Strikes Table Fix - Institutional Style */
+        .table-pro { width: 100%; border-collapse: collapse; background: #fff; border-radius: 4px; overflow: hidden; margin-top: 10px; }
+        .table-pro th { background: #f9fafb; padding: 12px 15px; color: var(--txt-dim); border-bottom: 1px solid var(--se-border); text-align: left; font-size: 0.75rem; font-weight: 800; text-transform: uppercase; }
+        .table-pro td { padding: 12px 15px; border-bottom: 1px solid #f3f4f6; text-align: left; font-weight: 700; font-size: 0.9rem; color: var(--se-blue); }
+        .table-pro tr:last-child td { border-bottom: none; }
+        .side-badge { padding: 4px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: 800; text-transform: uppercase; }
+        .side-bull { background: #e6f4ea; color: var(--bull); }
+        .side-bear { background: #fce8e6; color: var(--bear); }
+        .side-both { background: #f3f4f6; color: var(--txt-dim); }
+
+        @media (max-width: 991px) {
+            .se-sidebar { display: none; }
+            .se-content { padding: 15px; padding-bottom: 80px; }
+            .se-th, .se-tr { grid-template-columns: 2fr 1fr 1fr; padding: 12px 15px; }
+            .se-th span:nth-child(2), .se-tr div:nth-child(2) { display: none; }
+        }
+
+        #login-overlay { position: fixed; inset: 0; background: #f4f7f9; z-index: 2000; display: flex; align-items: center; justify-content: center; padding: 20px; }
+        #detail-view { display: none; position: fixed; inset: 0; background: #fff; z-index: 1500; padding: 20px; overflow-y: auto; }
     </style>
 </head>
 <body>
-<div id="login-overlay" style="display:none"><div class="card p-4 text-center shadow-lg" style="width: 100%; max-width: 400px;"><h2 class="fw-bold mb-4" style="color:var(--accent)">STOCKPRO HUB</h2><input type="email" id="email" class="form-control mb-3" placeholder="Email"><input type="password" id="password" class="form-control mb-4" placeholder="Access Key"><button id="login-btn" class="btn btn-dark w-100 fw-bold py-2">LOGIN</button><div id="login-error" class="mt-3 text-danger small"></div></div></div>
+
+<div id="login-overlay" style="display:none"><div class="card p-4 text-center shadow-lg" style="width: 100%; max-width: 400px;"><h2 class="fw-bold mb-4" style="color:var(--se-blue)">STOCKPRO HUB</h2><input type="email" id="email" class="form-control mb-3" placeholder="Email"><input type="password" id="password" class="form-control mb-4" placeholder="Access Key"><button id="login-btn" class="btn btn-dark w-100 fw-bold py-2">LOGIN</button><div id="login-error" class="mt-3 text-danger small"></div></div></div>
+
 <div id="app-shell" style="display:none">
-    <nav class="navbar d-flex justify-content-between align-items-center">
-        <span class="navbar-brand">Professional Master Station</span>
+    <div class="se-header">
+        <div class="d-flex align-items-center gap-2"><i class="bi bi-list fs-3 d-md-none"></i><span class="fw-bold fs-5" style="color:var(--se-blue)">StockPro Hub</span></div>
         <button id="logout-btn" class="btn btn-sm btn-outline-secondary"><i class="bi bi-power"></i></button>
-    </nav>
-    <div id="main-scroll"></div>
-    <div class="bottom-nav">
-        <button class="nav-item active" id="tab-options" onclick="setView('options')"><i class="bi bi-graph-up"></i>OPTIONS</button>
-        <button class="nav-item" id="tab-intra" onclick="setView('intraday')"><i class="bi bi-lightning-charge"></i>INTRA</button>
-        <button class="nav-item" id="tab-swing" onclick="setView('swing')"><i class="bi bi-calendar-event"></i>SWING</button>
-        <button class="nav-item" id="tab-pos" onclick="setView('positional')"><i class="bi bi-shield-check"></i>POS</button>
-        <button class="nav-item" id="tab-history" onclick="setView('history')"><i class="bi bi-clock-history"></i>HISTORY</button>
-        <button class="nav-item" id="tab-admin" onclick="setView('admin')"><i class="bi bi-gear-fill"></i>SCAN</button>
+    </div>
+
+    <div class="se-layout">
+        <div class="se-sidebar">
+            <div class="se-nav-group-title">Analytics</div>
+            <div class="se-nav-item active" id="nav-options" onclick="setView('options')"><i class="bi bi-graph-up"></i> Index Analytics</div>
+            <div class="se-nav-item" id="nav-home" onclick="setView('home')"><i class="bi bi-lightning"></i> Trading Strategies</div>
+            <div class="se-nav-item" id="nav-history" onclick="setView('history')"><i class="bi bi-clock-history"></i> Scan History</div>
+            <div class="se-nav-item" id="nav-admin" onclick="setView('admin')"><i class="bi bi-gear-fill"></i> Cloud Admin</div>
+        </div>
+        <div class="se-content" id="main-content"></div>
+    </div>
+
+    <div class="bottom-nav d-md-none">
+        <button class="nav-item active" id="btn-options" onclick="setView('options')"><i class="bi bi-graph-up"></i>OPTIONS</button>
+        <button class="nav-item" id="btn-intra" onclick="loadStockList('intraday')"><i class="bi bi-lightning-charge"></i>INTRA</button>
+        <button class="nav-item" id="btn-swing" onclick="loadStockList('swing')"><i class="bi bi-calendar-event"></i>SWING</button>
+        <button class="nav-item" id="btn-pos" onclick="loadStockList('positional')"><i class="bi bi-shield-check"></i>POS</button>
+        <button class="nav-item" id="btn-history" onclick="setView('history')"><i class="bi bi-clock-history"></i>HISTORY</button>
+        <button class="nav-item" id="btn-admin" onclick="setView('admin')"><i class="bi bi-gear-fill"></i>SCAN</button>
     </div>
 </div>
 
 <div id="detail-view">
-    <button class="back-btn" onclick="document.getElementById('detail-view').style.display='none'"><i class="bi bi-arrow-left"></i> BACK TO HUB</button>
+    <button class="btn btn-link fw-bold text-decoration-none" onclick="document.getElementById('detail-view').style.display='none'"><i class="bi bi-arrow-left"></i> BACK</button>
     <div id="detail-body"></div>
 </div>
 
@@ -82,7 +132,7 @@
 
     const config = { apiKey: "AIzaSyDMEUmFGSJBjGrz7fpDN46OiZlSJ6NTsjE", authDomain: "kunal-analysis.firebaseapp.com", projectId: "kunal-analysis", storageBucket: "kunal-analysis.firebasestorage.app", appId: "1:328297105533:web:3ed3d8d5aa3ec677b88914" };
     const app = initializeApp(config); const auth = getAuth(app); const db = getFirestore(app);
-    let view = 'options'; let symbol = 'NIFTY'; let tf = 5;
+    let viewState = 'options'; let symbol = 'NIFTY'; let tf = 5; let activeListType = 'intraday';
     let master = { opt: {}, stocks: {}, history_full: [], live: { NIFTY: '-', BANKNIFTY: '-' } };
 
     setPersistence(auth, browserLocalPersistence);
@@ -102,38 +152,35 @@
     const getToken = () => localStorage.getItem(STORAGE_KEY) || "";
 
     window.setView = (v) => {
-        view = v;
-        document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
-        const idMap = { 'options':'tab-options', 'intraday': 'tab-intra', 'swing': 'tab-swing', 'positional': 'tab-pos', 'history': 'tab-history', 'admin': 'tab-admin' };
-        document.getElementById(idMap[v]).classList.add('active');
-        render();
+        viewState = v;
+        document.querySelectorAll('.se-nav-item, .nav-item').forEach(b => b.classList.remove('active'));
+        if(v === 'home') renderHome();
+        else if(v === 'options') renderOptions();
+        else if(v === 'admin') renderAdmin();
+        else if(v === 'history') renderHistory();
     };
-    window.switchSym = (s) => { symbol = s; render(); startOpt(); };
 
-    window.triggerManual = async (type) => {
-        const t = getToken(); if(!t) { alert("GitHub Token Required!"); setView('admin'); return; }
+    window.triggerManual = async () => {
+        const t = getToken(); if(!t) { setView('admin'); alert("GitHub Token Required!"); return; }
         try {
-            const r = await fetch('https://api.github.com/repos/Kunalpagare03/Firebase/dispatches', {
-                method: 'POST', headers: { 'Authorization': `Bearer ${t}`, 'Accept': 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28' }, body: JSON.stringify({ event_type: 'manual_scan' })
-            });
-            if(r.ok || r.status === 204) alert("Sync Triggered!");
-            else if(r.status === 401) alert("401 Error: Invalid GitHub Token. Update it in SCAN tab.");
-            else alert("Error " + r.status);
+            const r = await fetch('https://api.github.com/repos/Kunalpagare03/Firebase/dispatches', { method: 'POST', headers: { 'Authorization': `Bearer ${t}`, 'Accept': 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28' }, body: JSON.stringify({ event_type: 'manual_scan' }) });
+            if(r.ok || r.status === 204) alert("Sync Triggered!"); else alert("Error " + r.status);
         } catch(e) { alert(e.message); }
     };
 
-    async function start() {
-        startOpt();
-        onSnapshot(doc(db, "stock_scans", "status"), (snap) => { const d = snap.data(); if (d) { master.scanner_status = d; render(); } });
-        onSnapshot(doc(db, "live_quotes", "NIFTY"), (snap) => { const d = snap.data(); if (d) { master.live['NIFTY'] = d.spot; if(view === 'options') render(); } });
-        onSnapshot(doc(db, "live_quotes", "BANKNIFTY"), (snap) => { const d = snap.data(); if (d) { master.live['BANKNIFTY'] = d.spot; if(view === 'options') render(); } });
-        onSnapshot(doc(db, "stock_scans", "comprehensive"), (snap) => { const d = snap.data(); if (d) { master.stocks['comprehensive'] = d; render(); } });
-        const q = query(collection(db, "stock_history"), orderBy("timestamp", "desc"), limit(30));
-        const historySnap = await getDocs(q);
-        master.history_full = historySnap.docs.map(d => d.data());
-    }
+    window.setTF = (m) => { tf = parseInt(m); renderOptions(); };
+    window.switchSym = (s) => { symbol = s; renderOptions(); };
 
-    function startOpt() { onSnapshot(doc(db, "option_sentiment", symbol), (snap) => { const d = snap.data(); if (d) { master.opt[symbol] = d; if(view === 'options') render(); } }); }
+    function start() {
+        onSnapshot(doc(db, "option_sentiment", "NIFTY"), (snap) => { master.opt['NIFTY'] = snap.data(); if(viewState === 'options' && symbol === 'NIFTY') renderOptions(); });
+        onSnapshot(doc(db, "option_sentiment", "BANKNIFTY"), (snap) => { master.opt['BANKNIFTY'] = snap.data(); if(viewState === 'options' && symbol === 'BANKNIFTY') renderOptions(); });
+        onSnapshot(doc(db, "stock_scans", "comprehensive"), (snap) => { master.stocks.comprehensive = snap.data(); if(viewState === 'home') renderHome(); else if(viewState === 'list') loadStockList(activeListType); });
+        onSnapshot(doc(db, "stock_scans", "status"), (snap) => { master.status = snap.data(); if(viewState === 'admin' || viewState === 'options') renderOptions(); });
+        onSnapshot(doc(db, "live_quotes", "NIFTY"), (snap) => { const d = snap.data(); if (d) { master.live['NIFTY'] = d.spot; if(viewState === 'options' && symbol==='NIFTY') { const el = document.getElementById('live-spot-val'); if(el) el.innerText = d.spot.toFixed(2); } } });
+        onSnapshot(doc(db, "live_quotes", "BANKNIFTY"), (snap) => { const d = snap.data(); if (d) { master.live['BANKNIFTY'] = d.spot; if(viewState === 'options' && symbol==='BANKNIFTY') { const el = document.getElementById('live-spot-val'); if(el) el.innerText = d.spot.toFixed(2); } } });
+        getDocs(query(collection(db, "stock_history"), orderBy("timestamp", "desc"), limit(30))).then(snap => { master.history_full = snap.docs.map(d => d.data()); });
+        renderOptions();
+    }
 
     function buildCandles(history, intervalMin) {
         if(!history || history.length < 2) return [];
@@ -142,94 +189,159 @@
         return Object.keys(bins).sort().map(time => { const v = bins[time]; return { x: new Date(parseInt(time)), open: v[0], high: Math.max(...v), low: Math.min(...v), close: v[v.length-1] }; });
     }
 
-    window.openDetails = (sym, type) => {
-        let s = null;
-        if(type === 'history') {
-            master.history_full.forEach(h => {
-                const list = (h.intraday || []).concat(h.swing || [], h.positional || []);
-                const found = list.find(x => x.symbol === sym); if(found) s = found;
-            });
-        } else {
-            s = (master.stocks.comprehensive?.[type] || []).find(x => x.symbol === sym);
-        }
-        if (!s) return;
-        document.getElementById('detail-body').innerHTML = `
-            <div class="sig-header"><span>${s.symbol.replace('.NS','')}</span><span class="sig-badge" style="background:${s.change > 0 ? '#1d8f5a':'#b32727'}">${s.recommendation || 'WATCH'}</span></div>
+    function renderOptions() {
+        const content = document.getElementById('main-content');
+        const d = master.opt[symbol]; const s = master.status || {status:'Idle'};
+        if(!d) { content.innerHTML = '<div class="text-center py-5">Syncing Option Analytics...</div>'; return; }
+        const sig = d.final_signal || 'Neutral'; const alert = d.trade_alert || {}; const tech = alert.technicals || {}; const g = d.greeks || {}; const p = d.price_action || {};
+        const liveSpotRaw = master.live[symbol] !== '-' ? master.live[symbol] : d.spot_price;
+        const liveSpot = parseFloat(liveSpotRaw) || 0;
+        const tfOpts = [{v:1,l:'1m'},{v:3,l:'3m'},{v:5,l:'5m'},{v:10,l:'10m'},{v:15,l:'15m'},{v:30,l:'30m'},{v:60,l:'1h'},{v:1440,l:'1d'},{v:10080,l:'1w'}];
+
+        content.innerHTML = `
+            <div class="meta-header"><div class="live-dot"></div> LIVE TERMINAL [${symbol}] • SYNC: ${d.fetched_at.split(' ')[1] || d.fetched_at} • Server: ${s.status}</div>
+
+            <div class="card-pro"><div class="d-flex align-items-center gap-3"><select class="form-select fw-bold w-auto" onchange="switchSym(this.value)"><option value="NIFTY" ${symbol==='NIFTY'?'selected':''}>NIFTY 50</option><option value="BANKNIFTY" ${symbol==='BANKNIFTY'?'selected':''}>BANKNIFTY</option></select><button class="btn btn-primary btn-sm fw-bold px-4" onclick="triggerManual()">SYNC SERVER</button></div></div>
+
+            <div class="alert-box shadow-sm"><div class="d-flex justify-content-between mb-2"><strong>Action alert:</strong> <span class="alert-tag">${alert.action || 'WAIT'}</span></div><div class="small mb-1"><strong>Trigger:</strong> ${alert.trigger || '-'}</div><div class="small mb-1"><strong>Confirmations:</strong> ${alert.confirmations || '-'}</div><div class="small mt-2 pt-2 border-top border-secondary border-opacity-10">RSI: ${tech.rsi || '-'} | MACD: ${tech.macd || '-'} | ${tech.trendline || '-'} trendline | ${tech.candle || '-'} candle</div></div>
+
+            <div class="sig-box"><span>Directional Signal</span><span class="sig-val-badge" style="background:${sig==='Bullish'?'var(--bull)':'var(--bear)'}">${sig}</span></div>
+
             <div class="metrics-grid">
-                <div class="m-box"><span class="m-lbl">Price</span><span class="m-val">₹${s.price}</span></div>
-                <div class="m-box"><span class="m-lbl">Target</span><span class="m-val text-success">₹${s.target_price}</span></div>
-                <div class="m-box"><span class="m-lbl">StopLoss</span><span class="m-val text-danger">₹${s.sl_price}</span></div>
-                <div class="m-box"><span class="m-lbl">Rating</span><span class="m-val">${s.rating}</span></div>
+                <div class="m-box"><span class="m-lbl">Spot Price</span><span class="m-val spot-hl" id="live-spot-val">${liveSpot.toFixed(2)}</span></div>
+                <div class="m-box"><span class="m-lbl">Max Pain</span><span class="m-val">${d.max_pain}</span></div>
+                <div class="m-box"><span class="m-lbl">PCR (OI)</span><span class="m-val">${d.pcr_oi}</span></div>
+                <div class="m-box"><span class="m-lbl">PCR (Vol)</span><span class="m-val">${d.pcr_volume || '-'}</span></div>
             </div>
-            <div class="card-custom"><div class="fw-bold mb-2">Institutional Justification:</div><div class="small">${s.justification || 'Technical breakout structure identified.'}</div></div>
+
+            <div class="card-pro"><div class="se-analysis-block">
+                <div class="a-row"><span class="a-lbl">Market read:</span><span class="a-val">${d.market_read || '-'}</span></div>
+                <div class="a-row"><span class="a-lbl">Chart structure:</span><span class="a-val">${d.chart_structure_str || '-'}</span></div>
+                <div class="a-row"><span class="a-lbl">Detected Pattern:</span><span class="a-val pattern-cyan">${d.price_structure?.chart_pattern || '--'}</span></div>
+                <div class="a-row"><span class="a-lbl">Support:</span><span class="a-val">${d.support_str || '-'} <strong>Resist:</strong> ${d.resist_str || '-'}</span></div>
+                <div class="a-row"><span class="a-lbl">OI buildup:</span><span class="a-val">${d.oi_buildup || '-'}</span></div>
+                <div class="a-row"><span class="a-lbl">OI trend:</span><span class="a-val">${d.oi_trend || '-'}</span></div>
+                <div class="a-row"><span class="a-lbl">Flow:</span><span class="a-val">${d.flow_str || '-'}</span></div>
+                <div class="a-row"><span class="a-lbl">Volume deltas:</span><span class="a-val">${d.vol_deltas || '-'} | <strong>OI deltas:</strong> ${d.oi_deltas || '-'}</span></div>
+                <div class="a-row"><span class="a-lbl">Manipulation risk:</span><span class="a-val">${d.manipulation_risk || '-'}</span></div>
+                <div class="a-row"><span class="a-lbl">Trend Logic:</span><span class="a-val small">${d.trend_verdict || '-'}</span></div>
+                <hr class="my-2 opacity-10"><div class="a-row text-primary"><span class="a-lbl">Call Buy Strike:</span><span class="a-val fw-bold">${d.delta_recommendations?.call?.buy_strike || '--'}</span></div><div class="a-row text-danger"><span class="a-lbl">Put Buy Strike:</span><span class="a-val fw-bold">${d.delta_recommendations?.put?.buy_strike || '--'}</span></div><span class="status-timer" style="color:#b32727; font-weight:800; margin-top:10px; display:block">Next trend analysis active.</span>
+            </div></div>
+
+            <div class="card-pro">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <span class="card-title-pro m-0">Live candlestick chart</span>
+                    <select class="form-select form-select-sm w-auto fw-bold" onchange="setTF(this.value)">${tfOpts.map(o => `<option value="${o.v}" ${tf==o.v?'selected':''}>${o.l}</option>`).join('')}</select>
+                </div>
+                <div class="chart-container"><div id="chart" class="chart-box"></div></div>
+            </div>
+            <div class="card-pro"><span class="card-title-pro">Volume Distribution</span><div class="chart-container"><div id="vol-chart" class="vol-chart-box"></div></div></div>
+            <div class="card-pro"><span class="card-title-pro">Price Action Details</span><div class="metrics-grid">
+                <div class="m-box"><span class="m-lbl">Close</span><span class="m-val">${p.close||'-'}</span></div>
+                <div class="m-box"><span class="m-lbl">Daily Chg</span><span class="m-val">${p.change||'0'}</span></div>
+                <div class="m-box"><span class="m-lbl">20-SMA</span><span class="m-val">${p.sma20||'--'}</span></div>
+                <div class="m-box"><span class="m-lbl">Read</span><span class="m-val small">${p.reading||'Mixed'}</span></div>
+            </div></div>
+            <div class="card-pro"><span class="card-title-pro">ATM Greeks</span><div class="metrics-grid">
+                <div class="m-box"><span class="m-lbl">Strike</span><span class="m-val">${g.strike||'--'}</span></div>
+                <div class="m-box"><span class="m-lbl">Call Delta</span><span class="m-val">${g.call_delta||'0'}</span></div>
+                <div class="m-box"><span class="m-lbl">Put Delta</span><span class="m-val">${g.put_delta||'0'}</span></div>
+                <div class="m-box"><span class="m-lbl">Gamma</span><span class="m-val">${g.gamma||'0'}</span></div>
+            </div></div>
+            <div class="card-pro">
+                <span class="card-title-pro">Top Strikes by Total OI</span>
+                <div class="table-wrap overflow-auto">
+                    <table class="table-pro">
+                        <thead><tr><th>Strike</th><th>Call OI</th><th>Put OI</th><th>Side</th></tr></thead>
+                        <tbody>
+                            ${(d.top_strikes || []).map(r => {
+                                let sideCls = 'side-both';
+                                if(r.oi_side?.includes('Call')) sideCls = 'side-bear';
+                                if(r.oi_side?.includes('Put')) sideCls = 'side-bull';
+                                return `<tr><td>${r.strike}</td><td>${r.call_oi.toLocaleString()}</td><td>${r.put_oi.toLocaleString()}</td><td><span class="side-badge ${sideCls}">${(r.oi_side||'Both').split(' ')[0]}</span></td></tr>`;
+                            }).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         `;
-        document.getElementById('detail-view').style.display = 'block';
+        document.getElementById('nav-options')?.classList.add('active');
+        document.getElementById('btn-options')?.classList.add('active');
+        requestAnimationFrame(() => {
+            const candles = buildCandles(d.spot_history, tf);
+            if(candles.length > 0) Plotly.react('chart', [{ x: candles.map(c=>c.x), open: candles.map(c=>c.open), high: candles.map(c=>c.high), low: candles.map(c=>c.low), close: candles.map(c=>c.close), type: 'candlestick', increasing: {line: {color: '#1f9d61'}}, decreasing: {line: {color: '#d9485f'}} }], { paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:'rgba(0,0,0,0)', margin:{t:10,r:10,b:30,l:40}, xaxis:{showgrid:false, tickfont:{size:8}, rangeslider:{visible:false}}, yaxis:{gridcolor:'#eee', tickfont:{size:8}} }, {responsive:true, displayModeBar:false});
+            const top = d.top_strikes || [];
+            if(top.length > 0) Plotly.react('vol-chart', [{ x: top.map(s => s.strike), y: top.map(s => s.call_oi), name: 'Call OI', type: 'bar', marker: {color: '#ef4444'} }, { x: top.map(s => s.strike), y: top.map(s => s.put_oi), name: 'Put OI', type: 'bar', marker: {color: '#10b981'} }], { barmode: 'group', paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:'rgba(0,0,0,0)', margin:{t:10,r:10,b:30,l:40}, xaxis:{tickfont:{size:8}, type: 'category'}, yaxis:{gridcolor:'#eee', tickfont:{size:8}}, showlegend: false }, {responsive:true, displayModeBar:false});
+        });
+    }
+
+    function renderHome() {
+        const content = document.getElementById('main-content');
+        const date = new Date().toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric'});
+        content.innerHTML = `
+            <div class="se-page-header"><div class="se-back-btn"><i class="bi bi-arrow-left"></i></div><span class="se-title">Trading Strategies</span></div>
+            <div class="strategy-list">
+                <div class="se-strat-card" onclick="loadStockList('intraday')"><div class="se-strat-icon" style="background:#1e3a8a"><i class="bi bi-graph-up-arrow"></i></div><div class="se-strat-info"><div class="se-strat-name">One Day Bullish Strategies</div><div class="se-strat-desc">Institutional volume bursts today.</div></div><div class="se-strat-count">${master.stocks.comprehensive?.intraday?.length || 0} Stocks</div></div>
+                <div class="se-strat-card" onclick="loadStockList('swing')"><div class="se-strat-icon" style="background:#dc2626"><i class="bi bi-bullseye"></i></div><div class="se-strat-info"><div class="se-strat-name">Swing Bullish Strategies</div><div class="se-strat-desc">Medium-term breakout candidates.</div></div><div class="se-strat-count">${master.stocks.comprehensive?.swing?.length || 0} Stocks</div></div>
+                <div class="se-strat-card" onclick="loadStockList('positional')"><div class="se-strat-icon" style="background:#991b1b"><i class="bi bi-shield-fill-check"></i></div><div class="se-strat-info"><div class="se-strat-name">Positional Bullish Strategies</div><div class="se-strat-desc">Long-term structural setups.</div></div><div class="se-strat-count">${master.stocks.comprehensive?.positional?.length || 0} Stocks</div></div>
+            </div>
+        `;
+        document.getElementById('nav-home')?.classList.add('active');
+    }
+
+    window.loadStockList = (type) => {
+        viewState = 'list'; activeListType = type;
+        document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+        const btnId = type === 'intraday' ? 'btn-intra' : (type === 'swing' ? 'btn-swing' : 'btn-pos');
+        document.getElementById(btnId)?.classList.add('active');
+        const content = document.getElementById('main-content');
+        const list = master.stocks.comprehensive[type] || [];
+        content.innerHTML = `
+            <div class="se-page-header"><div class="se-back-btn" onclick="setView('home')"><i class="bi bi-arrow-left"></i></div><span class="se-title">${type.toUpperCase()} BULLISH</span></div>
+            <div class="se-table shadow-sm">
+                <div class="se-th"><span>Stock Name</span><span>Type</span><span>Patterns</span><span class="text-end">LTP</span></div>
+                ${list.map(s => `
+                    <div class="se-tr" onclick="openDetails('${s.symbol}', '${type}')">
+                        <div class="se-stock-info"><div class="se-logo">${s.symbol.slice(0,2)}</div><div><div class="se-symbol">${s.symbol.replace('.NS','')}</div><div class="small text-muted">${s.sector}</div></div></div>
+                        <div class="se-type">Institutional</div>
+                        <div><div class="se-pattern-box">${s.pattern || 'BREAKOUT'}</div></div>
+                        <div class="se-price">₹${s.price}</div>
+                    </div>
+                `).join('')}
+            </div>
+        `;
     };
 
-    function render() {
-        const container = document.getElementById('main-scroll'); if (!container) return;
-        const s = master.scanner_status || { status: 'Idle', last_scan_time: '--:--' };
+    function renderHistory() {
+        const content = document.getElementById('main-content');
+        content.innerHTML = `<div class="se-page-header"><span class="se-title">Institutional Archive</span></div><div class="se-table shadow-sm">` +
+            (() => {
+                const unique = {};
+                master.history_full.forEach(h => { (h.intraday || []).concat(h.swing || [], h.positional || []).forEach(s => { if(!unique[s.symbol]) unique[s.symbol] = {...s, count:1, last: h.timestamp}; else { unique[s.symbol].count++; unique[s.symbol].last = h.timestamp; } }); });
+                return Object.values(unique).sort((a,b)=>b.count-a.count).map(s => `<div class="se-tr" onclick="openDetails('${s.symbol}', 'history')"><div class="se-stock-info"><div class="se-logo">${s.symbol.slice(0,2)}</div><div class="se-symbol">${s.symbol.replace('.NS','')}</div></div><div class="fw-bold text-primary">${s.count} Scans</div><div class="text-muted small">${s.last.split(' ')[0]}</div><div class="se-price">₹${s.price}</div></div>`).join('');
+            })() + `</div>`;
+        document.getElementById('nav-history')?.classList.add('active');
+        document.getElementById('btn-history')?.classList.add('active');
+    }
 
-        if (view === 'admin') {
-            container.innerHTML = `<div class="card-custom"><h4>Cloud Control Hub</h4><div class="alert alert-warning small py-1">Update your GitHub Token if you get 401.</div><input type="password" id="gh_token_input" class="form-control bg-dark text-white mb-2" value="${getToken()}"><button class="btn btn-primary w-100 fw-bold mb-3" onclick="localStorage.setItem('${STORAGE_KEY}', document.getElementById('gh_token_input').value); alert('Saved!');">SAVE TOKEN</button><hr><button class="btn btn-success w-100 fw-bold py-3" onclick="triggerManual('full')">FORCE START CLOUD SCAN</button><div class="mt-4 p-3 bg-light rounded text-center"><div class="small fw-bold text-muted text-uppercase mb-1">Server Status</div><div class="h5 fw-bold">${s.status}</div><div class="small text-muted mt-2">Update: ${s.last_scan_time}</div></div></div>`;
-            return;
-        }
+    function renderAdmin() {
+        const content = document.getElementById('main-content');
+        const s = master.status || {status:'Idle'};
+        content.innerHTML = `<div class="se-page-header"><span class="se-title">Cloud Admin Hub</span></div><div class="card-pro"><div class="alert alert-danger py-2 small">Update GitHub Token and SAVE.</div><input type="password" id="gh_token_input" class="form-control bg-dark text-white mb-2" value="${getToken()}"><button class="btn btn-primary w-100 fw-bold mb-3" onclick="localStorage.setItem('${STORAGE_KEY}', document.getElementById('gh_token_input').value); alert('Saved!');">SAVE TOKEN</button><hr><button class="btn btn-success w-100 fw-bold py-3" onclick="triggerManual()">FORCE START CLOUD SCAN</button><div class="mt-4 p-3 bg-light rounded text-center"><div class="small fw-bold text-muted mb-1">SERVER STATUS</div><div class="h5 fw-bold">${s.status}</div><div class="small text-muted">Update: ${s.last_scan_time}</div></div></div>`;
+        document.getElementById('nav-admin')?.classList.add('active');
+    }
 
-        if (view === 'options') {
-            const d = master.opt[symbol]; if (!d) { container.innerHTML = '<div class="text-center py-5">Syncing Option Chain...<br><div class="small muted mt-2">Server: ' + s.status + '</div></div>'; return; }
-            const liveSpotRaw = master.live[symbol] !== '-' ? master.live[symbol] : d.spot_price;
-            const liveSpot = parseFloat(liveSpotRaw) || 0;
-            const sig = d.final_signal || 'Neutral'; const tech = d.trade_alert?.technicals || {}; const g = d.greeks || {}; const p = d.price_action || {};
-            let oiRows = ''; (d.top_strikes || []).forEach(r => { oiRows += `<tr><td>${r.strike}</td><td>${r.call_oi}</td><td>${r.put_oi}</td><td><span class="${r.oi_side?.includes('Put')?'text-success':'text-danger'}">${(r.oi_side||'').split(' ')[0]}</span></td></tr>`; });
-
-            container.innerHTML = `
-                <div class="meta-text"><div class="live-dot"></div> LIVE TERMINAL [${symbol}] • SYNC: ${d.fetched_at.split(' ')[1] || d.fetched_at}<br>Server Status: ${s.status}</div>
-                <div class="card-manual"><select class="form-select mb-3 fw-bold" onchange="switchSym(this.value)"><option value="NIFTY" ${symbol==='NIFTY'?'selected':''}>NIFTY 50</option><option value="BANKNIFTY" ${symbol==='BANKNIFTY'?'selected':''}>BANKNIFTY</option></select><button class="btn btn-primary w-100 fw-bold btn-sm" onclick="triggerManual('option')">START SERVER / SYNC</button></div>
-                <div class="sig-header"><span>Signal</span><span class="sig-badge" style="background:${sig==='Bullish'?'#1d8f5a':'#b32727'}">${sig}</span></div>
-                <div class="metrics-grid"><div class="m-box"><span class="m-lbl">Spot:</span><span class="m-val spot-hl" id="live-spot-val">${liveSpot.toFixed(2)}</span></div><div class="m-box"><span class="m-lbl">Max pain:</span><span class="m-val">${d.max_pain}</span></div><div class="m-box"><span class="m-lbl">PCR:</span><span class="m-val">${d.pcr_oi}</span></div></div>
-                <div class="analysis-block shadow-sm">
-                    <div class="a-row"><span class="a-lbl">Market read:</span><span class="a-val">${d.market_read || '-'}</span></div>
-                    <div class="a-row"><span class="a-lbl">Chart structure:</span><span class="a-val">${d.chart_structure_str || '-'}</span></div>
-                    <div class="a-row"><span class="a-lbl">Detected Pattern:</span><span class="a-val pattern-cyan">${d.price_structure?.chart_pattern || '--'}</span></div>
-                    <div class="a-row"><span class="a-lbl">Support:</span><span class="a-val">${d.support_str || '-'} <strong>Resist:</strong> ${d.resist_str || '-'}</span></div>
-                    <div class="a-row"><span class="a-lbl">Flow:</span><span class="a-val">${d.flow_str || '-'}</span></div>
-                    <div class="a-row"><span class="a-lbl">Trend Logic:</span><span class="a-val small">${d.trend_verdict || '-'}</span></div>
-                    <hr class="my-2 opacity-25"><div class="a-row text-primary"><strong>Call Buy Strike:</strong> <span class="fw-bold">${d.delta_recommendations?.call?.buy_strike || '--'}</span></div><div class="a-row text-danger"><strong>Put Buy Strike:</strong> <span class="fw-bold">${d.delta_recommendations?.put?.buy_strike || '--'}</span></div><div class="status-red">Next trend analysis active.</div>
-                </div>
-                <div class="card-custom"><div class="card-title">ATM Greeks</div><div class="metrics-grid"><div class="m-box"><span class="m-lbl">Strike:</span><span class="m-val">${g.strike||'--'}</span></div><div class="m-box"><span class="m-lbl">Call delta:</span><span class="m-val">${g.call_delta||'0'}</span></div><div class="m-box"><span class="m-lbl">Put delta:</span><span class="m-val">${g.put_delta||'0'}</span></div><div class="m-box"><span class="m-lbl">Gamma:</span><span class="m-val">${g.gamma||'0'}</span></div></div></div>
-                <div class="card-custom"><span class="card-title border-0">Live candlestick chart</span><div id="chart" class="chart-box"></div></div>
-                <div class="card-custom"><span class="card-title border-0">Top strikes</span><div class="table-wrap overflow-auto"><table class="table-pro"><thead><tr><th>Strike</th><th>C-OI</th><th>P-OI</th><th>Side</th></tr></thead><tbody>${oiRows}</tbody></table></div></div>
-            `;
-            if((d.spot_history || []).length > 1) {
-                requestAnimationFrame(() => {
-                    const candles = buildCandles(d.spot_history, tf);
-                    const shapes = [];
-                    (d.resistance_zones || []).forEach(val => { shapes.push({ type: 'line', xref: 'paper', x0: 0, x1: 1, y0: val, y1: val, line: { color: 'rgba(179,39,39,0.4)', width: 1, dash: 'dash' } }); });
-                    (d.support_zones || []).forEach(val => { shapes.push({ type: 'line', xref: 'paper', x0: 0, x1: 1, y0: val, y1: val, line: { color: 'rgba(29,143,90,0.4)', width: 1, dash: 'dash' } }); });
-                    if(candles.length > 0) Plotly.react('chart', [{ x: candles.map(c=>c.x), open: candles.map(c=>c.open), high: candles.map(c=>c.high), low: candles.map(c=>c.low), close: candles.map(c=>c.close), type: 'candlestick', increasing: {line: {color: '#1f9d61'}}, decreasing: {line: {color: '#d9485f'}} }], { paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:'rgba(0,0,0,0)', margin:{t:10,r:10,b:30,l:40}, xaxis:{showgrid:false, tickfont:{size:8}, rangeslider:{visible:false}}, yaxis:{gridcolor:'#eee', tickfont:{size:8}}, shapes: shapes }, {responsive:true, displayModeBar:false});
-                });
-            }
-        } else if (view === 'history') {
-            container.innerHTML = `<div class="fw-bold mb-3 small text-uppercase text-muted" style="letter-spacing:1px; border-bottom:1px solid var(--border)">7-Day Institutional Archive</div>`;
-            const uniqueStocks = {};
-            master.history_full.forEach(scan => {
-                const all = (scan.intraday || []).concat(scan.swing || [], scan.positional || []);
-                all.forEach(s => { if(!uniqueStocks[s.symbol]) { uniqueStocks[s.symbol] = {...s, count: 1, last_seen: scan.timestamp}; } else { uniqueStocks[s.symbol].count++; } });
-            });
-            const list = Object.values(uniqueStocks).sort((a,b) => b.count - a.count);
-            if(!list.length) { container.innerHTML += '<div class="text-center py-5 card-custom">History loading...</div>'; return; }
-            list.forEach(s => { container.innerHTML += `<div class="stk-btn" onclick="openDetails('${s.symbol}', 'history')"><div class="d-flex justify-content-between px-3 pt-3"><div><div class="fw-bold">${s.symbol.replace('.NS','')} <span class="badge bg-info" style="font-size:0.6rem">${s.count} Scans</span></div><div class="small muted">Last Seen: ${s.last_seen.split(' ')[0]}</div></div><div class="text-end"><div class="fw-bold text-${s.change > 0 ? 'success':'danger'}">${s.change}%</div><div class="small muted">₹${s.price}</div></div></div></div>`; });
-        } else {
-            const list = master.stocks.comprehensive?.[view] || [];
-            if (!list.length) { container.innerHTML = '<div class="text-center py-5 card-custom">No trades found in this category.</div>'; return; }
-            let h = `<div class="fw-bold mb-3 small text-uppercase text-muted" style="letter-spacing:1px; border-bottom:1px solid var(--border)">${view.toUpperCase()} WATCHLIST</div>`;
-            const sectors = {}; list.forEach(s => { if(!sectors[s.sector]) sectors[s.sector] = []; sectors[s.sector].push(s); });
-            Object.keys(sectors).sort().forEach(sec => {
-                h += `<div class="fw-bold mb-2 small text-uppercase text-muted" style="margin-top:10px">${sec}</div>`;
-                sectors[sec].forEach(s => { h += `<div class="stk-btn" onclick="openDetails('${s.symbol}', '${view}')"><div class="d-flex justify-content-between px-3 pt-3"><div><div class="fw-bold d-flex align-items-center gap-2">${s.symbol.replace('.NS','')}${s.conviction==='High' ? '<span class="badge bg-warning text-dark" style="font-size:0.6rem">HIGH</span>' : ''}</div><div class="small muted">${s.rating} Score</div></div><div class="text-end"><div class="fw-bold text-${s.change > 0 ? 'success':'danger'}">${s.change}%</div><div class="small muted">₹${s.price}</div></div></div><div class="price-strip"><div class="price-item">TGT<span>${s.target_price}</span></div><div class="price-item">SL<span>${s.sl_price}</span></div></div></div>`; });
-            });
-            container.innerHTML = h;
-        }
+    window.openDetails = (sym, type) => {
+        let s = null;
+        if(type === 'history') { master.history_full.forEach(h => { const l = (h.intraday || []).concat(h.swing || [], h.positional || []); const f = l.find(x => x.symbol === sym); if(f) s = f; }); }
+        else s = (master.stocks.comprehensive?.[type] || []).find(x => x.symbol === sym);
+        if(!s) return;
+        document.getElementById('detail-body').innerHTML = `
+            <div class="card-pro" style="border-left: 5px solid var(--se-active)"><h3 class="fw-bold">${s.symbol.replace('.NS','')}</h3><div class="text-muted small">${s.sector} | ${s.recommendation}</div></div>
+            <div class="metrics-grid"><div class="m-box"><span class="m-lbl">LTP</span><span class="m-val">₹${s.price}</span></div><div class="m-box"><span class="m-lbl text-success">Target</span><span class="m-val text-success">₹${s.target_price}</span></div><div class="m-box"><span class="m-lbl text-danger">Stop</span><span class="m-val text-danger">₹${s.sl_price}</span></div></div>
+            <div class="card-pro"><strong>Institutional Justification:</strong><p class="small mt-2">${s.justification}</p><p class="small mt-2"><strong>Chart Pattern:</strong> ${s.pattern}</p></div>
+        `;
+        document.getElementById('detail-view').style.display = 'block';
     }
 </script>
 </body>

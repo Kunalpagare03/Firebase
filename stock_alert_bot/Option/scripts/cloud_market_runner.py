@@ -27,12 +27,15 @@ from stock_alert.price_action import analyze_price_action
 from stock_alert.greeks import analyze_chain_greeks
 from src.trend_detector import analyze_price_structure
 
+from stock.live_stock_scanner import run_live_scan
+
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 log = logging.getLogger("CloudTerminal")
 
 # Multi-Instrument Memory
 _chart_history = defaultdict(lambda: deque(maxlen=1000))
 _last_chain_refresh = defaultdict(int)
+_last_stock_scan = 0
 _cached_chain = {}
 _cached_df_prev = {}
 _cached_full_data = {}
@@ -148,6 +151,7 @@ def build_full_analysis(symbol, db):
         db.collection("stock_scans").document("status").set({"status": f"Engine Error: {str(e)[:50]}", "last_scan_time": datetime.now().strftime("%H:%M:%S")})
 
 def main_loop():
+    global _last_stock_scan
     SYMBOLS = ["NIFTY", "BANKNIFTY"]
     if not firebase_admin._apps:
         cred = credentials.Certificate(os.path.join(ROOT, "..", "service-account.json"))
@@ -168,6 +172,14 @@ def main_loop():
                 "status": f"Live - {status['reason']}",
                 "last_scan_time": datetime.now().strftime("%H:%M:%S")
             })
+
+            # --- HOURLY STOCK SCAN AUTOMATION ---
+            # Run every 60 minutes during market hours
+            now_ts = time.time()
+            if status['is_open'] and (now_ts - _last_stock_scan > 3600):
+                log.info("Triggering Hourly Automated Stock Scan...")
+                threading.Thread(target=run_live_scan, daemon=True).start()
+                _last_stock_scan = now_ts
 
             if status["reason"] == "after market close":
                 log.info("Closing session.")

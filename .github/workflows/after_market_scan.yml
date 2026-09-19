@@ -1,0 +1,32 @@
+name: Daily After-Market Stock Scan
+
+on:
+  schedule:
+    # Runs at 10:45 UTC (4:15 PM IST) Monday-Friday
+    - cron: '45 10 * * 1-5'
+  workflow_dispatch:
+
+jobs:
+  scan-and-archive:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: pip install yfinance pandas numpy firebase-admin requests openpyxl
+
+      - name: Create service-account.json
+        run: echo '${{ secrets.FIREBASE_SERVICE_ACCOUNT }}' > stock_alert_bot/service-account.json
+
+      - name: Run Global Deep Scan
+        env:
+          PYTHONPATH: ${{ github.workspace }}/stock_alert_bot/Option:${{ github.workspace }}/stock_alert_bot/stock
+        run: |
+          cd stock_alert_bot/stock
+          python live_stock_scanner.py

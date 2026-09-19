@@ -71,10 +71,23 @@ def analyze_stock(symbol):
             "justification": f"{conviction} conviction: {pattern}. Vol spike {round(vol_ratio,1)}x with RSI {round(rsi_val,1)}."
         }
 
-        # Filtering
-        intra = {**base_info, "recommendation": "BEST BUY"} if rating >= 7 and vol_ratio > 1.2 else None
-        swing = {**base_info, "recommendation": "SWING ENTRY"} if rating >= 6 and curr['Close'] > df['ema20'].iloc[-1] else None
-        pos = {**base_info, "recommendation": "CORE HOLD"} if rating >= 8 and df['ema50'].iloc[-1] > df['ema200'].iloc[-1] else None
+        # --- Refined Distinct Filtering Logic (v89.3) ---
+
+        # 1. Intraday: Today's Vol Spike + Momentum
+        intra = None
+        if rating >= 7 and vol_ratio > 1.8 and change_pct > 1.2:
+            intra = {**base_info, "recommendation": "INTRA MOMENTUM"}
+
+        # 2. Swing (1 Day to 1 Week): Breaking 10-day highs + 20-EMA support
+        swing = None
+        ten_day_high = df['High'].tail(10).max()
+        if curr['Close'] > df['ema20'].iloc[-1] and curr['Close'] >= ten_day_high * 0.98 and rating >= 6:
+            swing = {**base_info, "recommendation": "SWING BUY"}
+
+        # 3. Positional (1 Week to 1 Month+): Structural Strength (50 > 200 EMA)
+        pos = None
+        if df['ema50'].iloc[-1] > df['ema200'].iloc[-1] and curr['Close'] > df['ema50'].iloc[-1] and rating >= 7:
+            pos = {**base_info, "recommendation": "POS ACCUMULATE"}
 
         return intra, swing, pos
     except:
@@ -107,11 +120,20 @@ def run_live_scan():
                     if p: pos_list.append(p)
             except: pass
 
-    # Sort
-    def sort_key(x): return (x['conviction'] == 'High', int(x['rating'].split('/')[0]))
-    intra_list = sorted(intra_list, key=sort_key, reverse=True)[:40]
-    swing_list = sorted(swing_list, key=sort_key, reverse=True)[:40]
-    pos_list = sorted(pos_list, key=sort_key, reverse=True)[:40]
+    # --- UNIQUE SELECTION & DE-DUPLICATION (v89.5) ---
+
+    # 1. Intraday: Top 40 by Volume Spike
+    intra_list = sorted(intra_list, key=lambda x: (x['vol_ratio'], x['change']), reverse=True)[:40]
+    intra_symbols = {s['symbol'] for s in intra_list}
+
+    # 2. Swing: Top 40 by Breakout (Exclude Intraday picks)
+    swing_filtered = [s for s in swing_list if s['symbol'] not in intra_symbols]
+    swing_list = sorted(swing_filtered, key=lambda x: (x['change'], x['vol_ratio']), reverse=True)[:40]
+    swing_symbols = {s['symbol'] for s in swing_list}
+
+    # 3. Positional: Top 40 by Rating (Exclude Intraday & Swing picks)
+    pos_filtered = [s for s in pos_list if s['symbol'] not in intra_symbols and s['symbol'] not in swing_symbols]
+    pos_list = sorted(pos_filtered, key=lambda x: (int(x['rating'].split('/')[0]), x['vol_ratio']), reverse=True)[:40]
 
     report = {
         "timestamp": ts_str,

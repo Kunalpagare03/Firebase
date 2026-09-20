@@ -11,7 +11,7 @@
         :root { --se-blue: #1b3152; --se-active: #3b82f6; --se-bg: #f4f7f9; --se-border: #e5e7eb; --txt-main: #1f2937; --txt-dim: #6b7280; --bull: #1d8f5a; --bear: #b32727; --primary: #2563eb; }
         body { background: var(--se-bg); color: var(--txt-main); font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; }
 
-        /* Top Header */
+        /* StockEdge Top Header */
         .se-header { background: #ffffff; border-bottom: 1px solid var(--se-border); height: 60px; display: flex; align-items: center; padding: 0 20px; position: sticky; top: 0; z-index: 1100; justify-content: space-between; }
         .se-layout { display: flex; }
         .se-sidebar { width: 240px; background: #ffffff; border-right: 1px solid var(--se-border); height: calc(100vh - 60px); position: sticky; top: 60px; overflow-y: auto; }
@@ -21,68 +21,87 @@
         .se-nav-item.active { background: #eff6ff; color: var(--se-active); border-left-color: var(--se-active); }
 
         .se-content { flex: 1; padding: 25px; max-width: 1200px; margin: 0 auto; width: 100%; min-height: calc(100vh - 60px); }
+        .se-page-header { display: flex; align-items: center; gap: 15px; margin-bottom: 25px; }
+        .se-back-btn { width: 35px; height: 35px; border-radius: 50%; border: 1px solid var(--se-border); display: flex; align-items: center; justify-content: center; background: #fff; cursor: pointer; color: var(--se-active); }
+        .se-title { font-size: 1.4rem; font-weight: 800; color: var(--se-blue); }
+
+        /* Institutional Table Alignment Fix (v95.7) */
+        .se-table { width: 100%; background: #fff; border: 1px solid var(--se-border); border-radius: 4px; overflow: hidden; margin-top: 10px; }
+
+        /* Grid Columns: Name(4) | Type(1) | Pattern(2) | Price(1) */
+        .se-th {
+            background: #f9fafb; border-bottom: 1px solid var(--se-border); padding: 12px 25px;
+            display: grid; grid-template-columns: 4fr 1.2fr 2fr 1fr;
+            font-size: 0.72rem; font-weight: 800; color: var(--txt-dim); text-transform: uppercase; letter-spacing: 0.8px;
+        }
+        .se-tr {
+            display: grid; grid-template-columns: 4fr 1.2fr 2fr 1fr; padding: 18px 25px;
+            border-bottom: 1px solid #f3f4f6; align-items: center; cursor: pointer; transition: background 0.2s;
+        }
+        .se-tr:hover { background: #f8fafc; }
+
+        .se-stock-info { display: flex; align-items: center; gap: 15px; }
+        .se-logo { width: 40px; height: 40px; border-radius: 50%; background: #f3f4f6; display: flex; align-items: center; justify-content: center; font-weight: 800; color: var(--se-blue); border: 1px solid var(--se-border); font-size: 0.75rem; flex-shrink: 0; }
+        .se-symbol { font-weight: 700; font-size: 1rem; color: #111827; }
+        .se-type { font-size: 0.88rem; color: #4b5563; font-weight: 600; }
+        .pattern-col { display: flex; justify-content: center; }
+        .se-pattern-box {
+            background: #eef2ff; color: #4f46e5; font-size: 0.65rem; font-weight: 800;
+            padding: 6px 14px; border-radius: 4px; border: 1px solid #e0e7ff;
+            text-transform: uppercase; text-align: center; min-width: 115px;
+        }
+        .se-price { font-weight: 800; font-size: 1.05rem; text-align: right; color: #111827; font-family: monospace; }
+        .se-th span:last-child { text-align: right; }
+
+        /* Unified Card Styling */
         .card-pro { background: #fff; border: 1px solid var(--se-border); border-radius: 4px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.02); }
         .card-title-pro { font-size: 1.1rem; font-weight: 800; color: var(--se-blue); margin-bottom: 15px; display: block; }
-
         .meta-header { font-size: 0.75rem; color: var(--txt-dim); margin-bottom: 12px; font-weight: 800; text-transform: uppercase; background: #fff; padding: 10px; border: 1px solid var(--se-border); border-radius: 4px; display: flex; align-items: center; gap: 10px; }
         .live-dot { height: 8px; width: 8px; background: #10b981; border-radius: 50%; display: inline-block; animation: pulse 2s infinite; }
         @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.4; } 100% { opacity: 1; } }
-
         .alert-box { background: #f8fbfc; border: 1px solid var(--se-border); border-radius: 4px; padding: 18px; margin-bottom: 20px; }
         .alert-tag { background: #f4ead0; color: #755519; padding: 4px 12px; border-radius: 4px; font-weight: 800; font-size: 0.9rem; }
-
         .sig-box { background: #1b3152; color: white; padding: 16px 20px; border-radius: 4px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
         .sig-val-badge { padding: 6px 15px; border-radius: 4px; font-weight: 900; text-transform: uppercase; font-size: 1rem; }
-
-        .metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 20px; }
+        .metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 20px; }
         .m-box { padding: 12px; background: #f8fafc; border-left: 4px solid var(--se-active); border-radius: 4px; border: 1px solid var(--se-border); }
-        .m-lbl { font-size: 0.8rem; font-weight: 800; color: var(--txt-dim); text-transform: uppercase; margin-bottom: 4px; display: block; }
+        .m-lbl { font-size: 0.8rem; font-weight: 800; color: var(--txt-dim); text-transform: uppercase; }
         .m-val { font-size: 1.1rem; font-weight: 700; color: var(--txt-main); }
         .spot-hl { color: #2563eb !important; font-family: monospace; font-weight: 900; }
-
         .se-analysis-block { line-height: 2.2; font-size: 0.92rem; }
         .a-row { display: flex; justify-content: space-between; border-bottom: 1px solid #f3f4f6; padding: 5px 0; }
         .a-lbl { font-weight: 700; color: var(--se-blue); min-width: 160px; }
         .a-val { text-align: right; flex: 1; font-weight: 500; }
         .pattern-cyan { color: #22d3ee !important; font-weight: 800; }
         .status-timer { color: #b32727; font-weight: 800; margin-top: 10px; display: block; }
-
         .chart-container { width: 100%; overflow: hidden; position: relative; }
         .chart-box { background: #fbfcfd; border: 1px solid #c9d9d9; border-radius: 4px; margin-bottom: 5px; height: 400px; width: 100%; }
         .vol-chart-box { background: #fbfcfd; border: 1px solid #c9d9d9; border-radius: 4px; height: 280px; width: 100%; }
 
-        .se-table { width: 100%; background: #fff; border: 1px solid var(--se-border); border-radius: 4px; overflow: hidden; }
-        .se-th { background: #f9fafb; border-bottom: 1px solid var(--se-border); padding: 12px 20px; display: grid; grid-template-columns: 2.5fr 1fr 1.2fr 1fr; font-size: 0.75rem; font-weight: 800; color: var(--txt-dim); text-transform: uppercase; }
-        .se-tr { display: grid; grid-template-columns: 2.5fr 1fr 1.2fr 1fr; padding: 15px 20px; border-bottom: 1px solid var(--se-border); align-items: center; cursor: pointer; transition: background 0.1s; }
-        .se-tr:hover { background: #f8fafc; }
-        .se-logo { width: 35px; height: 35px; border-radius: 50%; background: #f3f4f6; display: flex; align-items: center; justify-content: center; font-weight: 800; color: var(--se-blue); border: 1px solid var(--se-border); font-size: 0.7rem; }
-        .se-symbol { font-weight: 700; font-size: 0.95rem; }
-        .se-pattern-box { background: #e0e7ff; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 0.6rem; color: var(--se-active); font-weight: 800; text-transform: uppercase; padding: 5px 8px; text-align: center; }
-
+        /* Strategy Cards */
         .se-strat-card { background: #ffffff; border: 1px solid var(--se-border); border-radius: 4px; display: flex; align-items: center; padding: 18px 20px; margin-bottom: 1px; cursor: pointer; }
         .se-strat-card:hover { background: #f9fafb; }
         .se-strat-icon { width: 45px; height: 45px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; color: #fff; margin-right: 20px; }
 
+        /* Bottom Nav */
         .bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; background: #ffffff; display: flex; border-top: 1px solid var(--se-border); z-index: 1000; height: 65px; box-shadow: 0 -5px 15px rgba(0,0,0,0.05); }
         .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--txt-dim); font-size: 0.58rem; font-weight: 700; border: none; background: none; outline: none; text-decoration: none; }
         .nav-item.active { color: var(--se-active); background: #f8fafc; }
         .nav-item i { font-size: 1.15rem; margin-bottom: 2px; }
 
-        /* Top Strikes Table Fix - Institutional Style */
-        .table-pro { width: 100%; border-collapse: collapse; background: #fff; border-radius: 4px; overflow: hidden; margin-top: 10px; }
+        .table-pro { width: 100%; border-collapse: collapse; background: #fff; }
         .table-pro th { background: #f9fafb; padding: 12px 15px; color: var(--txt-dim); border-bottom: 1px solid var(--se-border); text-align: left; font-size: 0.75rem; font-weight: 800; text-transform: uppercase; }
-        .table-pro td { padding: 12px 15px; border-bottom: 1px solid #f3f4f6; text-align: left; font-weight: 700; font-size: 0.9rem; color: var(--se-blue); }
-        .table-pro tr:last-child td { border-bottom: none; }
-        .side-badge { padding: 4px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: 800; text-transform: uppercase; }
+        .table-pro td { padding: 14px 15px; border-bottom: 1px solid #f3f4f6; text-align: left; font-weight: 700; font-size: 0.9rem; color: var(--se-blue); }
+        .side-badge { padding: 4px 10px; border-radius: 4px; font-size: 0.7rem; font-weight: 800; text-transform: uppercase; }
         .side-bull { background: #e6f4ea; color: var(--bull); }
         .side-bear { background: #fce8e6; color: var(--bear); }
         .side-both { background: #f3f4f6; color: var(--txt-dim); }
 
         @media (max-width: 991px) {
-            .se-sidebar { display: none; }
-            .se-content { padding: 15px; padding-bottom: 80px; }
-            .se-th, .se-tr { grid-template-columns: 2fr 1fr 1fr; padding: 12px 15px; }
-            .se-th span:nth-child(2), .se-tr div:nth-child(2) { display: none; }
+            .se-sidebar, .se-search-container { display: none; }
+            .se-content { padding: 10px; padding-bottom: 85px; }
+            .se-th, .se-tr { grid-template-columns: 2.5fr 1fr; padding: 12px 15px; }
+            .se-th span:nth-child(2), .se-th span:nth-child(3), .se-tr .se-type, .se-tr .pattern-col { display: none; }
         }
 
         #login-overlay { position: fixed; inset: 0; background: #f4f7f9; z-index: 2000; display: flex; align-items: center; justify-content: center; padding: 20px; }
@@ -200,11 +219,8 @@
 
         content.innerHTML = `
             <div class="meta-header"><div class="live-dot"></div> LIVE TERMINAL [${symbol}] • SYNC: ${d.fetched_at.split(' ')[1] || d.fetched_at} • Server: ${s.status}</div>
-
             <div class="card-pro"><div class="d-flex align-items-center gap-3"><select class="form-select fw-bold w-auto" onchange="switchSym(this.value)"><option value="NIFTY" ${symbol==='NIFTY'?'selected':''}>NIFTY 50</option><option value="BANKNIFTY" ${symbol==='BANKNIFTY'?'selected':''}>BANKNIFTY</option></select><button class="btn btn-primary btn-sm fw-bold px-4" onclick="triggerManual()">SYNC SERVER</button></div></div>
-
             <div class="alert-box shadow-sm"><div class="d-flex justify-content-between mb-2"><strong>Action alert:</strong> <span class="alert-tag">${alert.action || 'WAIT'}</span></div><div class="small mb-1"><strong>Trigger:</strong> ${alert.trigger || '-'}</div><div class="small mb-1"><strong>Confirmations:</strong> ${alert.confirmations || '-'}</div><div class="small mt-2 pt-2 border-top border-secondary border-opacity-10">RSI: ${tech.rsi || '-'} | MACD: ${tech.macd || '-'} | ${tech.trendline || '-'} trendline | ${tech.candle || '-'} candle</div></div>
-
             <div class="sig-box"><span>Directional Signal</span><span class="sig-val-badge" style="background:${sig==='Bullish'?'var(--bull)':'var(--bear)'}">${sig}</span></div>
 
             <div class="metrics-grid">
@@ -223,9 +239,8 @@
                 <div class="a-row"><span class="a-lbl">OI trend:</span><span class="a-val">${d.oi_trend || '-'}</span></div>
                 <div class="a-row"><span class="a-lbl">Flow:</span><span class="a-val">${d.flow_str || '-'}</span></div>
                 <div class="a-row"><span class="a-lbl">Volume deltas:</span><span class="a-val">${d.vol_deltas || '-'} | <strong>OI deltas:</strong> ${d.oi_deltas || '-'}</span></div>
-                <div class="a-row"><span class="a-lbl">Manipulation risk:</span><span class="a-val">${d.manipulation_risk || '-'}</span></div>
                 <div class="a-row"><span class="a-lbl">Trend Logic:</span><span class="a-val small">${d.trend_verdict || '-'}</span></div>
-                <hr class="my-2 opacity-10"><div class="a-row text-primary"><span class="a-lbl">Call Buy Strike:</span><span class="a-val fw-bold">${d.delta_recommendations?.call?.buy_strike || '--'}</span></div><div class="a-row text-danger"><span class="a-lbl">Put Buy Strike:</span><span class="a-val fw-bold">${d.delta_recommendations?.put?.buy_strike || '--'}</span></div><span class="status-timer" style="color:#b32727; font-weight:800; margin-top:10px; display:block">Next trend analysis active.</span>
+                <hr class="my-2 opacity-10"><div class="a-row text-primary"><span class="a-lbl">Call Buy Strike:</span><span class="a-val fw-bold">${d.delta_recommendations?.call?.buy_strike || '--'}</span></div><div class="a-row text-danger"><span class="a-lbl">Put Buy Strike:</span><span class="a-val fw-bold">${d.delta_recommendations?.put?.buy_strike || '--'}</span></div>
             </div></div>
 
             <div class="card-pro">
@@ -269,7 +284,7 @@
         document.getElementById('btn-options')?.classList.add('active');
         requestAnimationFrame(() => {
             const candles = buildCandles(d.spot_history, tf);
-            if(candles.length > 0) Plotly.react('chart', [{ x: candles.map(c=>c.x), open: candles.map(c=>c.open), high: candles.map(c=>c.high), low: candles.map(c=>c.low), close: candles.map(c=>c.close), type: 'candlestick', increasing: {line: {color: '#1f9d61'}}, decreasing: {line: {color: '#d9485f'}} }], { paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:'rgba(0,0,0,0)', margin:{t:10,r:10,b:30,l:40}, xaxis:{showgrid:false, tickfont:{size:8}, rangeslider:{visible:false}}, yaxis:{gridcolor:'#eee', tickfont:{size:8}} }, {responsive:true, displayModeBar:false});
+            if(candles.length > 0) Plotly.react('chart', [{ x: candles.map(c=>c.x), open: candles.map(c=>c.open), high: candles.map(c=>c.high), low: candles.map(c=>c.low), close: candles.map(c=>c.close), type: 'candlestick', increasing: {line: {color: '#1f9d61'}}, decreasing: {line: {color: '#d9485f'}} }], { paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:'rgba(0,0,0,0)', margin:{t:10,r:10,b:30,l:40}, xaxis:{showgrid:false, tickfont:{size:8}, rangeslider:{visible:false}}, yaxis:{gridcolor:'#eee', tickfont:{size:8}}, dragmode: 'pan' }, {responsive:true, displayModeBar:true});
             const top = d.top_strikes || [];
             if(top.length > 0) Plotly.react('vol-chart', [{ x: top.map(s => s.strike), y: top.map(s => s.call_oi), name: 'Call OI', type: 'bar', marker: {color: '#ef4444'} }, { x: top.map(s => s.strike), y: top.map(s => s.put_oi), name: 'Put OI', type: 'bar', marker: {color: '#10b981'} }], { barmode: 'group', paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:'rgba(0,0,0,0)', margin:{t:10,r:10,b:30,l:40}, xaxis:{tickfont:{size:8}, type: 'category'}, yaxis:{gridcolor:'#eee', tickfont:{size:8}}, showlegend: false }, {responsive:true, displayModeBar:false});
         });
@@ -293,18 +308,31 @@
         viewState = 'list'; activeListType = type;
         document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
         const btnId = type === 'intraday' ? 'btn-intra' : (type === 'swing' ? 'btn-swing' : 'btn-pos');
-        document.getElementById(btnId)?.classList.add('active');
+        const btnEl = document.getElementById(btnId);
+        if(btnEl) btnEl.classList.add('active');
+
         const content = document.getElementById('main-content');
         const list = master.stocks.comprehensive[type] || [];
+        const titleMap = { intraday: 'One Day Bullish', swing: 'Swing Bullish', positional: 'Positional Bullish' };
+
         content.innerHTML = `
-            <div class="se-page-header"><div class="se-back-btn" onclick="setView('home')"><i class="bi bi-arrow-left"></i></div><span class="se-title">${type.toUpperCase()} BULLISH</span></div>
+            <div class="se-page-header">
+                <div class="se-back-btn" onclick="setView('home')"><i class="bi bi-arrow-left"></i></div>
+                <span class="se-title">${titleMap[type]} Strategies</span>
+            </div>
             <div class="se-table shadow-sm">
                 <div class="se-th"><span>Stock Name</span><span>Type</span><span>Patterns</span><span class="text-end">LTP</span></div>
                 ${list.map(s => `
                     <div class="se-tr" onclick="openDetails('${s.symbol}', '${type}')">
-                        <div class="se-stock-info"><div class="se-logo">${s.symbol.slice(0,2)}</div><div><div class="se-symbol">${s.symbol.replace('.NS','')}</div><div class="small text-muted">${s.sector}</div></div></div>
+                        <div class="se-stock-info">
+                            <div class="se-logo">${s.symbol.slice(0,2)}</div>
+                            <div>
+                                <div class="se-symbol">${s.symbol.replace('.NS','')}</div>
+                                <div class="small text-muted">${s.sector}</div>
+                            </div>
+                        </div>
                         <div class="se-type">Institutional</div>
-                        <div><div class="se-pattern-box">${s.pattern || 'BREAKOUT'}</div></div>
+                        <div class="pattern-col"><div class="se-pattern-box">${s.pattern || 'BREAKOUT'}</div></div>
                         <div class="se-price">₹${s.price}</div>
                     </div>
                 `).join('')}

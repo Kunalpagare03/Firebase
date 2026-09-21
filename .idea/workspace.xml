@@ -7,18 +7,9 @@
     <list default="true" id="0d4bcccf-e067-48b7-9b85-e9a5ae4bda87" name="Changes" comment="Add multi-index instrument selector">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/android_app/.firebase/hosting.cHVibGlj.cache" beforeDir="false" afterPath="$PROJECT_DIR$/android_app/.firebase/hosting.cHVibGlj.cache" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/android_app/.gradle/8.2/checksums/checksums.lock" beforeDir="false" afterPath="$PROJECT_DIR$/android_app/.gradle/8.2/checksums/checksums.lock" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/android_app/.gradle/8.2/checksums/md5-checksums.bin" beforeDir="false" afterPath="$PROJECT_DIR$/android_app/.gradle/8.2/checksums/md5-checksums.bin" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/android_app/.gradle/8.2/checksums/sha1-checksums.bin" beforeDir="false" afterPath="$PROJECT_DIR$/android_app/.gradle/8.2/checksums/sha1-checksums.bin" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/android_app/.gradle/8.2/fileHashes/fileHashes.lock" beforeDir="false" afterPath="$PROJECT_DIR$/android_app/.gradle/8.2/fileHashes/fileHashes.lock" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/android_app/.gradle/buildOutputCleanup/buildOutputCleanup.lock" beforeDir="false" afterPath="$PROJECT_DIR$/android_app/.gradle/buildOutputCleanup/buildOutputCleanup.lock" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/android_app/app/build.gradle" beforeDir="false" afterPath="$PROJECT_DIR$/android_app/app/build.gradle" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/android_app/app/src/main/AndroidManifest.xml" beforeDir="false" afterPath="$PROJECT_DIR$/android_app/app/src/main/AndroidManifest.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/android_app/app/src/main/java/com/Kunal/stock/MainActivity.kt" beforeDir="false" afterPath="$PROJECT_DIR$/android_app/app/src/main/java/com/Kunal/stock/MainActivity.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/android_app/app/src/main/java/com/Kunal/stock/data/FirestoreRepository.kt" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/android_app/app/src/main/java/com/Kunal/stock/ui/LoginScreen.kt" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/android_app/app/src/main/java/com/Kunal/stock/ui/OptionSentimentScreen.kt" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/android_app/app/src/main/java/com/Kunal/stock/ui/StockScanScreen.kt" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/android_app/public/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/android_app/public/index.html" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -211,9 +202,9 @@
     </configuration>
     <list>
       <item itemvalue="Gradle.C:/Users/Kunal/Desktop/Stock/android_app/app/build.gradle" />
-      <item itemvalue="Gradle.C:/Users/Kunal/Desktop/Stock/android_app/build.gradle" />
       <item itemvalue="Gradle.C:/Users/Kunal/Desktop/Stock/android_app/build.gradle (1)" />
       <item itemvalue="Gradle.C:/Users/Kunal/Desktop/Stock/android_app/build.gradle (3)" />
+      <item itemvalue="Gradle.C:/Users/Kunal/Desktop/Stock/android_app/build.gradle" />
       <item itemvalue="Gradle.C:/Users/Kunal/Desktop/Stock/android_app/settings.gradle" />
     </list>
     <recent_temporary>

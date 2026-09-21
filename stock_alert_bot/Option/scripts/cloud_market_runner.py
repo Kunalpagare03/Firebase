@@ -27,7 +27,10 @@ from stock_alert.market_hours import market_status
 from stock_alert.price_action import analyze_price_action
 from stock_alert.greeks import analyze_chain_greeks
 from src.trend_detector import analyze_price_structure
-from stock.live_stock_scanner import run_live_scan
+try:
+    from live_stock_scanner import run_live_scan
+except ImportError:
+    from stock.live_stock_scanner import run_live_scan
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 log = logging.getLogger("CloudTerminal")

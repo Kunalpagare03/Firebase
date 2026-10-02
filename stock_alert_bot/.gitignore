@@ -1,0 +1,16 @@
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.env
+.env.*
+data/dhan_access_token.txt
+data/history/
+data/live/
+data/analysis/
+Option/data/dhan_access_token.txt
+Option/data/history/
+Option/data/live/
+Option/data/analysis/
+Option/logs/
+*.log

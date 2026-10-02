@@ -1,0 +1,28 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Shared market feeds and scheduled scans are readable by signed-in users.
+    match /{collection}/{document} {
+      allow read: if request.auth != null && collection != "users" && collection != "commands";
+      allow write: if false;
+    }
+
+    // Each signed-in user can submit and read only their own scan command.
+    match /commands/{userId} {
+      allow read: if request.auth != null && request.auth.uid == userId;
+      allow create, update: if request.auth != null
+        && request.auth.uid == userId
+        && request.resource.data.keys().hasOnly(["command", "timestamp", "processed"])
+        && request.resource.data.command in ["stock", "stock_scan", "option", "option_scan"]
+        && request.resource.data.processed == false;
+      allow delete: if false;
+    }
+
+
+    // Manual scan state/results stay private to the account that ran the scan.
+    match /users/{userId}/{path=**} {
+      allow read: if request.auth != null && request.auth.uid == userId;
+      allow write: if false;
+    }
+  }
+}

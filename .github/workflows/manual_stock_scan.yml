@@ -1,0 +1,41 @@
+name: Manual Cloud Terminal Sync
+
+on:
+  repository_dispatch:
+    types: [manual_scan]
+  workflow_dispatch:
+
+jobs:
+  terminal-sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: |
+          pip install yfinance pandas numpy firebase-admin requests openpyxl pyotp SmartApi-python
+
+      - name: Create service-account.json
+        run: echo '${{ secrets.FIREBASE_SERVICE_ACCOUNT }}' > stock_alert_bot/service-account.json
+
+      - name: Run Global Cloud Sync
+        env:
+          PYTHONPATH: ${{ github.workspace }}/stock_alert_bot/Option:${{ github.workspace }}/stock_alert_bot/stock
+          ANGEL_API_KEY: ${{ secrets.ANGEL_API_KEY }}
+          ANGEL_CLIENT_CODE: ${{ secrets.ANGEL_CLIENT_CODE }}
+          ANGEL_PIN: ${{ secrets.ANGEL_PIN }}
+          ANGEL_TOTP_SECRET: ${{ secrets.ANGEL_TOTP_SECRET }}
+        run: |
+          # 1. Update Option Dashboard with Full Telemetry (Greeks, PA, etc)
+          cd stock_alert_bot/Option
+          python scripts/cloud_sync_full.py
+          
+          # 2. Run Full Stock Scanner
+          cd ../stock
+          python live_stock_scanner.py

@@ -1,0 +1,58 @@
+# Secrets & Credentials
+*service-account*.json
+*serviceAccount*.json
+*token*.txt
+dhan_access_token.txt
+.env
+.env.*
+node_modules/
+*/node_modules/
+
+# Android & Gradle
+.gradle/
+*.gradle-cache/
+*.gradle-user/
+*.android-cache/
+*.android-user/
+.*-cache/
+.*-user/
+build/
+*/build/
+*.apk
+*.aab
+local.properties
+.navigation/
+captures/
+
+# IDE & Editor files
+.idea/
+*.iml
+.vscode/
+out/
+
+# Python caches and virtual environments
+__pycache__/
+*/__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.venv/
+*/.venv/
+venv/
+env/
+
+# Logs & Runtime artifacts
+logs/
+*/logs/
+*.log
+%SystemDrive%/
+*/%SystemDrive%/
+
+# Large generated data & reports
+*.xlsx
+*.csv
+stock_alert_bot/Option/data/history/
+stock_alert_bot/Option/data/analysis/
+stock_alert_bot/stock/analysis/
+stock_alert_bot/stock/analysis_report_*
+stock_alert_bot/Option/snapshot_*.json

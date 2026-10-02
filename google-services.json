@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "328297105533",
+    "project_id": "kunal-analysis",
+    "storage_bucket": "kunal-analysis.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:328297105533:android:283f902f9cbb8a2ab88914",
+        "android_client_info": {
+          "package_name": "com.Kunal"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD8VNKKzNzuZ3gOChtmEdwADWXULh4OlcE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

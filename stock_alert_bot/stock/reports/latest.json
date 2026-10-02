@@ -1,0 +1,1001 @@
+{
+  "generated_at": "2026-09-11T13:29:52",
+  "target": "2% objective, not guaranteed",
+  "screeners": {
+    "vcp": "https://chartink.com/screener/chartians-vcp-scanner?utm_source=copilot.com",
+    "bullish_5d": "https://chartink.com/screener/bullish-from-last-5-day"
+  },
+  "errors": [
+    "vcp: Chartink page reached, but no scan_clause was provided",
+    "bullish_5d: `Import html5lib` failed.  Use pip or conda to install the html5lib package."
+  ],
+  "evaluated_count": 38,
+  "candidate_count": 38,
+  "top_candidates": [
+    {
+      "symbol": "KOTAKBANK.NS",
+      "entry": 418.0,
+      "close": 418.0,
+      "change_pct": 0.35,
+      "volume_ratio": 0.85,
+      "rsi14": 65.1,
+      "sma20": 412.09,
+      "sma50": 396.73,
+      "atr14": 7.26,
+      "pattern": "Bullish close",
+      "score": 3,
+      "signals": [
+        "above rising SMA20/SMA50",
+        "RSI 65 healthy"
+      ],
+      "target_2pct": 426.36,
+      "stop_loss": 407.1,
+      "risk_reward": 0.77,
+      "recommendation": "WAIT",
+      "screeners": [
+        "fallback"
+      ]
+    },
+    {
+      "symbol": "APOLLOHOSP.NS",
+      "entry": 8940.0,
+      "close": 8940.0,
+      "change_pct": -0.3,
+      "volume_ratio": 0.39,
+      "rsi14": 59.4,
+      "sma20": 8789.8,
+      "sma50": 8838.09,
+      "atr14": 140.46,
+      "pattern": "Bullish close",
+      "score": 2,
+      "signals": [
+        "near 5-day high",
+        "20-day breakout pressure",
+        "RSI 59 healthy",
+        "weak volume"
+      ],
+      "target_2pct": 9118.8,
+      "stop_loss": 8729.3,
+      "risk_reward": 0.85,
+      "recommendation": "WAIT",
+      "screeners": [
+        "fallback"
+      ]
+    },
+    {
+      "symbol": "DRREDDY.NS",
+      "entry": 1178.9,
+      "close": 1178.9,
+      "change_pct": 3.14,
+      "volume_ratio": 1.35,
+      "rsi14": 46.0,
+      "sma20": 1168.3,
+      "sma50": 1191.8,
+      "atr14": 19.41,
+      "pattern": "Bullish close",
+      "score": 2,
+      "signals": [
+        "near 5-day high",
+        "RSI 46 healthy"
+      ],
+      "target_2pct": 1202.48,
+      "stop_loss": 1149.78,
+      "risk_reward": 0.81,
+      "recommendation": "WAIT",
+      "screeners": [
+        "fallback"
+      ]
+    }
+  ],
+  "top_setups": [],
+  "results": [
+    {
+      "symbol": "KOTAKBANK.NS",
+      "entry": 418.0,
+      "close": 418.0,
+      "change_pct": 0.35,
+      "volume_ratio": 0.85,
+      "rsi14": 65.1,
+      "sma20": 412.09,
+      "sma50": 396.73,
+      "atr14": 7.26,
+      "pattern": "Bullish close",
+      "score": 3,
+      "signals": [
+        "above rising SMA20/SMA50",
+        "RSI 65 healthy"
+      ],
+      "target_2pct": 426.36,
+      "stop_loss": 407.1,
+      "risk_reward": 0.77,
+      "recommendation": "WAIT",
+      "screeners": [
+        "fallback"
+      ]
+    },
+    {
+      "symbol": "APOLLOHOSP.NS",
+      "entry": 8940.0,
+      "close": 8940.0,
+      "change_pct": -0.3,
+      "volume_ratio": 0.39,
+      "rsi14": 59.4,
+      "sma20": 8789.8,
+      "sma50": 8838.09,
+      "atr14": 140.46,
+      "pattern": "Bullish close",
+      "score": 2,
+      "signals": [
+        "near 5-day high",
+        "20-day breakout pressure",
+        "RSI 59 healthy",
+        "weak volume"
+      ],
+      "target_2pct": 9118.8,
+      "stop_loss": 8729.3,
+      "risk_reward": 0.85,
+      "recommendation": "WAIT",
+      "screeners": [
+        "fallback"
+      ]
+    },
+    {
+      "symbol": "DRREDDY.NS",
+      "entry": 1178.9,
+      "close": 1178.9,
+      "change_pct": 3.14,
+      "volume_ratio": 1.35,
+      "rsi14": 46.0,
+      "sma20": 1168.3,
+      "sma50": 1191.8,
+      "atr14": 19.41,
+      "pattern": "Bullish close",
+      "score": 2,
+      "signals": [
+        "near 5-day high",
+        "RSI 46 healthy"
+      ],
+      "target_2pct": 1202.48,
+      "stop_loss": 1149.78,
+      "risk_reward": 0.81,
+      "recommendation": "WAIT",
+      "screeners": [
+        "fallback"
+      ]
+    },
+    {
+      "symbol": "ONGC.NS",
+      "entry": 234.7,
+      "close": 234.7,
+      "change_pct": -1.08,
+      "volume_ratio": 1.75,
+      "rsi14": 46.3,
+      "sma20": 235.5,
+      "sma50": 240.4,
+      "atr14": 4.11,
+      "pattern": "Bearish close",
+      "score": 1,
+      "signals": [
+        "volume 1.7x average",
+        "RSI 46 healthy",
+        "below SMA20"
+      ],
+      "target_2pct": 239.39,
+      "stop_loss": 228.53,
+      "risk_reward": 0.76,
+      "recommendation": "WAIT",
+      "screeners": [
+        "fallback"
+      ]
+    },
+    {
+      "symbol": "CIPLA.NS",
+      "entry": 1362.4,
+      "close": 1362.4,
+      "change_pct": -0.79,
+      "volume_ratio": 1.52,
+      "rsi14": 29.6,
+      "sma20": 1410.92,
+      "sma50": 1432.23,
+      "atr14": 22.09,
+      "pattern": "Bearish close",
+      "score": 0,
+      "signals": [
+        "volume 1.5x average",
+        "below SMA20"
+      ],
+      "target_2pct": 1389.65,
+      "stop_loss": 1329.27,
+      "risk_reward": 0.82,
+      "recommendation": "WAIT",
+      "screeners": [
+        "fallback"
+      ]
+    },
+    {
+      "symbol": "POWERGRID.NS",
+      "entry": 269.25,
+      "close": 269.25,
+      "change_pct": -0.92,
+      "volume_ratio": 0.85,
+      "rsi14": 43.6,
+      "sma20": 266.93,
+      "sma50": 275.91,
+      "atr14": 4.43,
+      "pattern": "Indecision / doji",
+      "score": 0,
+      "signals": [],
+      "target_2pct": 274.63,
+      "stop_loss": 262.61,
+      "risk_reward": 0.81,
+      "recommendation": "WAIT",
+      "screeners": [
+        "fallback"
+      ]
+    },
+    {
+      "symbol": "NTPC.NS",
+      "entry": 336.05,
+      "close": 336.05,
+      "change_pct": 0.46,
+      "volume_ratio": 0.34,
+      "rsi14": 42.2,
+      "sma20": 334.23,
+      "sma50": 341.68,
+      "atr14": 5.59,
+      "pattern": "Bullish close",
+      "score": 0,
+      "signals": [
+        "near 5-day high",
+        "weak volume"
+      ],
+      "target_2pct": 342.77,
+      "stop_loss": 327.67,
+      "risk_reward": 0.8,
+      "recommendation": "WAIT",
+      "screeners": [
+        "fallback"
+      ]
+    },
+    {
+      "symbol": "AXISBANK.NS",
+      "entry": 1250.4,
+      "close": 1250.4,
+      "change_pct": 0.35,
+      "volume_ratio": 0.58,
+      "rsi14": 51.2,
+      "sma20": 1249.91,
+      "sma50": 1261.91,
+      "atr14": 23.85,
+      "pattern": "Bullish close",
+      "score": 0,
+      "signals": [
+        "RSI 51 healthy",
+        "weak volume"
+      ],
+      "target_2pct": 1275.41,
+      "stop_loss": 1214.63,
+      "risk_reward": 0.7,
+      "recommendation": "WAIT",
+      "screeners": [
+        "fallback"
+      ]
+    },
+    {
+      "symbol": "ADANIENT.NS",
+      "entry": 3030.9,
+      "close": 3030.9,
+      "change_pct": -1.5,
+      "volume_ratio": 0.5,
+      "rsi14": 52.0,
+      "sma20": 3005.99,
+      "sma50": 3048.56,
+      "atr14": 97.86,
+      "pattern": "Indecision / doji",
+      "score": 0,
+      "signals": [
+        "RSI 52 healthy",
+        "weak volume"
+      ],
+      "target_2pct": 3091.52,
+      "stop_loss": 2939.97,
+      "risk_reward": 0.67,
+      "recommendation": "WAIT",
+      "screeners": [
+        "fallback"
+      ]
+    },
+    {
+      "symbol": "COALINDIA.NS",
+      "entry": 426.8,
+      "close": 426.8,
+      "change_pct": -1.2,
+      "volume_ratio": 0.23,
+      "rsi14": 68.5,
+      "sma20": 411.2,
+      "sma50": 417.4,
+      "atr14": 8.93,
+      "pattern": "Bearish close",
+      "score": 0,
+      "signals": [
+        "RSI 68 healthy",
+        "weak volume"
+      ],
+      "target_2pct": 435.34,
+      "stop_loss": 414.0,
+      "risk_reward": 0.67,
+      "recommendation": "WAIT",
+      "screeners": [
+        "fallback"
+      ]
+    },
+    {
+      "symbol": "BANKBARODA.NS",
+      "entry": 236.59,
+      "close": 236.59,
+      "change_pct": -0.43,
+      "volume_ratio": 0.31,
+      "rsi14": 39.7,
+      "sma20": 240.69,
+      "sma50": 244.35,
+      "atr14": 4.08,
+      "pattern": "Bullish close",
+      "score": -2,
+      "signals": [
+        "near 5-day high",
+        "below SMA20",
+        "weak volume"
+      ],
+      "target_2pct": 241.32,
+      "stop_loss": 230.47,
+      "risk_reward": 0.77,
+      "recommendation": "WAIT",
+      "screeners": [
+        "fallback"
+      ]
+    },
+    {
+      "symbol": "HINDALCO.NS",
+      "entry": 988.6,
+      "close": 988.6,
+      "change_pct": -2.5,
+      "volume_ratio": 1.18,
+      "rsi14": 36.1,
+      "sma20": 1027.34,
+      "sma50": 1001.18,
+      "atr14": 23.54,
+      "pattern": "Indecision / doji",
+      "score": -2,
+      "signals": [
+        "below SMA20"
+      ],
+      "target_2pct": 1008.37,
+      "stop_loss": 958.94,
+      "risk_reward": 0.67,
+      "recommendation": "WAIT",
+      "screeners": [
+        "fallback"
+      ]
+    },
+    {
+      "symbol": "INDUSINDBK.NS",
+      "entry": 976.3,
+      "close": 976.3,
+      "change_pct": -1.71,
+      "volume_ratio": 1.12,
+      "rsi14": 36.9,
+      "sma20": 1003.0,
+      "sma50": 1011.83,
+      "atr14": 21.51,
+      "pattern": "Bearish close",
+      "score": -2,
+      "signals": [
+        "below SMA20"
+      ],
+      "target_2pct": 995.83,
+      "stop_loss": 947.01,
+      "risk_reward": 0.67,
+      "recommendation": "WAIT",
+      "screeners": [
+        "fallback"
+      ]
+    },
+    {
+      "symbol": "MARUTI.NS",
+      "entry": 12412.0,
+      "close": 12412.0,
+      "change_pct": -1.63,
+      "volume_ratio": 0.97,
+      "rsi14": 19.2,
+      "sma20": 13265.55,
+      "sma50": 13649.04,
+      "atr14": 248.29,
+      "pattern": "Bearish close",
+      "score": -2,
+      "signals": [
+        "below SMA20"
+      ],
+      "target_2pct": 12660.24,
+      "stop_loss": 12039.64,
+      "risk_reward": 0.67,
+      "recommendation": "WAIT",
+      "screeners": [
+        "fallback"
+      ]
+    },
+    {
+      "symbol": "TECHM.NS",
+      "entry": 1538.8,
+      "close": 1538.8,
+      "change_pct": 0.85,
+      "volume_ratio": 0.79,
+      "rsi14": 42.4,
+      "sma20": 1586.41,
+      "sma50": 1577.21,
+      "atr14": 40.72,
+      "pattern": "Bullish close",
+      "score": -2,
+      "signals": [
+        "below SMA20"
+      ],
+      "target_2pct": 1569.58,
+      "stop_loss": 1492.64,
+      "risk_reward": 0.67,
+      "recommendation": "WAIT",
+      "screeners": [
+        "fallback"
+      ]
+    },
+    {
+      "symbol": "TATASTEEL.NS",
+      "entry": 182.4,
+      "close": 182.4,
+      "change_pct": -2.35,
+      "volume_ratio": 0.72,
+      "rsi14": 42.6,
+      "sma20": 185.47,
+      "sma50": 186.64,
+      "atr14": 5.04,
+      "pattern": "Bearish close",
+      "score": -2,
+      "signals": [
+        "below SMA20"
+      ],
+      "target_2pct": 186.05,
+      "stop_loss": 176.93,
+      "risk_reward": 0.67,
+      "recommendation": "WAIT",
+      "screeners": [
+        "fallback"
+      ]
+    },
+    {
+      "symbol": "HCLTECH.NS",
+      "entry": 1215.7,
+      "close": 1215.7,
+      "change_pct": 0.72,
+      "volume_ratio": 0.71,
+      "rsi14": 30.3,
+      "sma20": 1296.15,
+      "sma50": 1282.23,
+      "atr14": 35.57,
+      "pattern": "Bullish close",
+      "score": -2,
+      "signals": [
+        "below SMA20"
+      ],
+      "target_2pct": 1240.01,
+      "stop_loss": 1179.23,
+      "risk_reward": 0.67,
+      "recommendation": "WAIT",
+      "screeners": [
+        "fallback"
+      ]
+    },
+    {
+      "symbol": "BAJAJ-AUTO.NS",
+      "entry": 11665.0,
+      "close": 11665.0,
+      "change_pct": -1.06,
+      "volume_ratio": 0.63,
+      "rsi14": 49.1,
+      "sma20": 11839.2,
+      "sma50": 11306.28,
+      "atr14": 233.71,
+      "pattern": "Bullish close",
+      "score": -2,
+      "signals": [
+        "RSI 49 healthy",
+        "below SMA20",
+        "weak volume"
+      ],
+      "target_2pct": 11898.3,
+      "stop_loss": 11315.05,
+      "risk_reward": 0.67,
+      "recommendation": "WAIT",
+      "screeners": [
+        "fallback"
+      ]
+    },
+    {
+      "symbol": "HINDUNILVR.NS",
+      "entry": 1935.3,
+      "close": 1935.3,
+      "change_pct": -0.36,
+      "volume_ratio": 0.46,
+      "rsi14": 30.4,
+      "sma20": 2000.03,
+      "sma50": 2074.19,
+      "atr14": 28.09,
+      "pattern": "Bullish close",
+      "score": -3,
+      "signals": [
+        "below SMA20",
+        "weak volume"
+      ],
+      "target_2pct": 1974.01,
+      "stop_loss": 1893.16,
+      "risk_reward": 0.92,
+      "recommendation": "WAIT",
+      "screeners": [
+        "fallback"
+      ]
+    },
+    {
+      "symbol": "LT.NS",
+      "entry": 3915.5,
+      "close": 3915.5,
+      "change_pct": -1.0,
+      "volume_ratio": 0.6,
+      "rsi14": 28.5,
+      "sma20": 4018.48,
+      "sma50": 3965.18,
+      "atr14": 58.32,
+      "pattern": "Bearish close",
+      "score": -3,
+      "signals": [
+        "below SMA20",
+        "weak volume"
+      ],
+      "target_2pct": 3993.81,
+      "stop_loss": 3828.02,
+      "risk_reward": 0.9,
+      "recommendation": "WAIT",
+      "screeners": [
+        "fallback"
+      ]
+    },
+    {
+      "symbol": "TITAN.NS",
+      "entry": 4989.5,
+      "close": 4989.5,
+      "change_pct": -0.31,
+      "volume_ratio": 0.5,
+      "rsi14": 38.2,
+      "sma20": 5062.88,
+      "sma50": 4886.05,
+      "atr14": 75.09,
+      "pattern": "Bullish close",
+      "score": -3,
+      "signals": [
+        "below SMA20",
+        "weak volume"
+      ],
+      "target_2pct": 5089.29,
+      "stop_loss": 4876.87,
+      "risk_reward": 0.89,
+      "recommendation": "WAIT",
+      "screeners": [
+        "fallback"
+      ]
+    },
+    {
+      "symbol": "ICICIBANK.NS",
+      "entry": 1379.6,
+      "close": 1379.6,
+      "change_pct": -0.35,
+      "volume_ratio": 0.51,
+      "rsi14": 39.6,
+      "sma20": 1417.33,
+      "sma50": 1424.44,
+      "atr14": 22.18,
+      "pattern": "Bullish close",
+      "score": -3,
+      "signals": [
+        "below SMA20",
+        "weak volume"
+      ],
+      "target_2pct": 1407.19,
+      "stop_loss": 1346.33,
+      "risk_reward": 0.83,
+      "recommendation": "WAIT",
+      "screeners": [
+        "fallback"
+      ]
+    },
+    {
+      "symbol": "ULTRACEMCO.NS",
+      "entry": 10939.0,
+      "close": 10939.0,
+      "change_pct": -0.36,
+      "volume_ratio": 0.34,
+      "rsi14": 30.0,
+      "sma20": 11388.5,
+      "sma50": 11655.64,
+      "atr14": 182.36,
+      "pattern": "Bullish close",
+      "score": -3,
+      "signals": [
+        "below SMA20",
+        "weak volume"
+      ],
+      "target_2pct": 11157.78,
+      "stop_loss": 10665.46,
+      "risk_reward": 0.8,
+      "recommendation": "WAIT",
+      "screeners": [
+        "fallback"
+      ]
+    },
+    {
+      "symbol": "SBIN.NS",
+      "entry": 997.9,
+      "close": 997.9,
+      "change_pct": -1.17,
+      "volume_ratio": 0.59,
+      "rsi14": 33.8,
+      "sma20": 1033.31,
+      "sma50": 1038.54,
+      "atr14": 16.84,
+      "pattern": "Bearish close",
+      "score": -3,
+      "signals": [
+        "below SMA20",
+        "weak volume"
+      ],
+      "target_2pct": 1017.86,
+      "stop_loss": 972.64,
+      "risk_reward": 0.79,
+      "recommendation": "WAIT",
+      "screeners": [
+        "fallback"
+      ]
+    },
+    {
+      "symbol": "RELIANCE.NS",
+      "entry": 1255.0,
+      "close": 1255.0,
+      "change_pct": -1.49,
+      "volume_ratio": 0.48,
+      "rsi14": 35.6,
+      "sma20": 1300.41,
+      "sma50": 1301.15,
+      "atr14": 22.19,
+      "pattern": "Bearish close",
+      "score": -3,
+      "signals": [
+        "below SMA20",
+        "weak volume"
+      ],
+      "target_2pct": 1280.1,
+      "stop_loss": 1221.72,
+      "risk_reward": 0.75,
+      "recommendation": "WAIT",
+      "screeners": [
+        "fallback"
+      ]
+    },
+    {
+      "symbol": "SUNPHARMA.NS",
+      "entry": 1846.5,
+      "close": 1846.5,
+      "change_pct": -0.99,
+      "volume_ratio": 0.62,
+      "rsi14": 39.7,
+      "sma20": 1905.56,
+      "sma50": 1930.14,
+      "atr14": 33.5,
+      "pattern": "Indecision / doji",
+      "score": -3,
+      "signals": [
+        "below SMA20",
+        "weak volume"
+      ],
+      "target_2pct": 1883.43,
+      "stop_loss": 1796.25,
+      "risk_reward": 0.73,
+      "recommendation": "WAIT",
+      "screeners": [
+        "fallback"
+      ]
+    },
+    {
+      "symbol": "HDFCBANK.NS",
+      "entry": 691.95,
+      "close": 691.95,
+      "change_pct": -0.27,
+      "volume_ratio": 0.63,
+      "rsi14": 31.0,
+      "sma20": 713.29,
+      "sma50": 745.85,
+      "atr14": 12.92,
+      "pattern": "Bullish close",
+      "score": -3,
+      "signals": [
+        "below SMA20",
+        "weak volume"
+      ],
+      "target_2pct": 705.79,
+      "stop_loss": 672.56,
+      "risk_reward": 0.71,
+      "recommendation": "WAIT",
+      "screeners": [
+        "fallback"
+      ]
+    },
+    {
+      "symbol": "BHARTIARTL.NS",
+      "entry": 1841.7,
+      "close": 1841.7,
+      "change_pct": 1.49,
+      "volume_ratio": 0.44,
+      "rsi14": 35.6,
+      "sma20": 1893.27,
+      "sma50": 1917.51,
+      "atr14": 34.69,
+      "pattern": "Bullish close",
+      "score": -3,
+      "signals": [
+        "below SMA20",
+        "weak volume"
+      ],
+      "target_2pct": 1878.53,
+      "stop_loss": 1789.67,
+      "risk_reward": 0.71,
+      "recommendation": "WAIT",
+      "screeners": [
+        "fallback"
+      ]
+    },
+    {
+      "symbol": "ASIANPAINT.NS",
+      "entry": 2465.8,
+      "close": 2465.8,
+      "change_pct": -0.93,
+      "volume_ratio": 0.69,
+      "rsi14": 22.6,
+      "sma20": 2590.89,
+      "sma50": 2665.68,
+      "atr14": 47.86,
+      "pattern": "Bullish close",
+      "score": -3,
+      "signals": [
+        "below SMA20",
+        "weak volume"
+      ],
+      "target_2pct": 2515.12,
+      "stop_loss": 2394.01,
+      "risk_reward": 0.69,
+      "recommendation": "WAIT",
+      "screeners": [
+        "fallback"
+      ]
+    },
+    {
+      "symbol": "EICHERMOT.NS",
+      "entry": 7571.5,
+      "close": 7571.5,
+      "change_pct": -1.63,
+      "volume_ratio": 0.63,
+      "rsi14": 26.3,
+      "sma20": 7908.98,
+      "sma50": 7781.64,
+      "atr14": 145.57,
+      "pattern": "Bearish close",
+      "score": -3,
+      "signals": [
+        "below SMA20",
+        "weak volume"
+      ],
+      "target_2pct": 7722.93,
+      "stop_loss": 7353.14,
+      "risk_reward": 0.69,
+      "recommendation": "WAIT",
+      "screeners": [
+        "fallback"
+      ]
+    },
+    {
+      "symbol": "JSWSTEEL.NS",
+      "entry": 1271.0,
+      "close": 1271.0,
+      "change_pct": -2.53,
+      "volume_ratio": 0.69,
+      "rsi14": 33.8,
+      "sma20": 1306.49,
+      "sma50": 1279.95,
+      "atr14": 25.01,
+      "pattern": "Bearish close",
+      "score": -3,
+      "signals": [
+        "below SMA20",
+        "weak volume"
+      ],
+      "target_2pct": 1296.42,
+      "stop_loss": 1233.49,
+      "risk_reward": 0.68,
+      "recommendation": "WAIT",
+      "screeners": [
+        "fallback"
+      ]
+    },
+    {
+      "symbol": "ITC.NS",
+      "entry": 260.5,
+      "close": 260.5,
+      "change_pct": 0.46,
+      "volume_ratio": 0.57,
+      "rsi14": 38.3,
+      "sma20": 266.03,
+      "sma50": 275.91,
+      "atr14": 5.11,
+      "pattern": "Bullish close",
+      "score": -3,
+      "signals": [
+        "below SMA20",
+        "weak volume"
+      ],
+      "target_2pct": 265.71,
+      "stop_loss": 252.84,
+      "risk_reward": 0.68,
+      "recommendation": "WAIT",
+      "screeners": [
+        "fallback"
+      ]
+    },
+    {
+      "symbol": "TCS.NS",
+      "entry": 2206.5,
+      "close": 2206.5,
+      "change_pct": 0.11,
+      "volume_ratio": 0.7,
+      "rsi14": 40.5,
+      "sma20": 2290.37,
+      "sma50": 2288.46,
+      "atr14": 56.31,
+      "pattern": "Bullish close",
+      "score": -3,
+      "signals": [
+        "below SMA20",
+        "weak volume"
+      ],
+      "target_2pct": 2250.63,
+      "stop_loss": 2140.3,
+      "risk_reward": 0.67,
+      "recommendation": "WAIT",
+      "screeners": [
+        "fallback"
+      ]
+    },
+    {
+      "symbol": "WIPRO.NS",
+      "entry": 166.99,
+      "close": 166.99,
+      "change_pct": 0.41,
+      "volume_ratio": 0.69,
+      "rsi14": 28.5,
+      "sma20": 176.87,
+      "sma50": 178.75,
+      "atr14": 4.0,
+      "pattern": "Bullish close",
+      "score": -3,
+      "signals": [
+        "below SMA20",
+        "weak volume"
+      ],
+      "target_2pct": 170.33,
+      "stop_loss": 161.98,
+      "risk_reward": 0.67,
+      "recommendation": "WAIT",
+      "screeners": [
+        "fallback"
+      ]
+    },
+    {
+      "symbol": "NESTLEIND.NS",
+      "entry": 1388.5,
+      "close": 1388.5,
+      "change_pct": 0.17,
+      "volume_ratio": 0.53,
+      "rsi14": 29.4,
+      "sma20": 1439.57,
+      "sma50": 1463.39,
+      "atr14": 29.38,
+      "pattern": "Bullish close",
+      "score": -3,
+      "signals": [
+        "below SMA20",
+        "weak volume"
+      ],
+      "target_2pct": 1416.27,
+      "stop_loss": 1346.85,
+      "risk_reward": 0.67,
+      "recommendation": "WAIT",
+      "screeners": [
+        "fallback"
+      ]
+    },
+    {
+      "symbol": "INFY.NS",
+      "entry": 1039.8,
+      "close": 1039.8,
+      "change_pct": 0.32,
+      "volume_ratio": 0.51,
+      "rsi14": 31.1,
+      "sma20": 1112.27,
+      "sma50": 1113.61,
+      "atr14": 28.89,
+      "pattern": "Bullish close",
+      "score": -3,
+      "signals": [
+        "below SMA20",
+        "weak volume"
+      ],
+      "target_2pct": 1060.6,
+      "stop_loss": 1008.61,
+      "risk_reward": 0.67,
+      "recommendation": "WAIT",
+      "screeners": [
+        "fallback"
+      ]
+    },
+    {
+      "symbol": "M&M.NS",
+      "entry": 3106.6,
+      "close": 3106.6,
+      "change_pct": -0.55,
+      "volume_ratio": 0.48,
+      "rsi14": 12.8,
+      "sma20": 3286.73,
+      "sma50": 3277.85,
+      "atr14": 66.42,
+      "pattern": "Indecision / doji",
+      "score": -3,
+      "signals": [
+        "below SMA20",
+        "weak volume"
+      ],
+      "target_2pct": 3168.73,
+      "stop_loss": 3013.4,
+      "risk_reward": 0.67,
+      "recommendation": "WAIT",
+      "screeners": [
+        "fallback"
+      ]
+    },
+    {
+      "symbol": "PERSISTENT.NS",
+      "entry": 5498.0,
+      "close": 5498.0,
+      "change_pct": -0.21,
+      "volume_ratio": 0.46,
+      "rsi14": 43.0,
+      "sma20": 5612.18,
+      "sma50": 5404.12,
+      "atr14": 162.11,
+      "pattern": "Bullish close",
+      "score": -3,
+      "signals": [
+        "below SMA20",
+        "weak volume"
+      ],
+      "target_2pct": 5607.96,
+      "stop_loss": 5333.06,
+      "risk_reward": 0.67,
+      "recommendation": "WAIT",
+      "screeners": [
+        "fallback"
+      ]
+    }
+  ]
+}

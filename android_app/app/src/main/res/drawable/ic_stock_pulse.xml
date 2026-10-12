@@ -3,9 +3,19 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <path android:fillColor="#102A43" android:pathData="M54,2A52,52 0,1 0,54,106A52,52 0,1 0,54,2" />
-    <path android:fillColor="#00000000" android:pathData="M54,8A46,46 0,1 0,54,100A46,46 0,1 0,54,8" android:strokeColor="#31546C" android:strokeWidth="2" />
-    <path android:fillColor="#00000000" android:pathData="M27,30L27,78M28,54L47,32M28,54L47,76" android:strokeColor="#E8F1F6" android:strokeWidth="6" android:strokeLineCap="round" android:strokeLineJoin="round" />
-    <path android:fillColor="#00000000" android:pathData="M47,69L59,57L68,63L84,42" android:strokeColor="#35D08A" android:strokeWidth="5" android:strokeLineCap="round" android:strokeLineJoin="round" />
-    <path android:fillColor="#F6C453" android:pathData="M76,39L89,36L87,49L83,44L78,48Z" />
+    <!-- Deep Neon Purple & Violet Derivatives Quant Background -->
+    <path android:fillColor="#1A0B2E" android:pathData="M54,2A52,52 0,1 0,54,106A52,52 0,1 0,54,2" />
+    <!-- Glowing Magenta & Electric Violet Accent Ring -->
+    <path android:fillColor="#00000000" android:pathData="M54,8A46,46 0,1 0,54,100A46,46 0,1 0,54,8" android:strokeColor="#7928CA" android:strokeWidth="3.5" />
+    
+    <!-- Bold 'O' Ring for Options / Derivatives -->
+    <path android:fillColor="#00000000" android:pathData="M40,54A18,18 0,1 0,40,53.9" android:strokeColor="#FF0080" android:strokeWidth="5" />
+
+    <!-- Greek Delta Symbol (Δ) for Options / Quant Greeks -->
+    <path android:fillColor="#00000000" android:pathData="M70,72L55,42L40,72Z" android:strokeColor="#00DFD8" android:strokeWidth="4" android:strokeLineCap="round" android:strokeLineJoin="round" />
+
+    <!-- Sharp Upward Derivative Call Strike Arrow -->
+    <path android:fillColor="#00000000" android:pathData="M48,64L62,50L72,56L88,34" android:strokeColor="#00F5A0" android:strokeWidth="5.5" android:strokeLineCap="round" android:strokeLineJoin="round" />
+    <!-- Glowing Golden Arrowhead -->
+    <path android:fillColor="#FFD600" android:pathData="M80,31L93,28L91,41L87,36L82,40Z" />
 </vector>

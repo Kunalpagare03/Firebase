@@ -55,14 +55,71 @@ class BacktestViewModel(
             initialValue = UiState.Loading
         )
 
-    fun setSymbol(symbol: String) {
-        selectedSymbol.value = symbol
+    val selectedStockName = MutableStateFlow("NIFTY 50 INDEX")
+    val selectedStockSector = MutableStateFlow("Index")
+
+    private val _allStocks = MutableStateFlow<List<StockUniverseItem>>(emptyList())
+    val allStocks: StateFlow<List<StockUniverseItem>> = _allStocks.asStateFlow()
+
+    private val _sectors = MutableStateFlow<List<String>>(listOf("ALL"))
+    val sectors: StateFlow<List<String>> = _sectors.asStateFlow()
+
+    val stockSearchQuery = MutableStateFlow("")
+    val selectedSector = MutableStateFlow("ALL")
+
+    val filteredStocks: StateFlow<List<StockUniverseItem>> = combine(
+        _allStocks,
+        stockSearchQuery,
+        selectedSector
+    ) { stocks, query, sector ->
+        val q = query.trim().uppercase()
+        val list = if (stocks.isEmpty()) StockUniverseProvider.benchmarkSymbols else stocks
+        list.asSequence()
+            .filter { item ->
+                val matchesSector = (sector == "ALL" || item.sector.equals(sector, ignoreCase = true))
+                val matchesQuery = q.isEmpty() || item.symbol.contains(q) || item.name.uppercase().contains(q)
+                matchesSector && matchesQuery
+            }
+            .take(150)
+            .toList()
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = StockUniverseProvider.benchmarkSymbols
+    )
+
+    init {
+        runBacktest()
+    }
+
+    fun loadStockUniverse(context: android.content.Context) {
+        if (_allStocks.value.isEmpty()) {
+            viewModelScope.launch {
+                val list = StockUniverseProvider.loadStocksAsync(context)
+                _allStocks.value = list
+                _sectors.value = StockUniverseProvider.getCachedSectors()
+            }
+        }
+    }
+
+    fun setStock(item: StockUniverseItem) {
+        selectedSymbol.value = item.symbol
+        selectedStockName.value = item.name
+        selectedStockSector.value = item.sector
         _customResult.value = null
+        runBacktest()
+    }
+
+    fun setSymbol(symbol: String, name: String? = null, sector: String? = null) {
+        selectedSymbol.value = symbol
+        selectedStockName.value = name ?: symbol
+        selectedStockSector.value = sector ?: "General"
+        _customResult.value = null
+        runBacktest()
     }
 
     fun setStrategyType(type: String) {
-        strategyType.value = type
-        _customResult.value = null
+        applyPreset(type)
     }
 
     fun setTarget(target: Float) {
@@ -84,6 +141,24 @@ class BacktestViewModel(
     fun applyPreset(type: String) {
         strategyType.value = type
         when (type) {
+            "FUTURES_LONG_SHORT_BUILDUP" -> {
+                targetPct.value = 2.4f
+                stopLossPct.value = 0.9f
+                atrMultiplier.value = 1.3f
+                pcrThreshold.value = 1.25f
+            }
+            "FUTURES_VWAP_INSTITUTIONAL" -> {
+                targetPct.value = 2.0f
+                stopLossPct.value = 0.8f
+                atrMultiplier.value = 1.2f
+                pcrThreshold.value = 1.10f
+            }
+            "FUTURES_BASIS_ARBITRAGE_CARRY" -> {
+                targetPct.value = 1.8f
+                stopLossPct.value = 0.6f
+                atrMultiplier.value = 1.1f
+                pcrThreshold.value = 1.05f
+            }
             "OPTION_FLOW_GRAVITY" -> {
                 targetPct.value = 3.0f
                 stopLossPct.value = 1.2f
@@ -147,6 +222,9 @@ class BacktestViewModel(
             val atrM = atrMultiplier.value.toDouble()
 
             val expectedWinRate = when (strat) {
+                "FUTURES_LONG_SHORT_BUILDUP" -> 66.0 + (target / sl) * -1.7
+                "FUTURES_VWAP_INSTITUTIONAL" -> 68.0 + (target / sl) * -1.9
+                "FUTURES_BASIS_ARBITRAGE_CARRY" -> 72.0 + (target / sl) * -2.2
                 "INTRADAY_TIMING_CANDLE_REVERSAL" -> 64.0 + (target / sl) * -1.8
                 "MULTI_CONFLUENCE_QUANT" -> 58.0 + (target / sl) * -2.0
                 "PRICE_ACTION_STRUCTURE" -> 54.0 + (target / sl) * -2.2
@@ -155,7 +233,7 @@ class BacktestViewModel(
                 "EMA_CROSS" -> 46.0 + (target / sl) * -3.0
                 "RSI_MOMENTUM" -> 49.0 - (target * 2.0)
                 else -> 48.0
-            }.coerceIn(38.0, 75.0)
+            }.coerceIn(38.0, 78.0)
 
             val totalTrades = when (tf) {
                 "1y" -> Random.nextInt(16, 28)
@@ -172,6 +250,24 @@ class BacktestViewModel(
             val dateFormat = SimpleDateFormat("dd MMM yyyy", Locale.getDefault())
 
             val patternPool = when (strat) {
+                "FUTURES_LONG_SHORT_BUILDUP" -> listOf(
+                    "Aggressive Long Buildup: Price Rising + OI Expanding > 12%",
+                    "Short Covering Squeeze: Price Surging + OI Unwinding",
+                    "Institutional Short Buildup at Resistance",
+                    "Long Unwinding Cascade Triggered"
+                )
+                "FUTURES_VWAP_INSTITUTIONAL" -> listOf(
+                    "VWAP Rejection & Volume Expansion Thrust",
+                    "Anchored VWAP Support Bounce on Heavy Volume",
+                    "VWAP Standard Deviation Band Compression Breakout",
+                    "Opening Range 15m VWAP Crossover"
+                )
+                "FUTURES_BASIS_ARBITRAGE_CARRY" -> listOf(
+                    "Futures Basis Contango Expansion Entry",
+                    "Backwardation Reversal Long Entry",
+                    "Monthly Expiry Convergence Trade",
+                    "Roll Cost Arbitrage Hedge Rebalance"
+                )
                 "INTRADAY_TIMING_CANDLE_REVERSAL" -> listOf(
                     "10:30 AM European Pre-Market Bullish Hammer at Support",
                     "13:00 PM European Open Bearish Shooting Star at Resistance",

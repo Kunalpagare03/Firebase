@@ -23,6 +23,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.Kunal.stock.ui.LoginScreen
 import com.Kunal.stock.ui.OptionSentimentScreen
+import com.Kunal.stock.ui.FuturesQuantScreen
 import com.Kunal.stock.ui.StockScanScreen
 import com.Kunal.stock.ui.BacktestScreen
 import com.Kunal.stock.ui.theme.StockAnalysisTheme
@@ -69,6 +70,7 @@ fun MainScreen(
 
     val navItems = listOf(
         NavigationItem("Options", "options", Icons.Default.ShowChart),
+        NavigationItem("Futures", "futures", Icons.Default.TrendingUp),
         NavigationItem("Option Lab", "backtest", Icons.Default.Science)
     )
 
@@ -197,6 +199,7 @@ fun MainScreen(
             modifier = Modifier.padding(innerPadding)
         ) {
             composable("options") { OptionSentimentScreen() }
+            composable("futures") { FuturesQuantScreen() }
             composable("backtest") { BacktestScreen() }
         }
     }

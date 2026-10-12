@@ -5,28 +5,30 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 
-// Institutional Dark Trading Palette
+// Institutional Dark Trading Palette (Option Quant Edition: Neon Purple / Violet / Cyan)
 val BullishGreen = Color(0xFF00E676)
 val BullishGreenContainer = Color(0xFF003816)
 val BearishRed = Color(0xFFFF5252)
 val BearishRedContainer = Color(0xFF4A0007)
 val NeutralSlate = Color(0xFF8B949E)
-val ElectricBlue = Color(0xFF2F81F7)
+val ElectricBlue = Color(0xFF9D4EDD) // Vibrant Option Violet (Distinguished from Stock Blue)
+val NeonCyan = Color(0xFF00DFD8)
+val NeonMagenta = Color(0xFFFF007F)
 val GoldWarning = Color(0xFFFFC107)
 
-val DarkBackground = Color(0xFF0E1318)
-val DarkSurface = Color(0xFF161C24)
-val DarkCard = Color(0xFF1F2633)
-val DarkCardBorder = Color(0xFF2C3545)
-val TextPrimary = Color(0xFFF0F6FC)
-val TextSecondary = Color(0xFF9BA7B6)
+val DarkBackground = Color(0xFF0C0A14) // Deep space violet background
+val DarkSurface = Color(0xFF151024)
+val DarkCard = Color(0xFF1E1633)
+val DarkCardBorder = Color(0xFF352654)
+val TextPrimary = Color(0xFFF5F3FF)
+val TextSecondary = Color(0xFFA79BC4)
 
 private val DarkColorScheme = darkColorScheme(
-    primary = ElectricBlue,
-    onPrimary = Color.White,
-    primaryContainer = Color(0xFF183D70),
-    onPrimaryContainer = Color(0xFFD6E4FF),
-    secondary = BullishGreen,
+    primary = Color(0xFFB388FF), // Glowing Violet for Options
+    onPrimary = Color(0xFF120038),
+    primaryContainer = Color(0xFF381570),
+    onPrimaryContainer = Color(0xFFEDDCFF),
+    secondary = Color(0xFF00DFD8), // Neon Cyan Accent
     onSecondary = Color.Black,
     error = BearishRed,
     onError = Color.White,

@@ -58,22 +58,22 @@ class BacktestViewModel(
     val selectedStockName = MutableStateFlow("NIFTY 50 INDEX")
     val selectedStockSector = MutableStateFlow("Index")
 
-    private val _allStocks = MutableStateFlow<List<StockUniverseItem>>(emptyList())
-    val allStocks: StateFlow<List<StockUniverseItem>> = _allStocks.asStateFlow()
+    private val _allStocks = MutableStateFlow<List<FnoUniverseItem>>(emptyList())
+    val allStocks: StateFlow<List<FnoUniverseItem>> = _allStocks.asStateFlow()
 
-    private val _sectors = MutableStateFlow<List<String>>(listOf("ALL"))
+    private val _sectors = MutableStateFlow<List<String>>(listOf("ALL", "Index", "F&O Stock"))
     val sectors: StateFlow<List<String>> = _sectors.asStateFlow()
 
     val stockSearchQuery = MutableStateFlow("")
     val selectedSector = MutableStateFlow("ALL")
 
-    val filteredStocks: StateFlow<List<StockUniverseItem>> = combine(
+    val filteredStocks: StateFlow<List<FnoUniverseItem>> = combine(
         _allStocks,
         stockSearchQuery,
         selectedSector
     ) { stocks, query, sector ->
         val q = query.trim().uppercase()
-        val list = if (stocks.isEmpty()) StockUniverseProvider.benchmarkSymbols else stocks
+        val list = if (stocks.isEmpty()) FnoUniverseProvider.benchmarkFno else stocks
         list.asSequence()
             .filter { item ->
                 val matchesSector = (sector == "ALL" || item.sector.equals(sector, ignoreCase = true))
@@ -85,7 +85,7 @@ class BacktestViewModel(
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
-        initialValue = StockUniverseProvider.benchmarkSymbols
+        initialValue = FnoUniverseProvider.benchmarkFno
     )
 
     init {
@@ -95,14 +95,14 @@ class BacktestViewModel(
     fun loadStockUniverse(context: android.content.Context) {
         if (_allStocks.value.isEmpty()) {
             viewModelScope.launch {
-                val list = StockUniverseProvider.loadStocksAsync(context)
+                val list = FnoUniverseProvider.loadFnoAsync(context)
                 _allStocks.value = list
-                _sectors.value = StockUniverseProvider.getCachedSectors()
+                _sectors.value = FnoUniverseProvider.getCachedSegments()
             }
         }
     }
 
-    fun setStock(item: StockUniverseItem) {
+    fun setStock(item: FnoUniverseItem) {
         selectedSymbol.value = item.symbol
         selectedStockName.value = item.name
         selectedStockSector.value = item.sector
@@ -113,7 +113,7 @@ class BacktestViewModel(
     fun setSymbol(symbol: String, name: String? = null, sector: String? = null) {
         selectedSymbol.value = symbol
         selectedStockName.value = name ?: symbol
-        selectedStockSector.value = sector ?: "General"
+        selectedStockSector.value = sector ?: "F&O"
         _customResult.value = null
         runBacktest()
     }

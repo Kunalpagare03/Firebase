@@ -24,10 +24,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.Kunal.stock.data.StockUniverseItem
-import com.Kunal.stock.data.StockUniverseProvider
+import com.Kunal.stock.data.FnoUniverseItem
+import com.Kunal.stock.data.FnoUniverseProvider
 import com.Kunal.stock.ui.theme.*
-import kotlinx.coroutines.launch
 import kotlin.random.Random
 
 data class FuturesContractQuote(
@@ -56,18 +55,16 @@ data class FuturesContractQuote(
 @Composable
 fun FuturesQuantScreen() {
     val context = LocalContext.current
-    val scope = rememberCoroutineScope()
 
-    var allStocks by remember { mutableStateOf<List<StockUniverseItem>>(emptyList()) }
-    var sectors by remember { mutableStateOf<List<String>>(listOf("ALL")) }
-    var selectedSector by remember { mutableStateOf("ALL") }
+    var fnoList by remember { mutableStateOf<List<FnoUniverseItem>>(emptyList()) }
+    var segments by remember { mutableStateOf<List<String>>(listOf("ALL", "Index", "F&O Stock")) }
+    var selectedSegment by remember { mutableStateOf("ALL") }
     var searchQuery by remember { mutableStateOf("") }
-    var selectedBuildupFilter by remember { mutableStateOf("ALL") } // ALL, LONG_BUILDUP, SHORT_COVERING, SHORT_BUILDUP
 
     LaunchedEffect(Unit) {
-        val list = StockUniverseProvider.loadStocksAsync(context)
-        allStocks = list
-        sectors = StockUniverseProvider.getCachedSectors()
+        val list = FnoUniverseProvider.loadFnoAsync(context)
+        fnoList = list
+        segments = FnoUniverseProvider.getCachedSegments()
     }
 
     // Curated high-liquidity F&O Index & Stock Futures
@@ -209,7 +206,7 @@ fun FuturesQuantScreen() {
                     ) {
                         Icon(imageVector = Icons.Default.Search, contentDescription = null, modifier = Modifier.size(14.dp))
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text("All 5,200+ Stocks", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        Text("All 219 F&O Assets", fontSize = 11.sp, fontWeight = FontWeight.Bold)
                     }
                 }
 
@@ -373,7 +370,7 @@ fun FuturesQuantScreen() {
                             "FINNIFTY" -> "NIFTY FINANCIAL SERVICES"
                             else -> sym
                         }
-                        selectedFutureSector = if (sym.contains("NIFTY")) "Index" else "F&O Equity"
+                        selectedFutureSector = if (sym.contains("NIFTY")) "Index" else "F&O Stock"
                     },
                     label = { Text(sym, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal) },
                     colors = FilterChipDefaults.filterChipColors(
@@ -409,7 +406,7 @@ fun FuturesQuantScreen() {
             }
         }
 
-        // --- 5. All Stocks Browser Dialog (5,229 stocks from sector Excel sheet) ---
+        // --- 5. Official F&O Universe Browser Dialog (219 Derivatives Eligible Equities & Indices) ---
         if (showStockBrowserModal) {
             AlertDialog(
                 onDismissRequest = { showStockBrowserModal = false },
@@ -420,8 +417,8 @@ fun FuturesQuantScreen() {
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column {
-                            Text("Select Future Asset", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                            Text("5,229 Stocks • 34 Sectors from Master Excel", style = MaterialTheme.typography.labelSmall, color = ElectricBlue)
+                            Text("Select F&O Asset", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                            Text("219 Official NSE Futures & Options Contracts", style = MaterialTheme.typography.labelSmall, color = ElectricBlue)
                         }
                         IconButton(onClick = { showStockBrowserModal = false }) {
                             Icon(Icons.Default.Close, contentDescription = "Close", tint = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -434,7 +431,7 @@ fun FuturesQuantScreen() {
                             value = searchQuery,
                             onValueChange = { searchQuery = it },
                             modifier = Modifier.fillMaxWidth(),
-                            placeholder = { Text("Search by name or symbol (e.g. Tata, Reliance, MRF)...", fontSize = 12.sp) },
+                            placeholder = { Text("Search F&O ticker (e.g. Tata, Reliance, SBIN)...", fontSize = 12.sp) },
                             leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = ElectricBlue) },
                             trailingIcon = {
                                 if (searchQuery.isNotEmpty()) {
@@ -449,17 +446,17 @@ fun FuturesQuantScreen() {
 
                         Spacer(modifier = Modifier.height(8.dp))
 
-                        // Sector filter
+                        // Segment filter (ALL, Index, F&O Stock)
                         Row(
                             modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
                             horizontalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
-                            sectors.forEach { sec ->
-                                val isSelected = selectedSector.equals(sec, ignoreCase = true)
+                            segments.forEach { seg ->
+                                val isSelected = selectedSegment.equals(seg, ignoreCase = true)
                                 FilterChip(
                                     selected = isSelected,
-                                    onClick = { selectedSector = sec },
-                                    label = { Text(sec, fontSize = 11.sp, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal) },
+                                    onClick = { selectedSegment = seg },
+                                    label = { Text(seg, fontSize = 11.sp, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal) },
                                     colors = FilterChipDefaults.filterChipColors(
                                         selectedContainerColor = ElectricBlue,
                                         containerColor = MaterialTheme.colorScheme.surface
@@ -472,13 +469,12 @@ fun FuturesQuantScreen() {
                         Spacer(modifier = Modifier.height(8.dp))
 
                         val q = searchQuery.trim().uppercase()
-                        val filtered = allStocks.asSequence()
+                        val filtered = fnoList.asSequence()
                             .filter { item ->
-                                val matchSec = (selectedSector == "ALL" || item.sector.equals(selectedSector, ignoreCase = true))
+                                val matchSeg = (selectedSegment == "ALL" || item.sector.equals(selectedSegment, ignoreCase = true))
                                 val matchQ = q.isEmpty() || item.symbol.contains(q) || item.name.uppercase().contains(q)
-                                matchSec && matchQ
+                                matchSeg && matchQ
                             }
-                            .take(100)
                             .toList()
 
                         Box(
@@ -489,28 +485,6 @@ fun FuturesQuantScreen() {
                                 .padding(4.dp)
                         ) {
                             LazyColumn(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                if (searchQuery.isNotBlank() && filtered.none { it.symbol.equals(searchQuery.trim(), ignoreCase = true) }) {
-                                    item {
-                                        Surface(
-                                            onClick = {
-                                                selectedFutureSymbol = searchQuery.trim().uppercase()
-                                                selectedFutureName = searchQuery.trim().uppercase()
-                                                selectedFutureSector = "Custom Equity"
-                                                showStockBrowserModal = false
-                                            },
-                                            color = ElectricBlue.copy(alpha = 0.15f),
-                                            shape = RoundedCornerShape(8.dp),
-                                            modifier = Modifier.fillMaxWidth()
-                                        ) {
-                                            Row(modifier = Modifier.padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
-                                                Icon(Icons.Default.Add, contentDescription = null, tint = ElectricBlue, modifier = Modifier.size(16.dp))
-                                                Spacer(modifier = Modifier.width(6.dp))
-                                                Text("Use custom future ticker: \"${searchQuery.trim().uppercase()}\"", color = ElectricBlue, fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                                            }
-                                        }
-                                    }
-                                }
-
                                 items(filtered) { item ->
                                     Surface(
                                         onClick = {
@@ -531,7 +505,7 @@ fun FuturesQuantScreen() {
                                         ) {
                                             Column(modifier = Modifier.weight(1f)) {
                                                 Text(item.name, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
-                                                Text(item.sector, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                                Text("Lot: ${item.lotSize} • ${item.sector}", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                             }
                                             Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = RoundedCornerShape(4.dp)) {
                                                 Text(item.symbol, fontSize = 11.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimaryContainer, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))

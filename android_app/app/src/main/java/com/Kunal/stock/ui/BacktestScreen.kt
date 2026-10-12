@@ -55,7 +55,7 @@ fun BacktestScreen(
     var activeTab by remember { mutableIntStateOf(0) } // 0: Strategy Specs, 1: Trade Log
     var showStockSearchModal by remember { mutableStateOf(false) }
 
-    // --- Derivatives & Stock Universe Explorer Dialog (5,229 Stocks - 34 Sectors) ---
+    // --- Derivatives Eligible Universe Explorer (219 Official NSE F&O Contracts) ---
     if (showStockSearchModal) {
         AlertDialog(
             onDismissRequest = { showStockSearchModal = false },
@@ -67,12 +67,12 @@ fun BacktestScreen(
                 ) {
                     Column {
                         Text(
-                            text = "Derivatives & Stock Explorer",
+                            text = "Derivatives Contract Explorer",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold
                         )
                         Text(
-                            text = "5,229 Equities • 34 Sectors • F&O Contracts",
+                            text = "219 Official F&O Underlyings (Indices & Stocks)",
                             style = MaterialTheme.typography.labelSmall,
                             color = ElectricBlue
                         )
@@ -91,7 +91,7 @@ fun BacktestScreen(
                         value = stockSearchQuery,
                         onValueChange = { viewModel.stockSearchQuery.value = it },
                         modifier = Modifier.fillMaxWidth(),
-                        placeholder = { Text("Search any future/option stock (Tata, Reliance, MRF)...", fontSize = 12.sp) },
+                        placeholder = { Text("Search F&O stock/index (Tata, Reliance, SBIN)...", fontSize = 12.sp) },
                         leadingIcon = { Icon(imageVector = Icons.Default.Search, contentDescription = null, tint = ElectricBlue) },
                         trailingIcon = {
                             if (stockSearchQuery.isNotEmpty()) {
@@ -137,31 +137,6 @@ fun BacktestScreen(
                             .padding(4.dp)
                     ) {
                         LazyColumn(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                            if (stockSearchQuery.isNotBlank() && filteredStocks.none { it.symbol.equals(stockSearchQuery.trim(), ignoreCase = true) }) {
-                                item {
-                                    Surface(
-                                        onClick = {
-                                            viewModel.setSymbol(stockSearchQuery.trim().uppercase(), stockSearchQuery.trim().uppercase(), "Custom")
-                                            showStockSearchModal = false
-                                        },
-                                        color = ElectricBlue.copy(alpha = 0.15f),
-                                        shape = RoundedCornerShape(8.dp),
-                                        modifier = Modifier.fillMaxWidth()
-                                    ) {
-                                        Row(modifier = Modifier.padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
-                                            Icon(imageVector = Icons.Default.Add, contentDescription = null, tint = ElectricBlue, modifier = Modifier.size(16.dp))
-                                            Spacer(modifier = Modifier.width(6.dp))
-                                            Text(
-                                                text = "Test custom asset: \"${stockSearchQuery.trim().uppercase()}\"",
-                                                color = ElectricBlue,
-                                                fontWeight = FontWeight.Bold,
-                                                fontSize = 13.sp
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-
                             items(filteredStocks) { item ->
                                 Surface(
                                     onClick = {
@@ -182,7 +157,7 @@ fun BacktestScreen(
                                     ) {
                                         Column(modifier = Modifier.weight(1f)) {
                                             Text(text = item.name, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
-                                            Text(text = item.sector, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                            Text(text = "Lot Size: ${item.lotSize} • ${item.sector}", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                         }
                                         Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = RoundedCornerShape(4.dp)) {
                                             Text(text = item.symbol, fontSize = 11.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimaryContainer, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))
@@ -295,7 +270,7 @@ fun BacktestScreen(
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Text(
-                            text = "5,229 Stocks • Indices • 34 Sectors",
+                            text = "219 Official NSE F&O Contracts (Indices & Stocks)",
                             style = MaterialTheme.typography.labelSmall,
                             color = ElectricBlue
                         )
@@ -308,7 +283,7 @@ fun BacktestScreen(
                     ) {
                         Icon(imageVector = Icons.Default.Search, contentDescription = null, modifier = Modifier.size(14.dp))
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text("Browse 5,200+", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        Text("All 219 F&O Assets", fontSize = 11.sp, fontWeight = FontWeight.Bold)
                     }
                 }
 

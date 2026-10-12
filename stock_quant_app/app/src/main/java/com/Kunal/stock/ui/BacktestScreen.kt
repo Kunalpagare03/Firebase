@@ -31,7 +31,6 @@ import com.Kunal.stock.ui.theme.*
 fun BacktestScreen(
     viewModel: BacktestViewModel = viewModel()
 ) {
-    val backtestCategory by viewModel.backtestCategory.collectAsState()
     val uiState by viewModel.uiState.collectAsState()
     val isSimulating by viewModel.isSimulating.collectAsState()
     val selectedSymbol by viewModel.selectedSymbol.collectAsState()
@@ -42,8 +41,6 @@ fun BacktestScreen(
     val timeframe by viewModel.timeframe.collectAsState()
 
     var activeTab by remember { mutableIntStateOf(0) } // 0: Strategy Specs, 1: Trade Log
-
-    val isOptionMode = backtestCategory == "OPTION"
 
     Column(
         modifier = Modifier
@@ -66,7 +63,7 @@ fun BacktestScreen(
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(
-                    text = if (isOptionMode) "Derivatives Flow • Greeks • Time-Window Reversals" else "Equity Price Action • Volume Breakouts • Swing Trading Strategies",
+                    text = "Equity Price Action • Volume Breakouts • Swing Trading Strategies",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -82,14 +79,14 @@ fun BacktestScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(
-                        imageVector = if (isOptionMode) Icons.Default.Bolt else Icons.Default.AutoGraph,
+                        imageVector = Icons.Default.AutoGraph,
                         contentDescription = null,
                         tint = ElectricBlue,
                         modifier = Modifier.size(14.dp)
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
-                        text = if (isOptionMode) "OPTION QUANT" else "STOCK QUANT",
+                        text = "STOCK QUANT",
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
                         color = ElectricBlue
@@ -98,45 +95,7 @@ fun BacktestScreen(
             }
         }
 
-        Spacer(modifier = Modifier.height(14.dp))
-
-        // --- 1B. Dual-Mode Switcher: Stock vs Option Backtesting ---
-        Surface(
-            shape = RoundedCornerShape(12.dp),
-            color = MaterialTheme.colorScheme.surfaceVariant,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            TabRow(
-                selectedTabIndex = if (isOptionMode) 1 else 0,
-                containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                contentColor = MaterialTheme.colorScheme.primary
-            ) {
-                Tab(
-                    selected = !isOptionMode,
-                    onClick = { viewModel.setCategory("STOCK") },
-                    text = {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.TrendingUp, contentDescription = null, modifier = Modifier.size(16.dp))
-                            Spacer(Modifier.width(6.dp))
-                            Text("Stock Strategy Lab", fontWeight = FontWeight.Bold)
-                        }
-                    }
-                )
-                Tab(
-                    selected = isOptionMode,
-                    onClick = { viewModel.setCategory("OPTION") },
-                    text = {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.Bolt, contentDescription = null, modifier = Modifier.size(16.dp))
-                            Spacer(Modifier.width(6.dp))
-                            Text("Option Strategy Lab", fontWeight = FontWeight.Bold)
-                        }
-                    }
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.height(14.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
         // --- 2. Strategy Configuration Card ---
         Card(
@@ -155,7 +114,7 @@ fun BacktestScreen(
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        text = if (isOptionMode) "Option Strategy Model & Parameters" else "Equity Strategy Model & Parameters",
+                        text = "Equity Strategy Model & Parameters",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface
@@ -166,7 +125,7 @@ fun BacktestScreen(
 
                 // Asset Selector
                 Text(
-                    text = if (isOptionMode) "Derivatives Asset (Indices & F&O)" else "Stock Symbol",
+                    text = "Stock Symbol",
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -177,11 +136,7 @@ fun BacktestScreen(
                         .horizontalScroll(rememberScrollState()),
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    val availableSymbols = if (isOptionMode) {
-                        listOf("NIFTY", "BANKNIFTY", "FINNIFTY", "RELIANCE", "HDFCBANK")
-                    } else {
-                        listOf("RELIANCE", "TCS", "INFY", "HDFCBANK", "ICICIBANK", "TATAMOTORS", "BHARTIARTL", "SBIN", "LT", "ITC")
-                    }
+                    val availableSymbols = listOf("RELIANCE", "TCS", "INFY", "HDFCBANK", "ICICIBANK", "TATAMOTORS", "BHARTIARTL", "SBIN", "LT", "ITC")
                     availableSymbols.forEach { sym ->
                         val isSelected = selectedSymbol == sym
                         FilterChip(
@@ -207,7 +162,7 @@ fun BacktestScreen(
 
                 // Strategy Archetypes
                 Text(
-                    text = if (isOptionMode) "Option Algorithmic Archetype" else "Equity Strategy Archetype",
+                    text = "Equity Strategy Archetype",
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -218,25 +173,16 @@ fun BacktestScreen(
                         .horizontalScroll(rememberScrollState()),
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    val strategies = if (isOptionMode) {
-                        listOf(
-                            "MULTI_CONFLUENCE_QUANT" to "⚡ 3-Pillar Master Option Confluence",
-                            "INTRADAY_TIMING_CANDLE_REVERSAL" to "⏰ Intraday Timing & S&R Reversal",
-                            "OPTION_FLOW_GRAVITY" to "🌊 Option Flow & Max Pain Gravity",
-                            "GAMMA_SQUEEZE_EXPIRY" to "💥 Expiry High Gamma Squeeze (Hero-Zero)",
-                            "CANDLE_VOLATILITY_SQUEEZE" to "🎯 ATM Option Volatility Squeeze",
-                            "FAKE_BREAKOUT_TRAP_OPTION" to "🛡️ Fake Breakout Bull/Bear Trap Trade"
-                        )
-                    } else {
-                        listOf(
-                            "SWING_BREAKOUT" to "🚀 20-Day Swing Breakout & VCP",
-                            "EMA_TREND_FOLLOWING" to "📈 EMA 20/50 Trend Following",
-                            "RVOL_MOMENTUM_SURGE" to "⚡ RVOL High Volume Surge",
-                            "SQUEEZE_BREAKOUT" to "🎯 Bollinger Volatility Squeeze",
-                            "PRICE_ACTION_STRUCTURE" to "🏛️ Price Action (W-Pattern)",
-                            "MULTI_CONFLUENCE_STOCK" to "🔥 Master Equity Confluence Quant"
-                        )
-                    }
+                    val strategies = listOf(
+                        "SWING_BREAKOUT" to "🚀 20-Day Swing Breakout & VCP",
+                        "EMA_TREND_FOLLOWING" to "📈 EMA 20/50 Trend Following",
+                        "RVOL_MOMENTUM_SURGE" to "⚡ RVOL High Volume Surge",
+                        "SQUEEZE_BREAKOUT" to "🎯 Bollinger Volatility Squeeze",
+                        "PRICE_ACTION_STRUCTURE" to "🏛️ Price Action (W-Pattern)",
+                        "MOMENTUM_PULLBACK" to "📊 52-Week High Momentum Pullback",
+                        "SUPPORT_REVERSAL" to "🛡️ Demand Zone Support Reversal",
+                        "MULTI_CONFLUENCE_STOCK" to "🔥 Master Equity Confluence Quant"
+                    )
                     strategies.forEach { (type, label) ->
                         val isSelected = strategyType == type
                         FilterChip(
@@ -269,7 +215,7 @@ fun BacktestScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = if (isOptionMode) "Option Premium Target" else "Take Profit Target",
+                        text = "Take Profit Target",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurface
                     )
@@ -283,8 +229,8 @@ fun BacktestScreen(
                 Slider(
                     value = targetPct,
                     onValueChange = { viewModel.setTarget(it) },
-                    valueRange = if (isOptionMode) 10.0f..150.0f else 0.5f..15.0f,
-                    steps = if (isOptionMode) 14 else 14,
+                    valueRange = 0.5f..15.0f,
+                    steps = 14,
                     colors = SliderDefaults.colors(
                         thumbColor = BullishGreen,
                         activeTrackColor = BullishGreen
@@ -300,7 +246,7 @@ fun BacktestScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = if (isOptionMode) "Option Premium Stop Loss" else "Stop Loss Threshold",
+                        text = "Stop Loss Threshold",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurface
                     )
@@ -314,8 +260,8 @@ fun BacktestScreen(
                 Slider(
                     value = stopLossPct,
                     onValueChange = { viewModel.setStopLoss(it) },
-                    valueRange = if (isOptionMode) 5.0f..40.0f else 0.5f..6.0f,
-                    steps = if (isOptionMode) 7 else 11,
+                    valueRange = 0.5f..6.0f,
+                    steps = 11,
                     colors = SliderDefaults.colors(
                         thumbColor = BearishRed,
                         activeTrackColor = BearishRed

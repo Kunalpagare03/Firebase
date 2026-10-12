@@ -19,9 +19,10 @@ STOCK_STRIKE_INTERVALS = {
     "SENSEX": 100.0
 }
 
-def select_optimal_strike(symbol: str, spot_price: float, direction: str) -> Dict[str, Any]:
+def select_optimal_strike(symbol: str, spot_price: float, direction: str, option_chain: Any = None) -> Dict[str, Any]:
     """
     Computes the optimal ATM / slightly ITM or near OTM strike contract for NIFTY, BANKNIFTY, and NIFTY 50 / BANKNIFTY Stock Options.
+    Strictly synchronizes estimated_premium, targets, and stop-loss directly with live option chain LTP.
     """
     sym = symbol.upper().strip()
     strike_interval = STOCK_STRIKE_INTERVALS.get(sym, 50.0)
@@ -32,17 +33,39 @@ def select_optimal_strike(symbol: str, spot_price: float, direction: str) -> Dic
     base_strike = round(spot_price / strike_interval) * strike_interval
     is_stock = sym in ["RELIANCE", "HDFCBANK", "ICICIBANK", "INFY", "TCS", "SBIN", "AXISBANK", "TATAMOTORS", "BHARTIARTL", "KOTAKBANK"]
 
-    # Estimate premium ratio (Index ~ 0.65%, Stock ~ 1.8% of spot)
+    # Estimate fallback premium ratio (Index ~ 0.65%, Stock ~ 1.8% of spot)
     prem_factor = 0.018 if is_stock else 0.0065
+    fallback_prem = round(spot_price * prem_factor, 1)
+
+    chain_row = None
+    if option_chain is not None:
+        try:
+            if hasattr(option_chain, "iterrows"): # pandas DataFrame
+                exact = option_chain[abs(option_chain["strike"] - base_strike) < 0.5]
+                if not exact.empty:
+                    chain_row = exact.iloc[0].to_dict()
+                elif not option_chain.empty:
+                    # closest strike
+                    idx = (option_chain["strike"] - base_strike).abs().idxmin()
+                    chain_row = option_chain.loc[idx].to_dict()
+                    base_strike = float(chain_row["strike"])
+            elif isinstance(option_chain, list):
+                for row in option_chain:
+                    if isinstance(row, dict) and abs(float(row.get("strike", 0)) - base_strike) < 0.5:
+                        chain_row = row
+                        break
+        except Exception:
+            pass
 
     if direction == "BUY CALL":
         option_type = "CE"
         strike = int(base_strike) if base_strike.is_integer() else base_strike
         contract_name = f"{sym} {strike:,} CE" if isinstance(strike, int) else f"{sym} {strike} CE"
         
-        est_premium = round(spot_price * prem_factor, 1)
-        target_premium = round(est_premium * 1.35, 1) # +35%
-        sl_premium = round(est_premium * 0.85, 1) # -15%
+        chain_ltp = float(chain_row.get("call_ltp", 0.0)) if chain_row else 0.0
+        est_premium = round(chain_ltp, 2) if chain_ltp > 0 else fallback_prem
+        target_premium = round(est_premium * 1.35, 2) # +35%
+        sl_premium = round(est_premium * 0.82, 2) # -18%
         
         target_spot = round(spot_price + (strike_interval * 1.2), 2)
         sl_spot = round(spot_price - (strike_interval * 0.5), 2)
@@ -52,9 +75,10 @@ def select_optimal_strike(symbol: str, spot_price: float, direction: str) -> Dic
         strike = int(base_strike) if base_strike.is_integer() else base_strike
         contract_name = f"{sym} {strike:,} PE" if isinstance(strike, int) else f"{sym} {strike} PE"
 
-        est_premium = round(spot_price * prem_factor, 1)
-        target_premium = round(est_premium * 1.35, 1)
-        sl_premium = round(est_premium * 0.85, 1)
+        chain_ltp = float(chain_row.get("put_ltp", 0.0)) if chain_row else 0.0
+        est_premium = round(chain_ltp, 2) if chain_ltp > 0 else fallback_prem
+        target_premium = round(est_premium * 1.35, 2)
+        sl_premium = round(est_premium * 0.82, 2)
 
         target_spot = round(spot_price - (strike_interval * 1.2), 2)
         sl_spot = round(spot_price + (strike_interval * 0.5), 2)

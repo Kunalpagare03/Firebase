@@ -85,9 +85,12 @@ def sync_all():
             decision = _get_trade_decision(data, tech, structure)
             action = "BUY CALL" if "BREAKOUT" in decision or (data.get("final_signal")=="Bullish" and tech["trendline"]=="Bullish") else "BUY PUT" if "BREAKDOWN" in decision or (data.get("final_signal")=="Bearish" and tech["trendline"]=="Bearish") else "WAIT"
 
-            # 1. Actionable Live Strike Recommendation
-            live_signal = select_optimal_strike(symbol, float(spot), action)
+            # 1. Actionable Live Strike Recommendation (Strictly synced with Option Chain LTP)
+            live_signal = select_optimal_strike(symbol, float(spot), action, option_chain=df)
             data["live_trade_signal"] = live_signal
+            if live_signal.get("recommended_contract") and live_signal.get("recommended_contract") != "NO ACTIVE SIGNAL":
+                data["candidate_contract"] = live_signal["recommended_contract"]
+                data["candidate_premium"] = live_signal.get("estimated_premium", 0.0)
 
             # 2. Multi-Pillar Proof of Evidence
             data["proof_of_evidence"] = synthesize_proof_of_evidence(action, float(spot), data, tech, structure)

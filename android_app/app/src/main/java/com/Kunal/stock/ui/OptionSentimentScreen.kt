@@ -287,11 +287,16 @@ private fun OptionChainTab(data: OptionSentimentData) {
         if (data.optionChain.isEmpty()) {
             Text("Waiting for a fresh option-chain snapshot. Run Option Analysis while the market is open.")
         } else {
+            val signalStrike = data.liveTradeSignal.strike
+            val isSignalCall = data.liveTradeSignal.action.contains("CALL", ignoreCase = true) || data.liveTradeSignal.optionType.equals("CE", ignoreCase = true)
+            val isSignalPut = data.liveTradeSignal.action.contains("PUT", ignoreCase = true) || data.liveTradeSignal.optionType.equals("PE", ignoreCase = true)
+
             Row(Modifier.horizontalScroll(rememberScrollState())) {
                 Column {
                     OptionChainRowHeader()
                     visibleStrikes.forEachIndexed { index, strike ->
-                        OptionChainRow(strike, index)
+                        val isRecommended = signalStrike > 0 && kotlin.math.abs(strike.strike - signalStrike) < 0.5
+                        OptionChainRow(strike, index, isRecommended = isRecommended, isSignalCall = isSignalCall, isSignalPut = isSignalPut)
                     }
                 }
             }
@@ -309,24 +314,47 @@ private fun OptionChainRowHeader() {
 }
 
 @Composable
-private fun OptionChainRow(row: OptionStrike, index: Int) {
+private fun OptionChainRow(
+    row: OptionStrike,
+    index: Int,
+    isRecommended: Boolean = false,
+    isSignalCall: Boolean = false,
+    isSignalPut: Boolean = false
+) {
+    val rowBg = when {
+        isRecommended && isSignalCall -> BullishGreen.copy(alpha = 0.18f)
+        isRecommended && isSignalPut -> BearishRed.copy(alpha = 0.18f)
+        isRecommended -> ElectricBlue.copy(alpha = 0.18f)
+        index % 2 == 0 -> MaterialTheme.colorScheme.surfaceVariant
+        else -> MaterialTheme.colorScheme.background
+    }
     Row(
-        Modifier.background(if (index % 2 == 0) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.background)
+        Modifier.background(rowBg)
             .padding(vertical = 7.dp)
     ) {
         val values = listOf(
-            "${String.format("%,.0f", row.strike)}", "₹${String.format("%.2f", row.callLtp)}",
+            if (isRecommended) "${String.format("%,.0f", row.strike)} ★" else "${String.format("%,.0f", row.strike)}",
+            "₹${String.format("%.2f", row.callLtp)}",
             formatOi(row.callOiChange), formatOi(row.callOi), formatOi(row.callVolume),
             formatOi(row.putVolume), formatOi(row.putOi), formatOi(row.putOiChange),
             "₹${String.format("%.2f", row.putLtp)}", row.oiSide
         )
         values.forEachIndexed { cell, value ->
+            val textColor = when {
+                cell == 0 && isRecommended -> if (isSignalCall) BullishGreen else BearishRed
+                cell == 1 && isRecommended && isSignalCall -> BullishGreen
+                cell == 8 && isRecommended && isSignalPut -> BearishRed
+                cell == 2 -> if (row.callOiChange >= 0) BearishRed else BullishGreen
+                cell == 7 -> if (row.putOiChange >= 0) BullishGreen else BearishRed
+                else -> MaterialTheme.colorScheme.onSurface
+            }
+            val textWeight = if (cell == 0 || (cell == 1 && isRecommended && isSignalCall) || (cell == 8 && isRecommended && isSignalPut)) FontWeight.ExtraBold else FontWeight.Normal
             Text(
                 value,
                 Modifier.width(82.dp).padding(horizontal = 4.dp),
                 style = MaterialTheme.typography.labelSmall,
-                fontWeight = if (cell == 0) FontWeight.Bold else FontWeight.Normal,
-                color = when (cell) { 2 -> if (row.callOiChange >= 0) BearishRed else BullishGreen; 7 -> if (row.putOiChange >= 0) BullishGreen else BearishRed; else -> MaterialTheme.colorScheme.onSurface }
+                fontWeight = textWeight,
+                color = textColor
             )
         }
     }
@@ -1303,8 +1331,14 @@ fun ZonePill(text: String, color: Color) {
 @Composable
 fun LiveTradeSignalCard(data: OptionSentimentData) {
     val signal = data.liveTradeSignal
-    val isBuyCall = signal.action.contains("CALL", ignoreCase = true) || data.tradeAction.contains("CALL", ignoreCase = true)
-    val isBuyPut = signal.action.contains("PUT", ignoreCase = true) || data.tradeAction.contains("PUT", ignoreCase = true)
+    val isBuyCall = signal.action.contains("CALL", ignoreCase = true)
+        || data.tradeAction.contains("CALL", ignoreCase = true)
+        || data.deepDirection.contains("CALL", ignoreCase = true)
+        || signal.recommendedContract.contains("CE", ignoreCase = true)
+    val isBuyPut = signal.action.contains("PUT", ignoreCase = true)
+        || data.tradeAction.contains("PUT", ignoreCase = true)
+        || data.deepDirection.contains("PUT", ignoreCase = true)
+        || signal.recommendedContract.contains("PE", ignoreCase = true)
 
     val badgeColor = when {
         isBuyCall -> BullishGreen
@@ -1318,21 +1352,81 @@ fun LiveTradeSignalCard(data: OptionSentimentData) {
         else -> MaterialTheme.colorScheme.surfaceVariant
     }
 
-    val displayContract = if (signal.recommendedContract.isNotBlank() && signal.recommendedContract != "NO ACTIVE SIGNAL") {
-        signal.recommendedContract
-    } else if (isBuyCall) {
-        val st = (kotlin.math.round(data.spotPrice / 50.0) * 50.0).toInt()
-        "${data.symbol} $st CE"
-    } else if (isBuyPut) {
-        val st = (kotlin.math.round(data.spotPrice / 50.0) * 50.0).toInt()
-        "${data.symbol} $st PE"
+    // --- REAL-TIME OPTION CHAIN SYNC ENGINE ---
+    val allChainStrikes = if (data.optionChain.isNotEmpty()) data.optionChain else data.topStrikes
+
+    // Resolve recommended strike:
+    val resolvedStrike = if (signal.strike > 0) {
+        signal.strike
     } else {
-        "WAIT / NO ACTIVE TRIGGER"
+        val extractedFromContract = Regex("""\b(\d{3,6})\b""").find(
+            if (signal.recommendedContract.isNotBlank() && signal.recommendedContract != "NO ACTIVE SIGNAL") signal.recommendedContract else data.candidateContract
+        )?.value?.toDoubleOrNull()
+
+        extractedFromContract ?: if (allChainStrikes.isNotEmpty() && data.spotPrice > 0) {
+            allChainStrikes.minByOrNull { kotlin.math.abs(it.strike - data.spotPrice) }?.strike ?: 0.0
+        } else 0.0
     }
 
-    val estEntryPremium = if (signal.estimatedPremium > 0) signal.estimatedPremium else (data.spotPrice * 0.0065)
-    val targetPrem = if (signal.targetPremium > 0) signal.targetPremium else (estEntryPremium * 1.35)
-    val slPrem = if (signal.stopLossPremium > 0) signal.stopLossPremium else (estEntryPremium * 0.85)
+    // Find the exact matching strike row in Option Chain
+    val matchedChainRow = if (resolvedStrike > 0 && allChainStrikes.isNotEmpty()) {
+        allChainStrikes.find { kotlin.math.abs(it.strike - resolvedStrike) < 0.5 }
+            ?: allChainStrikes.minByOrNull { kotlin.math.abs(it.strike - resolvedStrike) }
+    } else null
+
+    // Exact Live LTP from the Option Chain
+    val liveChainLtp = when {
+        isBuyCall -> matchedChainRow?.callLtp ?: 0.0
+        isBuyPut -> matchedChainRow?.putLtp ?: 0.0
+        else -> 0.0
+    }
+
+    val isLiveChainSynced = liveChainLtp > 0.0
+
+    // Strict priority: Live Option Chain LTP > Signal estimated premium > Candidate premium > Spot estimate
+    val estEntryPremium = when {
+        liveChainLtp > 0.0 -> liveChainLtp
+        signal.estimatedPremium > 0.0 -> signal.estimatedPremium
+        data.candidatePremium > 0.0 -> data.candidatePremium
+        data.spotPrice > 0.0 -> (data.spotPrice * 0.0065)
+        else -> 0.0
+    }
+
+    val contractType = if (isBuyCall) "CE" else if (isBuyPut) "PE" else ""
+    val strikeDisplay = if (matchedChainRow != null) {
+        val s = matchedChainRow.strike
+        if (s % 1.0 == 0.0) "${s.toLong()}" else String.format("%.1f", s)
+    } else if (resolvedStrike > 0) {
+        if (resolvedStrike % 1.0 == 0.0) "${resolvedStrike.toLong()}" else String.format("%.1f", resolvedStrike)
+    } else ""
+
+    val displayContract = when {
+        strikeDisplay.isNotBlank() && contractType.isNotBlank() -> "${data.symbol} $strikeDisplay $contractType"
+        signal.recommendedContract.isNotBlank() && signal.recommendedContract != "NO ACTIVE SIGNAL" -> signal.recommendedContract
+        isBuyCall -> "${data.symbol} ATM CE"
+        isBuyPut -> "${data.symbol} ATM PE"
+        else -> "WAIT / NO ACTIVE TRIGGER"
+    }
+
+    // Dynamic institutional targets & stop loss synchronized with live entry
+    val targetPrem = if (estEntryPremium > 0) {
+        kotlin.math.round(estEntryPremium * 1.35 * 10.0) / 10.0
+    } else signal.targetPremium
+
+    val target2Prem = if (estEntryPremium > 0) {
+        kotlin.math.round(estEntryPremium * 1.65 * 10.0) / 10.0
+    } else 0.0
+
+    val slPrem = if (estEntryPremium > 0) {
+        kotlin.math.round(estEntryPremium * 0.82 * 10.0) / 10.0
+    } else signal.stopLossPremium
+
+    // Live Strike Metrics from Option Chain
+    val liveOi = if (isBuyCall) matchedChainRow?.callOi ?: 0L else matchedChainRow?.putOi ?: 0L
+    val liveOiChange = if (isBuyCall) matchedChainRow?.callOiChange ?: 0L else matchedChainRow?.putOiChange ?: 0L
+    val liveVolume = if (isBuyCall) matchedChainRow?.callVolume ?: 0L else matchedChainRow?.putVolume ?: 0L
+    val liveIv = if (isBuyCall) matchedChainRow?.callIv ?: 0.0 else matchedChainRow?.putIv ?: 0.0
+    val liveBuild = if (isBuyCall) matchedChainRow?.callBuild.orEmpty() else matchedChainRow?.putBuild.orEmpty()
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -1341,7 +1435,7 @@ fun LiveTradeSignalCard(data: OptionSentimentData) {
         border = BorderStroke(1.5.dp, badgeColor.copy(alpha = 0.8f))
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            // Header Row: Title & Action Pill
+            // Header Row: Title, Sync Badge & Action Pill
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -1363,24 +1457,42 @@ fun LiveTradeSignalCard(data: OptionSentimentData) {
                     )
                 }
 
-                Surface(
-                    color = badgeColor.copy(alpha = 0.2f),
-                    shape = RoundedCornerShape(8.dp),
-                    border = BorderStroke(1.dp, badgeColor)
-                ) {
-                    Text(
-                        text = if (isBuyCall) "BUY CALL" else if (isBuyPut) "BUY PUT" else "WAIT",
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
-                        fontWeight = FontWeight.ExtraBold,
-                        fontSize = 12.sp,
-                        color = badgeColor
-                    )
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    // Option Chain Sync Indicator
+                    Surface(
+                        color = if (isLiveChainSynced) BullishGreen.copy(alpha = 0.2f) else GoldWarning.copy(alpha = 0.2f),
+                        shape = RoundedCornerShape(6.dp),
+                        border = BorderStroke(1.dp, if (isLiveChainSynced) BullishGreen.copy(alpha = 0.7f) else GoldWarning.copy(alpha = 0.7f))
+                    ) {
+                        Text(
+                            text = if (isLiveChainSynced) "● CHAIN SYNCED" else "● MODEL TICK",
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp),
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 10.sp,
+                            color = if (isLiveChainSynced) BullishGreen else GoldWarning
+                        )
+                    }
+
+                    // Direction Pill
+                    Surface(
+                        color = badgeColor.copy(alpha = 0.2f),
+                        shape = RoundedCornerShape(8.dp),
+                        border = BorderStroke(1.dp, badgeColor)
+                    ) {
+                        Text(
+                            text = if (isBuyCall) "BUY CALL" else if (isBuyPut) "BUY PUT" else "WAIT",
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                            fontWeight = FontWeight.ExtraBold,
+                            fontSize = 12.sp,
+                            color = badgeColor
+                        )
+                    }
                 }
             }
 
             Spacer(modifier = Modifier.height(10.dp))
 
-            // Highlighted Contract Box
+            // Highlighted Contract & Live Entry Box
             Surface(
                 modifier = Modifier.fillMaxWidth(),
                 color = containerBg,
@@ -1406,20 +1518,85 @@ fun LiveTradeSignalCard(data: OptionSentimentData) {
                             fontWeight = FontWeight.ExtraBold,
                             color = Color.White
                         )
+                        if (strikeDisplay.isNotBlank()) {
+                            Text(
+                                text = "Strike: ₹$strikeDisplay · ${if (isBuyCall) "CALL (CE)" else if (isBuyPut) "PUT (PE)" else ""}",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
 
                     Column(horizontalAlignment = Alignment.End) {
                         Text(
-                            text = "EST. ENTRY",
+                            text = if (isLiveChainSynced) "LIVE CHAIN LTP" else "EST. ENTRY",
                             style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            fontWeight = FontWeight.Bold,
+                            color = if (isLiveChainSynced) BullishGreen else MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Text(
-                            text = if (estEntryPremium > 0) "₹${String.format("%.1f", estEntryPremium)}" else "₹ --",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface
+                            text = if (estEntryPremium > 0) "₹${String.format("%.2f", estEntryPremium)}" else "₹ --",
+                            style = MaterialTheme.typography.headlineSmall,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = if (isLiveChainSynced) Color.White else MaterialTheme.colorScheme.onSurface
                         )
+                        if (isLiveChainSynced) {
+                            Text(
+                                text = "Synced with Chain",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontSize = 9.sp,
+                                color = BullishGreen
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Live Strike Option Chain Depth Row
+            if (matchedChainRow != null) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    color = MaterialTheme.colorScheme.surface.copy(alpha = 0.6f),
+                    shape = RoundedCornerShape(8.dp),
+                    border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f))
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 10.dp, vertical = 6.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "OI: ${formatOi(liveOi)} (${if (liveOiChange >= 0) "+" else ""}${formatOi(liveOiChange)})",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = if (liveOiChange >= 0) BullishGreen else BearishRed,
+                            fontSize = 11.sp
+                        )
+                        Text(
+                            text = "Vol: ${formatOi(liveVolume)}",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            fontSize = 11.sp
+                        )
+                        if (liveIv > 0) {
+                            Text(
+                                text = "IV: ${String.format("%.1f", liveIv)}%",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = ElectricBlue,
+                                fontSize = 11.sp
+                            )
+                        }
+                        if (liveBuild.isNotBlank()) {
+                            Text(
+                                text = liveBuild,
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.SemiBold,
+                                color = if (liveBuild.contains("Long", ignoreCase = true)) BullishGreen else BearishRed,
+                                fontSize = 11.sp
+                            )
+                        }
                     }
                 }
             }
@@ -1431,7 +1608,7 @@ fun LiveTradeSignalCard(data: OptionSentimentData) {
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                // Target Card
+                // Target 1 Card
                 Card(
                     modifier = Modifier.weight(1f),
                     shape = RoundedCornerShape(10.dp),
@@ -1442,11 +1619,11 @@ fun LiveTradeSignalCard(data: OptionSentimentData) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(Icons.Default.ArrowOutward, contentDescription = null, tint = BullishGreen, modifier = Modifier.size(14.dp))
                             Spacer(modifier = Modifier.width(4.dp))
-                            Text("TARGET (+35%)", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = BullishGreen)
+                            Text("TARGET 1 (+35%)", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = BullishGreen)
                         }
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = if (targetPrem > 0) "₹${String.format("%.1f", targetPrem)}" else "₹ --",
+                            text = if (targetPrem > 0) "₹${String.format("%.2f", targetPrem)}" else "₹ --",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.ExtraBold,
                             color = BullishGreen
@@ -1454,6 +1631,30 @@ fun LiveTradeSignalCard(data: OptionSentimentData) {
                         if (signal.targetSpot > 0) {
                             Text("Spot ₹${String.format("%.0f", signal.targetSpot)}", style = MaterialTheme.typography.labelSmall, color = BullishGreen.copy(alpha = 0.8f))
                         }
+                    }
+                }
+
+                // Target 2 Runner Card
+                Card(
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(10.dp),
+                    colors = CardDefaults.cardColors(containerColor = BullishGreenContainer.copy(alpha = 0.2f)),
+                    border = BorderStroke(1.dp, BullishGreen.copy(alpha = 0.35f))
+                ) {
+                    Column(modifier = Modifier.padding(10.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.TrendingUp, contentDescription = null, tint = BullishGreen, modifier = Modifier.size(14.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("TARGET 2 (+65%)", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = BullishGreen)
+                        }
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = if (target2Prem > 0) "₹${String.format("%.2f", target2Prem)}" else "₹ --",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = BullishGreen
+                        )
+                        Text("Runner Exit", style = MaterialTheme.typography.labelSmall, color = BullishGreen.copy(alpha = 0.8f))
                     }
                 }
 
@@ -1468,11 +1669,11 @@ fun LiveTradeSignalCard(data: OptionSentimentData) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(Icons.Default.SouthEast, contentDescription = null, tint = BearishRed, modifier = Modifier.size(14.dp))
                             Spacer(modifier = Modifier.width(4.dp))
-                            Text("STOP LOSS (-15%)", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = BearishRed)
+                            Text("STOP LOSS (-18%)", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = BearishRed)
                         }
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = if (slPrem > 0) "₹${String.format("%.1f", slPrem)}" else "₹ --",
+                            text = if (slPrem > 0) "₹${String.format("%.2f", slPrem)}" else "₹ --",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.ExtraBold,
                             color = BearishRed
@@ -1492,8 +1693,8 @@ fun LiveTradeSignalCard(data: OptionSentimentData) {
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                MetricPill("Risk : Reward", signal.riskRewardRatio.ifBlank { "1 : 2.5" })
-                MetricPill("Confluence Score", if (signal.confidenceScore > 0) "${signal.confidenceScore}%" else "85%")
+                MetricPill("Risk : Reward", signal.riskRewardRatio.ifBlank { "1 : 2.0" })
+                MetricPill("Confluence Score", if (signal.confidenceScore > 0) "${signal.confidenceScore}%" else "88%")
                 MetricPill("Spot Ref", "₹${String.format("%,.0f", if (signal.entrySpot > 0) signal.entrySpot else data.spotPrice)}")
             }
         }

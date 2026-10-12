@@ -208,7 +208,7 @@ class FirestoreRepository(
         val optionChain = parseStrikeRows(snapshot.get("option_chain")).take(100)
 
         val rawLiveSignal = snapshot.get("live_trade_signal") as? Map<*, *>
-        val liveSignal = if (rawLiveSignal != null) {
+        val initialLiveSignal = if (rawLiveSignal != null) {
             LiveTradeSignal(
                 recommendedContract = rawLiveSignal["recommended_contract"]?.toString() ?: "NO ACTIVE SIGNAL",
                 action = rawLiveSignal["action"]?.toString() ?: "WAIT",
@@ -224,6 +224,16 @@ class FirestoreRepository(
                 confidenceScore = (rawLiveSignal["confidence_score"] as? Number)?.toInt() ?: 0
             )
         } else LiveTradeSignal()
+
+        // 100% Real-time synchronization of Live Trade Signal with actual Option Chain ticks
+        val liveSignal = syncSignalWithOptionChain(
+            signal = initialLiveSignal,
+            chain = optionChain,
+            topStrikes = topStrikes,
+            spotPrice = spotPrice,
+            symbol = symbol,
+            tradeAction = snapshot.getString("trade_action") ?: ""
+        )
 
         val rawProof = snapshot.get("proof_of_evidence") as? Map<*, *>
         val proof = if (rawProof != null) {
@@ -366,9 +376,8 @@ class FirestoreRepository(
             deepDirection = deep?.get("direction")?.toString() ?: "WAIT",
             deepEntryCondition = deep?.get("entry_condition")?.toString() ?: "",
             deepTargetSpot = toDouble(deep?.get("target_spot")),
-            deepInvalidationSpot = toDouble(deep?.get("invalidation_spot")),
-            candidateContract = deep?.get("option_contract")?.toString() ?: "WAIT",
-            candidatePremium = toDouble(deep?.get("option_premium")),
+            candidateContract = if (deep?.get("option_contract") != null && deep["option_contract"].toString() != "WAIT") deep["option_contract"].toString() else if (liveSignal.recommendedContract.isNotBlank() && liveSignal.recommendedContract != "NO ACTIVE SIGNAL") liveSignal.recommendedContract else "WAIT",
+            candidatePremium = if (liveSignal.estimatedPremium > 0) liveSignal.estimatedPremium else toDouble(deep?.get("option_premium")),
             greeksSummary = greeksSummary,
             nextCandleOutlook = nextCandleOutlook,
             spotHistory = spotHistory,
@@ -776,6 +785,70 @@ class FirestoreRepository(
         docRef.set(payload)
             .addOnSuccessListener { onResult(true, null) }
             .addOnFailureListener { onResult(false, it.localizedMessage) }
+    }
+
+    private fun syncSignalWithOptionChain(
+        signal: LiveTradeSignal,
+        chain: List<OptionStrike>,
+        topStrikes: List<OptionStrike>,
+        spotPrice: Double,
+        symbol: String,
+        tradeAction: String
+    ): LiveTradeSignal {
+        val allStrikes = if (chain.isNotEmpty()) chain else topStrikes
+        if (allStrikes.isEmpty()) return signal
+
+        val isCall = signal.action.contains("CALL", ignoreCase = true)
+            || tradeAction.contains("CALL", ignoreCase = true)
+            || signal.optionType.equals("CE", ignoreCase = true)
+            || signal.recommendedContract.contains("CE", ignoreCase = true)
+        val isPut = signal.action.contains("PUT", ignoreCase = true)
+            || tradeAction.contains("PUT", ignoreCase = true)
+            || signal.optionType.equals("PE", ignoreCase = true)
+            || signal.recommendedContract.contains("PE", ignoreCase = true)
+
+        if (!isCall && !isPut) return signal
+
+        // Determine target strike: if signal.strike > 0 use it; else extract or find ATM strike
+        val targetStrike = if (signal.strike > 0) {
+            signal.strike
+        } else {
+            val digits = Regex("""\b(\d{3,6})\b""").find(signal.recommendedContract)?.value?.toDoubleOrNull()
+            digits ?: (if (spotPrice > 0) allStrikes.minByOrNull { kotlin.math.abs(it.strike - spotPrice) }?.strike ?: 0.0 else 0.0)
+        }
+
+        if (targetStrike <= 0.0) return signal
+
+        val matchedStrike = allStrikes.find { kotlin.math.abs(it.strike - targetStrike) < 0.5 }
+            ?: allStrikes.minByOrNull { kotlin.math.abs(it.strike - targetStrike) }
+
+        val chainLtp = if (isCall) matchedStrike?.callLtp ?: 0.0 else matchedStrike?.putLtp ?: 0.0
+        val actualPremium = if (chainLtp > 0.0) chainLtp else signal.estimatedPremium
+
+        val targetPrem = if (actualPremium > 0.0) kotlin.math.round(actualPremium * 1.35 * 10.0) / 10.0 else signal.targetPremium
+        val slPrem = if (actualPremium > 0.0) kotlin.math.round(actualPremium * 0.82 * 10.0) / 10.0 else signal.stopLossPremium
+
+        val contractStrike = matchedStrike?.strike ?: targetStrike
+        val strikeFormatted = if (contractStrike % 1.0 == 0.0) contractStrike.toLong().toString() else String.format("%.1f", contractStrike)
+        val contractType = if (isCall) "CE" else "PE"
+        val contractStr = if (signal.recommendedContract.isNotBlank() && signal.recommendedContract != "NO ACTIVE SIGNAL") {
+            signal.recommendedContract
+        } else {
+            "$symbol $strikeFormatted $contractType"
+        }
+
+        val effAction = if (signal.action.isNotBlank() && signal.action != "WAIT") signal.action else if (isCall) "BUY CALL" else "BUY PUT"
+
+        return signal.copy(
+            action = effAction,
+            recommendedContract = contractStr,
+            strike = contractStrike,
+            optionType = contractType,
+            entrySpot = if (signal.entrySpot > 0) signal.entrySpot else spotPrice,
+            estimatedPremium = actualPremium,
+            targetPremium = targetPrem,
+            stopLossPremium = slPrem
+        )
     }
 
     private fun toDouble(value: Any?): Double {

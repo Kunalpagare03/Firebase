@@ -54,9 +54,69 @@ class BacktestViewModel(
             initialValue = UiState.Loading
         )
 
-    fun setSymbol(symbol: String) {
-        selectedSymbol.value = symbol
+    // Stock Universe & Selection (5,229 Stocks - 34 Sectors)
+    val selectedStockName = MutableStateFlow("Reliance Industries")
+    val selectedStockSector = MutableStateFlow("Energy")
+
+    private val _allStocks = MutableStateFlow<List<StockUniverseItem>>(emptyList())
+    val allStocks: StateFlow<List<StockUniverseItem>> = _allStocks.asStateFlow()
+
+    private val _sectors = MutableStateFlow<List<String>>(listOf("ALL"))
+    val sectors: StateFlow<List<String>> = _sectors.asStateFlow()
+
+    val stockSearchQuery = MutableStateFlow("")
+    val selectedSector = MutableStateFlow("ALL")
+
+    val filteredStocks: StateFlow<List<StockUniverseItem>> = combine(
+        _allStocks,
+        stockSearchQuery,
+        selectedSector
+    ) { stocks, query, sector ->
+        val q = query.trim().uppercase()
+        val list = if (stocks.isEmpty()) StockUniverseProvider.benchmarkSymbols else stocks
+        list.asSequence()
+            .filter { item ->
+                val matchesSector = (sector == "ALL" || item.sector.equals(sector, ignoreCase = true))
+                val matchesQuery = q.isEmpty() || item.symbol.contains(q) || item.name.uppercase().contains(q)
+                matchesSector && matchesQuery
+            }
+            .take(150)
+            .toList()
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = StockUniverseProvider.benchmarkSymbols
+    )
+
+    init {
+        // Automatically compute initial simulation for baseline responsiveness
+        runBacktest()
+    }
+
+    fun loadStockUniverse(context: android.content.Context) {
+        if (_allStocks.value.isEmpty()) {
+            viewModelScope.launch {
+                val list = StockUniverseProvider.loadStocksAsync(context)
+                _allStocks.value = list
+                _sectors.value = StockUniverseProvider.getCachedSectors()
+            }
+        }
+    }
+
+    fun setStock(item: StockUniverseItem) {
+        selectedSymbol.value = item.symbol
+        selectedStockName.value = item.name
+        selectedStockSector.value = item.sector
         _customResult.value = null
+        runBacktest()
+    }
+
+    fun setSymbol(symbol: String, name: String? = null, sector: String? = null) {
+        selectedSymbol.value = symbol
+        selectedStockName.value = name ?: symbol
+        selectedStockSector.value = sector ?: "General"
+        _customResult.value = null
+        runBacktest()
     }
 
     fun setStrategyType(type: String) {

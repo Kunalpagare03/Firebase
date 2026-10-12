@@ -31,16 +31,220 @@ import com.Kunal.stock.ui.theme.*
 fun BacktestScreen(
     viewModel: BacktestViewModel = viewModel()
 ) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    LaunchedEffect(Unit) {
+        viewModel.loadStockUniverse(context)
+    }
+
     val uiState by viewModel.uiState.collectAsState()
     val isSimulating by viewModel.isSimulating.collectAsState()
     val selectedSymbol by viewModel.selectedSymbol.collectAsState()
+    val selectedStockName by viewModel.selectedStockName.collectAsState()
+    val selectedStockSector by viewModel.selectedStockSector.collectAsState()
     val strategyType by viewModel.strategyType.collectAsState()
     val targetPct by viewModel.targetPct.collectAsState()
     val stopLossPct by viewModel.stopLossPct.collectAsState()
     val atrMultiplier by viewModel.atrMultiplier.collectAsState()
     val timeframe by viewModel.timeframe.collectAsState()
 
+    val sectors by viewModel.sectors.collectAsState()
+    val filteredStocks by viewModel.filteredStocks.collectAsState()
+    val stockSearchQuery by viewModel.stockSearchQuery.collectAsState()
+    val selectedSector by viewModel.selectedSector.collectAsState()
+
     var activeTab by remember { mutableIntStateOf(0) } // 0: Strategy Specs, 1: Trade Log
+    var showStockSearchModal by remember { mutableStateOf(false) }
+
+    // --- Stock Universe Explorer Dialog (5,229 Stocks across 34 Sectors) ---
+    if (showStockSearchModal) {
+        AlertDialog(
+            onDismissRequest = { showStockSearchModal = false },
+            title = {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column {
+                        Text(
+                            text = "Stock Universe Explorer",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = "5,229 Equities • 34 Sectors from Master List",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = ElectricBlue
+                        )
+                    }
+                    IconButton(
+                        onClick = { showStockSearchModal = false },
+                        modifier = Modifier.size(28.dp)
+                    ) {
+                        Icon(imageVector = Icons.Default.Close, contentDescription = "Close", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+            },
+            text = {
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    // Search Input
+                    OutlinedTextField(
+                        value = stockSearchQuery,
+                        onValueChange = { viewModel.stockSearchQuery.value = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        placeholder = { Text("Search by symbol or company (e.g. Tata, Zomato, MRF)...", fontSize = 12.sp) },
+                        leadingIcon = {
+                            Icon(imageVector = Icons.Default.Search, contentDescription = null, tint = ElectricBlue)
+                        },
+                        trailingIcon = {
+                            if (stockSearchQuery.isNotEmpty()) {
+                                IconButton(onClick = { viewModel.stockSearchQuery.value = "" }) {
+                                    Icon(imageVector = Icons.Default.Clear, contentDescription = "Clear", modifier = Modifier.size(16.dp))
+                                }
+                            }
+                        },
+                        singleLine = true,
+                        shape = RoundedCornerShape(10.dp)
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    // Sector Filter Chips
+                    Text(
+                        text = "Filter by Sector (${sectors.size} Sectors):",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        sectors.forEach { sec ->
+                            val isSelected = selectedSector.equals(sec, ignoreCase = true)
+                            FilterChip(
+                                selected = isSelected,
+                                onClick = { viewModel.selectedSector.value = sec },
+                                label = { Text(sec, fontSize = 11.sp, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal) },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = ElectricBlue,
+                                    containerColor = MaterialTheme.colorScheme.surface
+                                ),
+                                shape = RoundedCornerShape(6.dp)
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Text(
+                        text = "Showing matching stocks (tap to select):",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    // Bounded LazyColumn for smooth scrolling
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(320.dp)
+                            .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(8.dp))
+                            .padding(4.dp)
+                    ) {
+                        LazyColumn(
+                            modifier = Modifier.fillMaxSize(),
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            // Option for custom typed ticker if user typed something specific
+                            if (stockSearchQuery.isNotBlank() && filteredStocks.none { it.symbol.equals(stockSearchQuery.trim(), ignoreCase = true) }) {
+                                item {
+                                    Surface(
+                                        onClick = {
+                                            viewModel.setSymbol(stockSearchQuery.trim().uppercase(), stockSearchQuery.trim().uppercase(), "Custom")
+                                            showStockSearchModal = false
+                                        },
+                                        color = ElectricBlue.copy(alpha = 0.15f),
+                                        shape = RoundedCornerShape(8.dp),
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.padding(10.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Icon(imageVector = Icons.Default.Add, contentDescription = null, tint = ElectricBlue, modifier = Modifier.size(16.dp))
+                                            Spacer(modifier = Modifier.width(6.dp))
+                                            Text(
+                                                text = "Test custom ticker: \"${stockSearchQuery.trim().uppercase()}\"",
+                                                color = ElectricBlue,
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 13.sp
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+
+                            items(filteredStocks) { item ->
+                                Surface(
+                                    onClick = {
+                                        viewModel.setStock(item)
+                                        showStockSearchModal = false
+                                    },
+                                    color = if (selectedSymbol == item.symbol) ElectricBlue.copy(alpha = 0.2f) else MaterialTheme.colorScheme.surfaceVariant,
+                                    shape = RoundedCornerShape(8.dp),
+                                    border = if (selectedSymbol == item.symbol) BorderStroke(1.dp, ElectricBlue) else null,
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = 10.dp, vertical = 8.dp),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Text(
+                                                text = item.name,
+                                                fontSize = 13.sp,
+                                                fontWeight = FontWeight.SemiBold,
+                                                color = MaterialTheme.colorScheme.onSurface
+                                            )
+                                            Text(
+                                                text = item.sector,
+                                                fontSize = 11.sp,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
+                                        Surface(
+                                            color = MaterialTheme.colorScheme.primaryContainer,
+                                            shape = RoundedCornerShape(4.dp)
+                                        ) {
+                                            Text(
+                                                text = item.symbol,
+                                                fontSize = 11.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(onClick = { showStockSearchModal = false }) {
+                    Text("Close")
+                }
+            }
+        )
+    }
 
     Column(
         modifier = Modifier
@@ -123,25 +327,134 @@ fun BacktestScreen(
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                // Asset Selector
+                // Asset Selector Header
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column {
+                        Text(
+                            text = "Target Stock Asset",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            text = "5,229 Stocks • 34 Sectors from Excel",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = ElectricBlue
+                        )
+                    }
+
+                    FilledTonalButton(
+                        onClick = { showStockSearchModal = true },
+                        shape = RoundedCornerShape(8.dp),
+                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Search,
+                            contentDescription = null,
+                            modifier = Modifier.size(15.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = "Browse All (5,200+)",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Selected Stock Active Card
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    color = MaterialTheme.colorScheme.surface,
+                    shape = RoundedCornerShape(10.dp),
+                    border = BorderStroke(1.dp, ElectricBlue.copy(alpha = 0.5f))
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 12.dp, vertical = 10.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    text = selectedStockName,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 15.sp,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Surface(
+                                    color = ElectricBlue.copy(alpha = 0.2f),
+                                    shape = RoundedCornerShape(4.dp)
+                                ) {
+                                    Text(
+                                        text = selectedSymbol,
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.ExtraBold,
+                                        color = ElectricBlue,
+                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                    )
+                                }
+                            }
+                            Text(
+                                text = "Sector: $selectedStockSector • Ready for Quantitative Backtest",
+                                fontSize = 11.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+
+                        IconButton(
+                            onClick = { showStockSearchModal = true },
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Search,
+                                contentDescription = "Search All Stocks",
+                                tint = ElectricBlue
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                // Benchmark Quick Access Pills
                 Text(
-                    text = "Stock Symbol",
-                    style = MaterialTheme.typography.labelMedium,
+                    text = "Benchmark Quick Access:",
+                    style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                Spacer(modifier = Modifier.height(6.dp))
+                Spacer(modifier = Modifier.height(4.dp))
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .horizontalScroll(rememberScrollState()),
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    val availableSymbols = listOf("RELIANCE", "TCS", "INFY", "HDFCBANK", "ICICIBANK", "TATAMOTORS", "BHARTIARTL", "SBIN", "LT", "ITC")
-                    availableSymbols.forEach { sym ->
+                    val quickSymbols = listOf(
+                        Triple("RELIANCE", "Reliance Industries", "Energy"),
+                        Triple("TCS", "Tata Consultancy Services", "Software Services"),
+                        Triple("INFOSYS", "Infosys", "Software Services"),
+                        Triple("HDFCBANK", "HDFC Bank", "Financial services"),
+                        Triple("ICICIBANK", "ICICI Bank", "Financial services"),
+                        Triple("TATAMOTORS", "Tata Motors", "Automobile"),
+                        Triple("BHARTIARTL", "Bharti Airtel", "Telecom"),
+                        Triple("SBIN", "State Bank of India", "Financial services"),
+                        Triple("LT", "Larsen & Toubro", "Engineering & Capital Goods"),
+                        Triple("ITC", "ITC", "FMCG")
+                    )
+                    quickSymbols.forEach { (sym, name, sec) ->
                         val isSelected = selectedSymbol == sym
                         FilterChip(
                             selected = isSelected,
-                            onClick = { viewModel.setSymbol(sym) },
+                            onClick = { viewModel.setSymbol(sym, name, sec) },
                             label = { Text(sym, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal) },
                             colors = FilterChipDefaults.filterChipColors(
                                 selectedContainerColor = MaterialTheme.colorScheme.primary,

@@ -1,4 +1,4 @@
-﻿package com.Kunal.stock.ui
+package com.Kunal.stock.ui
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.BorderStroke
@@ -501,10 +501,45 @@ fun OptionSentimentContent(data: OptionSentimentData) {
     var showProbabilityMomentum by remember { mutableStateOf(true) }
     var showHeroZero by remember { mutableStateOf(data.heroZeroAnalysis.isHeroZeroCandidate) }
     var showQuantAnalytics by remember { mutableStateOf(false) }
+    var showAgentPanel by remember { mutableStateOf(false) }
+    var showSignalLog by remember { mutableStateOf(false) }
     var showTechnicalSetup by remember { mutableStateOf(false) }
     var showChartOutlook by remember { mutableStateOf(false) }
     var showMarketEvidence by remember { mutableStateOf(false) }
     var showKeyMetrics by remember { mutableStateOf(false) }
+
+    // Multi-agent pipeline result
+    val agentResult = remember(data.symbol, data.spotPrice) {
+        if (data.spotPrice > 0) runFullAgentPipeline(data.symbol, data.spotPrice) else null
+    }
+
+    // Options signal log via SharedPreferences
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    val signalLog = remember { mutableStateListOf<String>() }
+    LaunchedEffect(Unit) {
+        val prefs = ctx.getSharedPreferences("option_signal_log", android.content.Context.MODE_PRIVATE)
+        val raw = prefs.getString("log", "") ?: ""
+        if (raw.isNotBlank()) {
+            signalLog.clear()
+            signalLog.addAll(raw.split("||").filter { it.isNotBlank() }.reversed().take(30))
+        }
+    }
+    LaunchedEffect(data.liveTradeSignal.recommendedContract) {
+        val sig = data.liveTradeSignal
+        if (sig.recommendedContract.isNotBlank() && sig.recommendedContract != "WAIT" && data.spotPrice > 0) {
+            val sdf = java.text.SimpleDateFormat("dd MMM HH:mm", java.util.Locale.getDefault())
+            val entry = "${sdf.format(java.util.Date())} | ${sig.action} | ${sig.recommendedContract} | Entry -Rs${String.format("%.1f", sig.estimatedPremium)} | T1 -Rs${String.format("%.1f", sig.targetPremium)} | SL -Rs${String.format("%.1f", sig.stopLossPremium)}"
+            val prefs = ctx.getSharedPreferences("option_signal_log", android.content.Context.MODE_PRIVATE)
+            val existing = prefs.getString("log", "") ?: ""
+            val entries = existing.split("||").filter { it.isNotBlank() }.toMutableList()
+            if (entries.none { it.contains(sig.recommendedContract) && it.startsWith(entry.take(12)) }) {
+                entries.add(entry)
+                prefs.edit().putString("log", entries.takeLast(50).joinToString("||")).apply()
+                signalLog.clear()
+                signalLog.addAll(entries.reversed().take(30))
+            }
+        }
+    }
 
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
 
@@ -692,6 +727,159 @@ fun OptionSentimentContent(data: OptionSentimentData) {
                 QuantOptionChainCard(data.quantOptionChain)
                 TimeWindowReversalCard(data.timeWindowReversal)
                 ProofOfEvidenceCard(data.proofOfEvidence)
+            }
+        }
+
+        // ═══════════════════════════════════════════════════
+        // SECTION 6B: MULTI-AGENT AI PANEL (collapsible)
+        // Greeks / IV Smile / OI agents + Master Supervisor
+        // ═══════════════════════════════════════════════════
+        DashboardSectionHeader(
+            title = "🤖 Multi-Agent AI Analysis",
+            description = "6 specialist sub-agents → Options & Futures managers → Master Supervisor consensus",
+            isExpanded = showAgentPanel,
+            onToggle = { showAgentPanel = !showAgentPanel }
+        )
+        AnimatedVisibility(visible = showAgentPanel) {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                agentResult?.let { ar ->
+                    // Master Supervisor Card
+                    val masterColor = when (ar.masterConsensus.finalDirection) {
+                        "BULLISH" -> BullishGreen; "BEARISH" -> BearishRed; else -> GoldWarning
+                    }
+                    Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(14.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                        border = BorderStroke(1.dp, masterColor.copy(alpha = 0.6f))) {
+                        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.Default.AccountTree, null, tint = masterColor, modifier = Modifier.size(18.dp))
+                                    Spacer(Modifier.width(6.dp))
+                                    Text("Master Supervisor", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                                }
+                                Surface(color = masterColor.copy(alpha = 0.2f), shape = RoundedCornerShape(8.dp),
+                                    border = BorderStroke(1.dp, masterColor)) {
+                                    Text(ar.masterConsensus.finalSignal,
+                                        Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                                        fontWeight = FontWeight.ExtraBold, fontSize = 11.sp, color = masterColor)
+                                }
+                            }
+                            if (ar.masterConsensus.trendAlignmentLock) {
+                                Surface(color = BearishRed.copy(alpha = 0.12f), shape = RoundedCornerShape(6.dp)) {
+                                    Text("⚠ TREND LOCK: ",
+                                        Modifier.padding(8.dp), style = MaterialTheme.typography.labelSmall, color = BearishRed)
+                                }
+                            }
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                MetricPill("Confidence", "%")
+                                MetricPill("Macro", ar.masterConsensus.macroTrend)
+                                MetricPill("Risk", ar.masterConsensus.riskParameterStatus)
+                            }
+                            Text(ar.masterConsensus.crossClusterInsight.take(200),
+                                style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                    // Options Cluster
+                    Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                        border = BorderStroke(0.5.dp, ElectricBlue.copy(alpha = 0.5f))) {
+                        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Text("Options Cluster — ",
+                                style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, color = ElectricBlue)
+                            listOf(ar.optionsCluster.greeksReport, ar.optionsCluster.ivSmileReport, ar.optionsCluster.openInterestReport).forEach { agent ->
+                                val ac = when (agent.signalBias) { "BULLISH" -> BullishGreen; "BEARISH" -> BearishRed; else -> GoldWarning }
+                                Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
+                                    Column(Modifier.weight(1f)) {
+                                        Text(agent.agentName, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold)
+                                        Text(agent.outputSummary.take(90), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    }
+                                    Surface(color = ac.copy(alpha = 0.15f), shape = RoundedCornerShape(4.dp)) {
+                                        Text(" %",
+                                            Modifier.padding(horizontal = 5.dp, vertical = 2.dp), fontSize = 9.sp, fontWeight = FontWeight.Bold, color = ac)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    // Futures Cluster
+                    Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                        border = BorderStroke(0.5.dp, GoldWarning.copy(alpha = 0.5f))) {
+                        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Text("Futures Cluster — ",
+                                style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, color = GoldWarning)
+                            listOf(ar.futuresCluster.longShortReport, ar.futuresCluster.premiumDiscountReport, ar.futuresCluster.deliveryVolumeReport).forEach { agent ->
+                                val ac = when (agent.signalBias) { "BULLISH" -> BullishGreen; "BEARISH" -> BearishRed; else -> GoldWarning }
+                                Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
+                                    Column(Modifier.weight(1f)) {
+                                        Text(agent.agentName, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold)
+                                        Text(agent.outputSummary.take(90), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    }
+                                    Surface(color = ac.copy(alpha = 0.15f), shape = RoundedCornerShape(4.dp)) {
+                                        Text(" %",
+                                            Modifier.padding(horizontal = 5.dp, vertical = 2.dp), fontSize = 9.sp, fontWeight = FontWeight.Bold, color = ac)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } ?: Text("Run Option Analysis with a valid spot price to activate the agent pipeline.",
+                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+
+        // ═══════════════════════════════════════════════════
+        // SECTION 6C: SIGNAL LOG & HERO-ZERO ARCHIVE
+        // Auto-saved history of every generated signal
+        // ═══════════════════════════════════════════════════
+        DashboardSectionHeader(
+            title = "📋 Signal Log & Hero-Zero Archive",
+            description = "Auto-saved history of all option signals + full Hero-Zero vault for performance review",
+            isExpanded = showSignalLog,
+            onToggle = { showSignalLog = !showSignalLog }
+        )
+        AnimatedVisibility(visible = showSignalLog) {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                // Signal log
+                if (signalLog.isEmpty()) {
+                    Surface(color = MaterialTheme.colorScheme.surfaceVariant, shape = RoundedCornerShape(10.dp), modifier = Modifier.fillMaxWidth()) {
+                        Text("No signals logged yet. Signals are auto-saved when a valid live trade signal is generated.",
+                            Modifier.padding(12.dp), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                } else {
+                    Text("Signal Log — last  signals (most recent first)",
+                        style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    signalLog.take(15).forEach { entry ->
+                        val isCall = entry.contains("CALL", ignoreCase = true) || entry.contains("CE")
+                        val isPut  = entry.contains("PUT",  ignoreCase = true) || entry.contains("PE")
+                        val entryColor = when { isCall -> BullishGreen; isPut -> BearishRed; else -> ElectricBlue }
+                        Surface(color = MaterialTheme.colorScheme.surfaceVariant, shape = RoundedCornerShape(8.dp),
+                            border = BorderStroke(0.5.dp, entryColor.copy(alpha = 0.4f)), modifier = Modifier.fillMaxWidth()) {
+                            Row(Modifier.padding(horizontal = 10.dp, vertical = 7.dp), Arrangement.SpaceBetween, Alignment.CenterVertically) {
+                                Text(entry, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.weight(1f))
+                                Surface(color = entryColor.copy(0.15f), shape = RoundedCornerShape(4.dp)) {
+                                    Text(if (isCall) "CE" else if (isPut) "PE" else "?",
+                                        Modifier.padding(horizontal = 5.dp, vertical = 2.dp), fontSize = 9.sp, fontWeight = FontWeight.Bold, color = entryColor)
+                                }
+                            }
+                        }
+                    }
+                }
+                // Hero-Zero Archive (re-reads from prefs)
+                val hzPrefs = ctx.getSharedPreferences("hero_zero_prefs", android.content.Context.MODE_PRIVATE)
+                val hzRaw = hzPrefs.getString("hero_zero_log", "") ?: ""
+                val hzEntries = hzRaw.split("||").filter { it.isNotBlank() }.reversed()
+                if (hzEntries.isNotEmpty()) {
+                    Divider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
+                    Text("⭐ Hero-Zero Archive —  saved setups",
+                        style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, color = GoldWarning)
+                    hzEntries.take(10).forEach { hz ->
+                        Surface(color = GoldWarning.copy(0.06f), shape = RoundedCornerShape(8.dp),
+                            border = BorderStroke(0.5.dp, GoldWarning.copy(alpha = 0.4f)), modifier = Modifier.fillMaxWidth()) {
+                            Text(hz, Modifier.padding(9.dp), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurface)
+                        }
+                    }
+                }
             }
         }
 

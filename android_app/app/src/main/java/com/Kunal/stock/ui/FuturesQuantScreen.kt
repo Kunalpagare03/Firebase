@@ -288,6 +288,9 @@ private fun MultiAgentAnalyticsTab(
             if (result.masterConsensus.payload.isActive) {
                 SignalPayloadCard(result.masterConsensus.payload)
             }
+
+            // ── Next Candle Forecast ──
+            NextCandleForecastCard(result)
         } else if (isProcessing) {
             AgentLoadingCard()
         }
@@ -312,6 +315,73 @@ private fun MultiAgentAnalyticsTab(
 // ────────────────────────────────────────────────────────────────────
 // AGENT UI COMPONENTS
 // ────────────────────────────────────────────────────────────────────
+
+@Composable
+private fun NextCandleForecastCard(result: FullAgentPipelineResult) {
+    val master = result.masterConsensus
+    val payload = master.payload
+    val direction = master.finalDirection
+    val dirColor = when (direction) { "BULLISH" -> BullishGreen; "BEARISH" -> BearishRed; else -> GoldWarning }
+    val candleIcon = when (direction) { "BULLISH" -> "🟢"; "BEARISH" -> "🔴"; else -> "🟡" }
+    // Derive range from payload entry/SL/TP or fallback
+    val rangeHigh = if (payload.isActive) payload.entryCeiling else 0.0
+    val rangeLow  = if (payload.isActive) payload.hardStopLoss  else 0.0
+    val volSigma  = if (payload.pillarVolumeDelta.isNotBlank()) payload.pillarVolumeDelta else "—"
+    val mtfStatus = if (payload.pillarMTFStatus.isNotBlank()) payload.pillarMTFStatus else "Awaiting data"
+    val triggerCandle = when (direction) {
+        "BULLISH" -> "Bullish engulfing / breakout close above ${if (payload.pillarSRLevel.isNotBlank()) payload.pillarSRLevel else "key resistance"}"
+        "BEARISH" -> "Bearish rejection / breakdown close below ${if (payload.pillarSRLevel.isNotBlank()) payload.pillarSRLevel else "key support"}"
+        else      -> "Inside-bar consolidation expected — no directional bias confirmed"
+    }
+    Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(14.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+        border = BorderStroke(1.dp, dirColor.copy(alpha = 0.5f))) {
+        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("🕯", fontSize = 18.sp)
+                    Spacer(Modifier.width(6.dp))
+                    Text("Next Candle Forecast", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                }
+                Surface(color = dirColor.copy(0.18f), shape = RoundedCornerShape(8.dp), border = BorderStroke(1.dp, dirColor)) {
+                    Text("$candleIcon $direction", Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                        fontWeight = FontWeight.ExtraBold, fontSize = 11.sp, color = dirColor)
+                }
+            }
+            Text("Master consensus: ${master.finalSignal} · Confidence ${master.overallConfidence}%",
+                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.SemiBold)
+            if (payload.isActive && rangeHigh > 0) {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    MetricTile("Range High", "₹${String.format("%,.1f", rangeHigh)}", dirColor)
+                    MetricTile("Range Low",  "₹${String.format("%,.1f", rangeLow)}",  BearishRed)
+                    MetricTile("Vol Spike",  volSigma, GoldWarning)
+                }
+            }
+            // Trigger Candle row
+            Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.Top) {
+                Text("Trigger Candle", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.width(100.dp))
+                Text(triggerCandle, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.weight(1f))
+            }
+            // Invalidation row
+            Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
+                Text("Invalidation (SL)", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.width(100.dp))
+                Text(if (payload.isActive) "₹${String.format("%,.2f", payload.hardStopLoss)}" else "Not computed yet",
+                    style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = BearishRed)
+            }
+            // MTF Alignment row
+            Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
+                Text("MTF Alignment", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.width(100.dp))
+                Text(mtfStatus, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.weight(1f))
+            }
+            if (master.trendAlignmentLock) {
+                Surface(color = BearishRed.copy(0.1f), shape = RoundedCornerShape(6.dp), modifier = Modifier.fillMaxWidth()) {
+                    Text("⚠ Forecast suppressed — trend alignment lock active. ${master.trendLockReason.take(80)}",
+                        Modifier.padding(8.dp), style = MaterialTheme.typography.labelSmall, color = BearishRed)
+                }
+            }
+        }
+    }
+}
 
 @Composable
 private fun AgentArchitectureBanner() {

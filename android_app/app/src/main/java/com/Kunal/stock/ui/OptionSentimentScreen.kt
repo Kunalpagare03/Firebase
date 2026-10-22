@@ -1,4 +1,4 @@
-package com.Kunal.stock.ui
+﻿package com.Kunal.stock.ui
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.BorderStroke
@@ -294,7 +294,30 @@ private fun OptionChainTab(data: OptionSentimentData) {
             Row(Modifier.horizontalScroll(rememberScrollState())) {
                 Column {
                     OptionChainRowHeader()
+                    val atmStrikeIndex = visibleStrikes.indices.minByOrNull { i -> kotlin.math.abs(visibleStrikes[i].strike - data.spotPrice) } ?: -1
                     visibleStrikes.forEachIndexed { index, strike ->
+                        // ATM separator row — inserted BEFORE the ATM strike row
+                        if (index == atmStrikeIndex) {
+                            Row(
+                                modifier = Modifier
+                                    .background(ElectricBlue.copy(alpha = 0.22f))
+                                    .padding(vertical = 5.dp)
+                                    .fillMaxWidth(0.85f),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.Center
+                            ) {
+                                Icon(Icons.Default.FiberManualRecord, contentDescription = null, tint = ElectricBlue, modifier = Modifier.size(8.dp))
+                                Spacer(Modifier.width(6.dp))
+                                Text(
+                                    text = "◀ ATM  ₹${String.format("%,.0f", data.spotPrice)}  ▶",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = ElectricBlue
+                                )
+                                Spacer(Modifier.width(6.dp))
+                                Icon(Icons.Default.FiberManualRecord, contentDescription = null, tint = ElectricBlue, modifier = Modifier.size(8.dp))
+                            }
+                        }
                         val isRecommended = signalStrike > 0 && kotlin.math.abs(strike.strike - signalStrike) < 0.5
                         OptionChainRow(strike, index, isRecommended = isRecommended, isSignalCall = isSignalCall, isSignalPut = isSignalPut)
                     }
@@ -473,8 +496,21 @@ fun OptionSentimentContent(data: OptionSentimentData) {
         else -> MaterialTheme.colorScheme.surfaceVariant
     }
 
-    Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-        // --- A. HERO SENTIMENT CARD ---
+    // Collapsible section state
+    var showAlerts by remember { mutableStateOf(true) }
+    var showProbabilityMomentum by remember { mutableStateOf(true) }
+    var showHeroZero by remember { mutableStateOf(data.heroZeroAnalysis.isHeroZeroCandidate) }
+    var showQuantAnalytics by remember { mutableStateOf(false) }
+    var showTechnicalSetup by remember { mutableStateOf(false) }
+    var showChartOutlook by remember { mutableStateOf(false) }
+    var showMarketEvidence by remember { mutableStateOf(false) }
+    var showKeyMetrics by remember { mutableStateOf(false) }
+
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+
+        // ═══════════════════════════════════════════════════
+        // SECTION 1: PRICE OVERVIEW (always visible)
+        // ═══════════════════════════════════════════════════
         Card(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(16.dp),
@@ -500,8 +536,6 @@ fun OptionSentimentContent(data: OptionSentimentData) {
                             color = MaterialTheme.colorScheme.onSurface
                         )
                     }
-
-                    // Directional Badge
                     Surface(
                         color = signalBg,
                         shape = RoundedCornerShape(20.dp),
@@ -531,11 +565,9 @@ fun OptionSentimentContent(data: OptionSentimentData) {
                         }
                     }
                 }
-
                 Spacer(modifier = Modifier.height(10.dp))
                 Divider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f))
                 Spacer(modifier = Modifier.height(10.dp))
-
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -566,297 +598,341 @@ fun OptionSentimentContent(data: OptionSentimentData) {
             }
         }
 
-        // --- B. HFT INSTITUTIONAL BURST ALERT ---
-        if (data.hftBurstAlert.isActive) {
-            HftBurstAlertCard(data.hftBurstAlert)
-        }
-
-        // --- C. BIG MOMENTUM FRACTAL ALERT (WHEN DETECTED) ---
-        if (data.bigMomentumAlert.isImminent || data.bigMomentumAlert.title.isNotBlank()) {
-            BigMomentumAlertCard(data.bigMomentumAlert)
-        }
-
-        // --- D. ACTIONABLE LIVE STRIKE SIGNAL CARD ---
+        // ═══════════════════════════════════════════════════
+        // SECTION 2: LIVE SIGNAL (always visible)
+        // Entry timing & premium levels based on live chain
+        // ═══════════════════════════════════════════════════
+        DashboardSectionHeader(
+            title = "⚡ Live Trade Signal",
+            description = "Entry timing & premium levels synced with live option chain",
+            isExpanded = true,
+            alwaysExpanded = true,
+            onToggle = {}
+        )
         LiveTradeSignalCard(data)
 
-        // --- D1. SYNTHESIZED UNIFIED DIRECTIONAL PROBABILITY VECTOR GAUGE (Item 8) ---
-        UnifiedDirectionalProbabilityCard(data.multiHorizonProbabilities, data.finalSignal)
-
-        // --- D2. VELOCITY & MOMENTUM SCANNER (Item 6) ---
-        VelocityMomentumScannerCard(data.liveTickRate10s, data.liveMove10sPct, data.rapidActivity, data.rapidActivityNote)
-
-        // --- D3. ANTI-WHIPSAW & TRAP DETECTION (Item 7) ---
-        FakeBreakoutCard(data.fakeBreakoutAnalysis)
-
-        // --- D4. HERO-ZERO EXECUTION MODULE WITH LOGS & PERSISTENCE (Item 3) ---
-        HeroZeroCard(data.heroZeroAnalysis)
-
-        // --- D5. STREAMING STRATEGY BACKTESTER (Item 9) ---
-        StreamingStrategyBacktesterCard(data.symbol, data.spotPrice, data.expectedValue, data.liveTradeSignal)
-
-        // --- D6. QUANT REGIME & EXPECTED VALUE (EV / RR) CARD ---
-        QuantRegimeEvCard(data.regimeName, data.expectedValue, data.liveTradeSignal)
-
-        // --- D7. QUANT OPTION CHAIN ANALYTICS CARD ---
-        QuantOptionChainCard(data.quantOptionChain)
-
-        // --- E. INTRADAY TIME WINDOW & CANDLESTICK REVERSAL ---
-        TimeWindowReversalCard(data.timeWindowReversal)
-
-        // --- F. 3-PILLAR PROOF OF EVIDENCE CARD ---
-        ProofOfEvidenceCard(data.proofOfEvidence)
-
-        // --- E. CONDITIONAL SETUP & TECHNICALS BANNER ---
-        val actionColor = when {
-            data.tradeAction.contains("CALL") -> BullishGreen
-            data.tradeAction.contains("PUT") -> BearishRed
-            else -> ElectricBlue
-        }
-
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(14.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
-        ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Default.ElectricBolt,
-                            contentDescription = null,
-                            tint = GoldWarning,
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(
-                            text = "Technical Confluence",
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                    }
-
-                    Surface(
-                        color = actionColor.copy(alpha = 0.2f),
-                        shape = RoundedCornerShape(8.dp)
-                    ) {
-                        Text(
-                            text = data.tradeAction,
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 11.sp,
-                            color = actionColor
-                        )
-                    }
-                }
-
-                if (data.tradeTrigger.isNotEmpty()) {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = data.tradeTrigger,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(10.dp))
-                // Technicals Chips
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    MetricPill("RSI", data.rsi)
-                    MetricPill("MACD", data.macd)
-                    MetricPill("Trend", data.trendline)
-                }
-            }
-        }
-
-        // --- F. DEEP LIVE ANALYSIS ---
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(14.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-            border = BorderStroke(
-                1.dp,
-                if (data.analysisConfidence == "High") BullishGreen.copy(alpha = 0.65f)
-                else MaterialTheme.colorScheme.outline
-            )
-        ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "Deep Option Analysis",
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Surface(
-                        color = if (data.analysisConfidence == "High") BullishGreenContainer else MaterialTheme.colorScheme.background,
-                        shape = RoundedCornerShape(8.dp)
-                    ) {
-                        Text(
-                            text = "${data.analysisConfidence} confidence",
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = if (data.analysisConfidence == "High") BullishGreen else MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-                if (data.analysisSummary.isNotBlank()) {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(data.analysisSummary, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-                Spacer(modifier = Modifier.height(10.dp))
-                MetricPill("Chart", "${data.chartTrend}: ${data.chartPattern}")
-                Spacer(modifier = Modifier.height(6.dp))
-                MetricPill("Flow", "${data.marketPressure} · Vol PCR ${if (data.volumePcr > 0) String.format("%.2f", data.volumePcr) else "--"}")
-                Spacer(modifier = Modifier.height(6.dp))
-                MetricPill("Greeks", data.greeksSummary)
-            }
-        }
-
-        // --- D. AUTO CANDLE CHART AND OUTLOOK ---
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(14.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
-        ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Text("Auto live candle chart", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    "Built from synced live spot history. It is an analysis view, not a price prediction.",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Spacer(modifier = Modifier.height(10.dp))
-        LiveCandleChart(
-            data.symbol, data.spotPrice, data.spotHistory, data.supportZones,
-            data.resistanceZones,
-            data.optionChain.sortedBy { kotlin.math.abs(it.strike - data.spotPrice) }
-                .take(5).map { it.strike }
+        // ═══════════════════════════════════════════════════
+        // SECTION 3: MARKET ALERTS (collapsible)
+        // Real-time institutional activity & momentum bursts
+        // ═══════════════════════════════════════════════════
+        val hasAlerts = data.hftBurstAlert.isActive || data.bigMomentumAlert.isImminent || data.bigMomentumAlert.title.isNotBlank()
+        DashboardSectionHeader(
+            title = "🔔 Market Alerts ${if (hasAlerts) "· ACTIVE" else ""}",
+            description = "Real-time HFT burst & big momentum fractal detections",
+            isExpanded = showAlerts,
+            onToggle = { showAlerts = !showAlerts }
         )
-                Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                    Text("— Support", style = MaterialTheme.typography.labelSmall, color = BullishGreen)
-                    Text("- - Resistance", style = MaterialTheme.typography.labelSmall, color = BearishRed)
-                    Text("— Price", style = MaterialTheme.typography.labelSmall, color = ElectricBlue)
+        AnimatedVisibility(visible = showAlerts) {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                if (data.hftBurstAlert.isActive) HftBurstAlertCard(data.hftBurstAlert)
+                if (data.bigMomentumAlert.isImminent || data.bigMomentumAlert.title.isNotBlank()) BigMomentumAlertCard(data.bigMomentumAlert)
+                if (!hasAlerts) {
+                    Surface(
+                        color = MaterialTheme.colorScheme.surfaceVariant,
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            "No active alerts. Monitoring for HFT burst & momentum events.",
+                            modifier = Modifier.padding(12.dp),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
-                Spacer(modifier = Modifier.height(10.dp))
-                Text("Next candle outlook", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
-                Spacer(modifier = Modifier.height(2.dp))
-                Text(data.nextCandleOutlook, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
 
-        OptionEvidenceCard(data)
-
-        // --- E. 2x2 KEY METRICS GRID ---
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            MetricCard(
-                title = "PCR (OI)",
-                value = if (data.pcrOi > 0) String.format("%.2f", data.pcrOi) else "--",
-                subtitle = if (data.pcrOi > 1.1) "Bullish Bias" else if (data.pcrOi < 0.9) "Bearish Bias" else "Neutral",
-                valueColor = if (data.pcrOi > 1.1) BullishGreen else if (data.pcrOi < 0.9) BearishRed else MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.weight(1f)
-            )
-            MetricCard(
-                title = "PCR (Volume)",
-                value = if (data.pcrVolume > 0) String.format("%.2f", data.pcrVolume) else "--",
-                subtitle = "Volume Flow",
-                valueColor = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.weight(1f)
-            )
+        // ═══════════════════════════════════════════════════
+        // SECTION 4: PROBABILITY & MOMENTUM (collapsible)
+        // Multi-horizon directional probabilities & velocity scan
+        // ═══════════════════════════════════════════════════
+        DashboardSectionHeader(
+            title = "📊 Probability & Momentum",
+            description = "Multi-candle directional forecast, velocity scanner & trap detection",
+            isExpanded = showProbabilityMomentum,
+            onToggle = { showProbabilityMomentum = !showProbabilityMomentum }
+        )
+        AnimatedVisibility(visible = showProbabilityMomentum) {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                UnifiedDirectionalProbabilityCard(data.multiHorizonProbabilities, data.finalSignal)
+                VelocityMomentumScannerCard(data.liveTickRate10s, data.liveMove10sPct, data.rapidActivity, data.rapidActivityNote)
+                FakeBreakoutCard(data.fakeBreakoutAnalysis)
+            }
         }
 
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            MetricCard(
-                title = "Max Pain Strike",
-                value = if (data.maxPain > 0) String.format("₹%,.0f", data.maxPain) else "--",
-                subtitle = "Option Seller Target",
-                valueColor = ElectricBlue,
-                modifier = Modifier.weight(1f)
-            )
-            MetricCard(
-                title = "OI Trend",
-                value = data.oiTrend,
-                subtitle = data.oiBuildupOverall.ifEmpty { "Buildup Pace" },
-                valueColor = GoldWarning,
-                modifier = Modifier.weight(1f)
-            )
+        // ═══════════════════════════════════════════════════
+        // SECTION 5: HERO-ZERO MODULE (collapsible, auto-expanded when candidate)
+        // Expiry-day ultra-premium capture strategy setup
+        // ═══════════════════════════════════════════════════
+        DashboardSectionHeader(
+            title = "⭐ Hero-Zero Module ${if (data.heroZeroAnalysis.isHeroZeroCandidate) "· SETUP DETECTED" else ""}",
+            description = "Expiry-day ultra-premium capture — monitors for sub-₹10 premium entries with 5–10x target",
+            isExpanded = showHeroZero,
+            onToggle = { showHeroZero = !showHeroZero }
+        )
+        AnimatedVisibility(visible = showHeroZero) {
+            HeroZeroCard(data.heroZeroAnalysis)
         }
 
-        // --- D. SUPPORT & RESISTANCE ZONES ---
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(14.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+        // ═══════════════════════════════════════════════════
+        // SECTION 6: QUANT ANALYTICS (collapsible)
+        // Strategy backtester, regime EV & chain analytics
+        // ═══════════════════════════════════════════════════
+        DashboardSectionHeader(
+            title = "🧮 Quant Analytics",
+            description = "Strategy backtester, regime expected value & quant chain walls",
+            isExpanded = showQuantAnalytics,
+            onToggle = { showQuantAnalytics = !showQuantAnalytics }
+        )
+        AnimatedVisibility(visible = showQuantAnalytics) {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                StreamingStrategyBacktesterCard(data.symbol, data.spotPrice, data.expectedValue, data.liveTradeSignal)
+                QuantRegimeEvCard(data.regimeName, data.expectedValue, data.liveTradeSignal)
+                QuantOptionChainCard(data.quantOptionChain)
+                TimeWindowReversalCard(data.timeWindowReversal)
+                ProofOfEvidenceCard(data.proofOfEvidence)
+            }
+        }
+
+        // ═══════════════════════════════════════════════════
+        // SECTION 7: TECHNICAL SETUP (collapsible)
+        // RSI/MACD confluence, deep analysis & chart pattern
+        // ═══════════════════════════════════════════════════
+        DashboardSectionHeader(
+            title = "📈 Technical Setup",
+            description = "RSI/MACD/trend confluence, deep option analysis & setup confidence",
+            isExpanded = showTechnicalSetup,
+            onToggle = { showTechnicalSetup = !showTechnicalSetup }
+        )
+        AnimatedVisibility(visible = showTechnicalSetup) {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                val actionColor = when {
+                    data.tradeAction.contains("CALL") -> BullishGreen
+                    data.tradeAction.contains("PUT") -> BearishRed
+                    else -> ElectricBlue
+                }
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(14.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(imageVector = Icons.Default.ElectricBolt, contentDescription = null, tint = GoldWarning, modifier = Modifier.size(20.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("Technical Confluence", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                            }
+                            Surface(color = actionColor.copy(alpha = 0.2f), shape = RoundedCornerShape(8.dp)) {
+                                Text(data.tradeAction, modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp), fontWeight = FontWeight.Bold, fontSize = 11.sp, color = actionColor)
+                            }
+                        }
+                        if (data.tradeTrigger.isNotEmpty()) {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(data.tradeTrigger, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        Spacer(modifier = Modifier.height(10.dp))
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            MetricPill("RSI", data.rsi)
+                            MetricPill("MACD", data.macd)
+                            MetricPill("Trend", data.trendline)
+                        }
+                    }
+                }
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(14.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                    border = BorderStroke(1.dp, if (data.analysisConfidence == "High") BullishGreen.copy(alpha = 0.65f) else MaterialTheme.colorScheme.outline)
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                            Text("Deep Option Analysis", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                            Surface(color = if (data.analysisConfidence == "High") BullishGreenContainer else MaterialTheme.colorScheme.background, shape = RoundedCornerShape(8.dp)) {
+                                Text("${data.analysisConfidence} confidence", modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp), style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = if (data.analysisConfidence == "High") BullishGreen else MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
+                        if (data.analysisSummary.isNotBlank()) {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(data.analysisSummary, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        Spacer(modifier = Modifier.height(10.dp))
+                        MetricPill("Chart", "${data.chartTrend}: ${data.chartPattern}")
+                        Spacer(modifier = Modifier.height(6.dp))
+                        MetricPill("Flow", "${data.marketPressure} · Vol PCR ${if (data.volumePcr > 0) String.format("%.2f", data.volumePcr) else "--"}")
+                        Spacer(modifier = Modifier.height(6.dp))
+                        MetricPill("Greeks", data.greeksSummary)
+                    }
+                }
+            }
+        }
+
+        // ═══════════════════════════════════════════════════
+        // SECTION 8: CHART & NEXT CANDLE OUTLOOK (collapsible)
+        // Live spot chart & next-candle directional prediction
+        // ═══════════════════════════════════════════════════
+        DashboardSectionHeader(
+            title = "🕯 Chart & Candle Outlook",
+            description = "Live spot price chart with support/resistance & next-candle directional prediction",
+            isExpanded = showChartOutlook,
+            onToggle = { showChartOutlook = !showChartOutlook }
+        )
+        AnimatedVisibility(visible = showChartOutlook) {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(14.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text("Auto live candle chart", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text("Built from synced live spot history. Analysis view — not a price prediction.", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Spacer(modifier = Modifier.height(10.dp))
+                    LiveCandleChart(
+                        data.symbol, data.spotPrice, data.spotHistory, data.supportZones,
+                        data.resistanceZones,
+                        data.optionChain.sortedBy { kotlin.math.abs(it.strike - data.spotPrice) }.take(5).map { it.strike }
+                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                        Text("— Support", style = MaterialTheme.typography.labelSmall, color = BullishGreen)
+                        Text("- - Resistance", style = MaterialTheme.typography.labelSmall, color = BearishRed)
+                        Text("— Price", style = MaterialTheme.typography.labelSmall, color = ElectricBlue)
+                    }
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Text("Next candle outlook", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(data.nextCandleOutlook, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+        }
+
+        // ═══════════════════════════════════════════════════
+        // SECTION 9: MARKET EVIDENCE (collapsible)
+        // OI flow, option chain evidence & Greeks summary
+        // ═══════════════════════════════════════════════════
+        DashboardSectionHeader(
+            title = "🔍 Market Evidence",
+            description = "OI flow, option chain evidence, Greeks & key strike barriers",
+            isExpanded = showMarketEvidence,
+            onToggle = { showMarketEvidence = !showMarketEvidence }
+        )
+        AnimatedVisibility(visible = showMarketEvidence) {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                OptionEvidenceCard(data)
+            }
+        }
+
+        // ═══════════════════════════════════════════════════
+        // SECTION 10: KEY METRICS (collapsible)
+        // PCR, Max Pain, OI Trend & support/resistance zones
+        // ═══════════════════════════════════════════════════
+        DashboardSectionHeader(
+            title = "📐 Key Metrics & Zones",
+            description = "PCR ratios, max pain strike, OI trend & support/resistance barriers",
+            isExpanded = showKeyMetrics,
+            onToggle = { showKeyMetrics = !showKeyMetrics }
+        )
+        AnimatedVisibility(visible = showKeyMetrics) {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    MetricCard(
+                        title = "PCR (OI)",
+                        value = if (data.pcrOi > 0) String.format("%.2f", data.pcrOi) else "--",
+                        subtitle = if (data.pcrOi > 1.1) "Bullish Bias" else if (data.pcrOi < 0.9) "Bearish Bias" else "Neutral",
+                        valueColor = if (data.pcrOi > 1.1) BullishGreen else if (data.pcrOi < 0.9) BearishRed else MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.weight(1f)
+                    )
+                    MetricCard(
+                        title = "PCR (Volume)",
+                        value = if (data.pcrVolume > 0) String.format("%.2f", data.pcrVolume) else "--",
+                        subtitle = "Volume Flow",
+                        valueColor = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    MetricCard(
+                        title = "Max Pain Strike",
+                        value = if (data.maxPain > 0) String.format("₹%,.0f", data.maxPain) else "--",
+                        subtitle = "Option Seller Target",
+                        valueColor = ElectricBlue,
+                        modifier = Modifier.weight(1f)
+                    )
+                    MetricCard(
+                        title = "OI Trend",
+                        value = data.oiTrend,
+                        subtitle = data.oiBuildupOverall.ifEmpty { "Buildup Pace" },
+                        valueColor = GoldWarning,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(14.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text(text = "Key Strike Barriers", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                        Spacer(modifier = Modifier.height(10.dp))
+                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                            Text("Resistance: ", style = MaterialTheme.typography.bodySmall, color = BearishRed, fontWeight = FontWeight.Bold, modifier = Modifier.width(80.dp))
+                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                data.resistanceZones.take(3).forEach { strike -> ZonePill(text = String.format("₹%,.0f", strike), color = BearishRed) }
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                            Text("Support: ", style = MaterialTheme.typography.bodySmall, color = BullishGreen, fontWeight = FontWeight.Bold, modifier = Modifier.width(80.dp))
+                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                data.supportZones.take(3).forEach { strike -> ZonePill(text = String.format("₹%,.0f", strike), color = BullishGreen) }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun DashboardSectionHeader(
+    title: String,
+    description: String,
+    isExpanded: Boolean,
+    alwaysExpanded: Boolean = false,
+    onToggle: () -> Unit
+) {
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .then(if (!alwaysExpanded) Modifier.clickable { onToggle() } else Modifier),
+        color = MaterialTheme.colorScheme.surface,
+        shape = RoundedCornerShape(10.dp),
+        border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Text(
-                    text = "Key Strike Barriers",
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
+            Column(modifier = Modifier.weight(1f)) {
+                Text(title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                Text(description, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            if (!alwaysExpanded) {
+                Icon(
+                    imageVector = if (isExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                    contentDescription = if (isExpanded) "Collapse" else "Expand",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(20.dp)
                 )
-                Spacer(modifier = Modifier.height(10.dp))
-
-                // Resistance Zones
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text(
-                        text = "Resistance: ",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = BearishRed,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.width(80.dp)
-                    )
-                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        data.resistanceZones.take(3).forEach { strike ->
-                            ZonePill(text = String.format("₹%,.0f", strike), color = BearishRed)
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                // Support Zones
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text(
-                        text = "Support: ",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = BullishGreen,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.width(80.dp)
-                    )
-                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        data.supportZones.take(3).forEach { strike ->
-                            ZonePill(text = String.format("₹%,.0f", strike), color = BullishGreen)
-                        }
-                    }
-                }
             }
         }
     }
@@ -2495,8 +2571,40 @@ fun StreamingStrategyBacktesterCard(
 
 @Composable
 fun HeroZeroCard(hero: HeroZeroAnalysis) {
+    val context = androidx.compose.ui.platform.LocalContext.current
     val isCandidate = hero.isHeroZeroCandidate
     val badgeColor = if (isCandidate) BullishGreen else NeutralSlate
+    var showHistory by remember { mutableStateOf(false) }
+
+    // Load saved hero-zero history from SharedPreferences
+    val savedEntries = remember { mutableStateListOf<String>() }
+    LaunchedEffect(Unit) {
+        val prefs = context.getSharedPreferences("hero_zero_prefs", android.content.Context.MODE_PRIVATE)
+        val raw = prefs.getString("hero_zero_log", "") ?: ""
+        if (raw.isNotBlank()) {
+            savedEntries.clear()
+            savedEntries.addAll(raw.split("||").filter { it.isNotBlank() }.takeLast(20).reversed())
+        }
+    }
+
+    // Auto-save when a hero-zero candidate fires
+    LaunchedEffect(hero.isHeroZeroCandidate, hero.contract) {
+        if (hero.isHeroZeroCandidate && hero.contract.isNotBlank()) {
+            val prefs = context.getSharedPreferences("hero_zero_prefs", android.content.Context.MODE_PRIVATE)
+            val existing = prefs.getString("hero_zero_log", "") ?: ""
+            val sdf = java.text.SimpleDateFormat("dd MMM HH:mm", java.util.Locale.getDefault())
+            val newEntry = "${sdf.format(java.util.Date())} | ${hero.contract} | Entry ₹${String.format("%.1f", hero.entryPremium)} → T1 ₹${String.format("%.1f", hero.target1Premium)} (${hero.targetMultiplier}x) | ${hero.recommendation}"
+            val entries = existing.split("||").filter { it.isNotBlank() }.toMutableList()
+            // Avoid duplicate saves within same session
+            if (entries.none { it.contains(hero.contract) && it.contains(String.format("%.1f", hero.entryPremium)) }) {
+                entries.add(newEntry)
+                prefs.edit().putString("hero_zero_log", entries.takeLast(50).joinToString("||")).apply()
+                savedEntries.clear()
+                savedEntries.addAll(entries.takeLast(20).reversed())
+            }
+        }
+    }
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(14.dp),
@@ -2510,18 +2618,9 @@ fun HeroZeroCard(hero: HeroZeroAnalysis) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Default.Star,
-                        contentDescription = null,
-                        tint = GoldWarning,
-                        modifier = Modifier.size(20.dp)
-                    )
+                    Icon(imageVector = Icons.Default.Star, contentDescription = null, tint = GoldWarning, modifier = Modifier.size(20.dp))
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text(
-                        text = "Expiry-Day 'Hero Zero' Module",
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.Bold
-                    )
+                    Text("Expiry-Day 'Hero Zero' Module", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
                 }
                 Surface(
                     color = badgeColor.copy(alpha = 0.2f),
@@ -2529,7 +2628,7 @@ fun HeroZeroCard(hero: HeroZeroAnalysis) {
                     border = BorderStroke(1.dp, badgeColor)
                 ) {
                     Text(
-                        text = hero.recommendation,
+                        text = if (isCandidate) hero.recommendation else "WATCHING",
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.ExtraBold,
@@ -2537,33 +2636,74 @@ fun HeroZeroCard(hero: HeroZeroAnalysis) {
                     )
                 }
             }
-            if (hero.reason.isNotBlank()) {
-                Spacer(modifier = Modifier.height(8.dp))
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            if (isCandidate) {
+                Text(hero.reason.ifBlank { "Hero-Zero setup detected. Check contract details below." },
+                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                if (hero.contract.isNotBlank()) {
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Surface(color = MaterialTheme.colorScheme.background, shape = RoundedCornerShape(10.dp), modifier = Modifier.fillMaxWidth()) {
+                        Row(modifier = Modifier.padding(12.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                            Column {
+                                Text("HERO ZERO CONTRACT", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text(hero.contract, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = GoldWarning)
+                            }
+                            Column(horizontalAlignment = Alignment.End) {
+                                Text("ENTRY / TARGET", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text("₹${String.format("%.1f", hero.entryPremium)} ➔ ₹${String.format("%.1f", hero.target1Premium)} (${hero.targetMultiplier}x)", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold, color = BullishGreen)
+                            }
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Surface(color = BearishRed.copy(alpha = 0.15f), shape = RoundedCornerShape(6.dp)) {
+                            Text("SL ₹${String.format("%.1f", hero.stopLossPremium)}", modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp), style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = BearishRed)
+                        }
+                        if (hero.expectedHoldingTime.isNotBlank()) {
+                            Surface(color = ElectricBlue.copy(alpha = 0.15f), shape = RoundedCornerShape(6.dp)) {
+                                Text("Hold: ${hero.expectedHoldingTime}", modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp), style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = ElectricBlue)
+                            }
+                        }
+                        Surface(color = GoldWarning.copy(alpha = 0.15f), shape = RoundedCornerShape(6.dp)) {
+                            Text("✓ SAVED", modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp), style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = GoldWarning)
+                        }
+                    }
+                }
+            } else {
                 Text(
-                    text = hero.reason,
+                    "👁 Watching for expiry-day setup. Triggers when premium is sub-₹10 with high OI activity on expiry date.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-            if (isCandidate && hero.contract.isNotBlank()) {
+
+            // History section
+            if (savedEntries.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(10.dp))
-                Surface(
-                    color = MaterialTheme.colorScheme.background,
-                    shape = RoundedCornerShape(10.dp),
-                    modifier = Modifier.fillMaxWidth()
+                Divider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth().clickable { showHistory = !showHistory },
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Row(
-                        modifier = Modifier.padding(12.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column {
-                            Text("HERO ZERO CONTRACT", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            Text(hero.contract, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = GoldWarning)
+                    Text("Saved Setups (${savedEntries.size})", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, color = GoldWarning)
+                    Icon(
+                        if (showHistory) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                        contentDescription = null, tint = GoldWarning, modifier = Modifier.size(16.dp)
+                    )
+                }
+                AnimatedVisibility(visible = showHistory) {
+                    Column(modifier = Modifier.padding(top = 8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        savedEntries.take(10).forEach { entry ->
+                            Surface(color = MaterialTheme.colorScheme.background, shape = RoundedCornerShape(6.dp), modifier = Modifier.fillMaxWidth()) {
+                                Text(entry, modifier = Modifier.padding(8.dp), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
                         }
-                        Column(horizontalAlignment = Alignment.End) {
-                            Text("ENTRY / TARGET", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            Text("₹${String.format("%.1f", hero.entryPremium)} ➔ ₹${String.format("%.1f", hero.target1Premium)} (${hero.targetMultiplier}x)", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold, color = BullishGreen)
+                        if (savedEntries.size > 10) {
+                            Text("+ ${savedEntries.size - 10} more saved setups", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
                 }

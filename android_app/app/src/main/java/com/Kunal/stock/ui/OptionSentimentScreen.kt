@@ -513,9 +513,13 @@ fun OptionSentimentContent(data: OptionSentimentData) {
         if (data.spotPrice > 0) runFullAgentPipeline(data.symbol, data.spotPrice) else null
     }
 
-    // Options signal log via SharedPreferences
+    // Options signal log via SharedPreferences -- debounced + SL/Target auto-status
     val ctx = androidx.compose.ui.platform.LocalContext.current
     val signalLog = remember { mutableStateListOf<String>() }
+    var pendingContract by remember { mutableStateOf("") }
+    var stableCount by remember { mutableIntStateOf(0) }
+    var lastLoggedContract by remember { mutableStateOf("") }
+
     LaunchedEffect(Unit) {
         val prefs = ctx.getSharedPreferences("option_signal_log", android.content.Context.MODE_PRIVATE)
         val raw = prefs.getString("log", "") ?: ""
@@ -524,20 +528,51 @@ fun OptionSentimentContent(data: OptionSentimentData) {
             signalLog.addAll(raw.split("||").filter { it.isNotBlank() }.reversed().take(30))
         }
     }
+    // Debounce: only log after signal holds for 2 consecutive Firestore ticks
     LaunchedEffect(data.liveTradeSignal.recommendedContract) {
+        val incoming = data.liveTradeSignal.recommendedContract
+        if (incoming == pendingContract) stableCount++ else { pendingContract = incoming; stableCount = 1 }
         val sig = data.liveTradeSignal
-        if (sig.recommendedContract.isNotBlank() && sig.recommendedContract != "WAIT" && data.spotPrice > 0) {
+        val valid = incoming.isNotBlank() && incoming != "WAIT" && incoming != "NO ACTIVE SIGNAL" && data.spotPrice > 0
+        if (stableCount >= 2 && valid && incoming != lastLoggedContract) {
+            lastLoggedContract = incoming
             val sdf = java.text.SimpleDateFormat("dd MMM HH:mm", java.util.Locale.getDefault())
-            val entry = "${sdf.format(java.util.Date())} | ${sig.action} | ${sig.recommendedContract} | Entry -Rs${String.format("%.1f", sig.estimatedPremium)} | T1 -Rs${String.format("%.1f", sig.targetPremium)} | SL -Rs${String.format("%.1f", sig.stopLossPremium)}"
+            val ts = sdf.format(java.util.Date())
+            val entry = ts + " | " + sig.action + " | " + sig.recommendedContract + " | Entry Rs" + String.format("%.1f", sig.estimatedPremium) + " | T1 Rs" + String.format("%.1f", sig.targetPremium) + " | SL Rs" + String.format("%.1f", sig.stopLossPremium) + " | STATUS:OPEN"
             val prefs = ctx.getSharedPreferences("option_signal_log", android.content.Context.MODE_PRIVATE)
             val existing = prefs.getString("log", "") ?: ""
             val entries = existing.split("||").filter { it.isNotBlank() }.toMutableList()
-            if (entries.none { it.contains(sig.recommendedContract) && it.startsWith(entry.take(12)) }) {
+            if (entries.none { it.contains(sig.recommendedContract) && it.startsWith(ts.take(9)) }) {
                 entries.add(entry)
                 prefs.edit().putString("log", entries.takeLast(50).joinToString("||")).apply()
                 signalLog.clear()
                 signalLog.addAll(entries.reversed().take(30))
             }
+        }
+    }
+    // Auto-update log status when SL or Target hit via live spot price
+    LaunchedEffect(data.spotPrice) {
+        val spot = data.spotPrice
+        if (spot <= 0) return@LaunchedEffect
+        val sig = data.liveTradeSignal
+        if (sig.targetSpot <= 0 && sig.stopLossSpot <= 0) return@LaunchedEffect
+        val prefs = ctx.getSharedPreferences("option_signal_log", android.content.Context.MODE_PRIVATE)
+        val existing = prefs.getString("log", "") ?: ""
+        val entries = existing.split("||").filter { it.isNotBlank() }.toMutableList()
+        var changed = false
+        val updated = entries.map { e ->
+            if (e.contains("STATUS:OPEN") && sig.recommendedContract.isNotBlank() && e.contains(sig.recommendedContract)) {
+                when {
+                    sig.targetSpot > 0 && spot >= sig.targetSpot -> { changed = true; e.replace("STATUS:OPEN", "STATUS:TARGET HIT") }
+                    sig.stopLossSpot > 0 && spot <= sig.stopLossSpot -> { changed = true; e.replace("STATUS:OPEN", "STATUS:SL HIT") }
+                    else -> e
+                }
+            } else e
+        }
+        if (changed) {
+            prefs.edit().putString("log", updated.takeLast(50).joinToString("||")).apply()
+            signalLog.clear()
+            signalLog.addAll(updated.reversed().take(30))
         }
     }
 
@@ -2760,7 +2795,10 @@ fun StreamingStrategyBacktesterCard(
 @Composable
 fun HeroZeroCard(hero: HeroZeroAnalysis) {
     val context = androidx.compose.ui.platform.LocalContext.current
-    val isCandidate = hero.isHeroZeroCandidate
+    // Hero-Zero is ONLY valid for Index options (NIFTY/BANKNIFTY/FINNIFTY weekly expiry)
+    val indexSymbols = setOf("NIFTY", "BANKNIFTY", "FINNIFTY")
+    val isIndexSymbol = indexSymbols.any { hero.contract.uppercase().startsWith(it) || hero.contract.isBlank() }
+    val isCandidate = hero.isHeroZeroCandidate && isIndexSymbol
     val badgeColor = if (isCandidate) BullishGreen else NeutralSlate
     var showHistory by remember { mutableStateOf(false) }
 

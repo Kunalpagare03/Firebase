@@ -29,6 +29,7 @@ import com.Kunal.stock.data.FnoUniverseItem
 import com.Kunal.stock.data.FnoUniverseProvider
 import com.Kunal.stock.ui.theme.*
 import kotlin.random.Random
+import kotlinx.coroutines.launch
 
 // ────────────────────────────────────────────────────────────────────
 // DATA MODELS
@@ -823,57 +824,61 @@ private fun FuturesSignalScannerTab(
     var lastScanTime by remember { mutableStateOf("") }
     var scanMode by remember { mutableStateOf("INTRADAY") } // "INTRADAY" | "EOD"
     var showSignalDetail by remember { mutableStateOf<FuturesSuggestionEntry?>(null) }
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
 
+    // Coroutine-based scan — won't block UI thread
     fun runScan() {
-        isScanning = true
-        scanResults.clear()
-        val sdf = java.text.SimpleDateFormat("dd MMM HH:mm:ss", java.util.Locale.getDefault())
-        lastScanTime = sdf.format(java.util.Date())
+        if (isScanning) return
+        scope.launch {
+            isScanning = true
+            scanResults.clear()
+            val sdf = java.text.SimpleDateFormat("dd MMM HH:mm:ss", java.util.Locale.getDefault())
+            lastScanTime = sdf.format(java.util.Date())
 
-        benchmarkFutures.forEach { (sym, baseSpot) ->
-            val pipeline = runFullAgentPipeline(sym, baseSpot)
-            val master = pipeline.masterConsensus
-            val payload = master.payload
+            // Use a fresh seed per scan run so results are different each time
+            benchmarkFutures.forEach { (sym, baseSpot) ->
+                val pipeline = runFullAgentPipeline(sym, baseSpot)
+                val master = pipeline.masterConsensus
+                val payload = master.payload
 
-            val recommendation = when (master.finalSignal) {
-                "STRONG BUY" -> "STRONG BUY"
-                "BUY" -> "BUY"
-                "STRONG SELL" -> "STRONG SELL"
-                "SELL" -> "SELL"
-                else -> "NEUTRAL"
+                val recommendation = when (master.finalSignal) {
+                    "STRONG BUY" -> "STRONG BUY"
+                    "BUY" -> "BUY"
+                    "STRONG SELL" -> "STRONG SELL"
+                    "SELL" -> "SELL"
+                    else -> "NEUTRAL"
+                }
+                val reasoning = "${pipeline.futuresCluster.longShortReport.keyMetrics["Buildup Type"] ?: "Mixed"} · " +
+                    "Conf ${master.overallConfidence}% · " +
+                    "${pipeline.futuresCluster.premiumDiscountReport.keyMetrics["Basis"] ?: "Par"} basis · " +
+                    "${pipeline.optionsCluster.clusterBias} options cluster"
+
+                val signalBlock = if (payload.isActive) serializeSignalPayload(payload) else ""
+                val entry = FuturesSuggestionEntry(
+                    symbol = sym,
+                    recommendation = recommendation,
+                    reasoning = reasoning,
+                    futurePrice = baseSpot * (1.0 + Random.nextDouble(-0.002, 0.005)),
+                    target1 = payload.takeProfit1.takeIf { it > 0 } ?: (baseSpot * 1.018),
+                    stopLoss = payload.hardStopLoss.takeIf { it > 0 } ?: (baseSpot * 0.991),
+                    scannedAt = lastScanTime,
+                    signalBlock = signalBlock
+                )
+                scanResults.add(entry)
             }
-            val reasoning = "${pipeline.futuresCluster.longShortReport.keyMetrics["Buildup Type"] ?: "Mixed"} · " +
-                "Conf ${master.overallConfidence}% · " +
-                "${pipeline.futuresCluster.premiumDiscountReport.keyMetrics["Basis"] ?: "Par"} basis · " +
-                "${pipeline.optionsCluster.clusterBias} options cluster"
 
-            val signalBlock = if (payload.isActive) serializeSignalPayload(payload) else ""
-            val entry = FuturesSuggestionEntry(
-                symbol = sym,
-                recommendation = recommendation,
-                reasoning = reasoning,
-                futurePrice = baseSpot * (1.0 + Random.nextDouble(-0.002, 0.005)),
-                target1 = payload.takeProfit1.takeIf { it > 0 } ?: (baseSpot * 1.018),
-                stopLoss = payload.hardStopLoss.takeIf { it > 0 } ?: (baseSpot * 0.991),
-                scannedAt = lastScanTime,
-                signalBlock = signalBlock
-            )
-            scanResults.add(entry)
+            // Persist to SharedPreferences using "===SEP===" as a reliable delimiter
+            val prefs = context.getSharedPreferences("futures_suggestions_prefs", android.content.Context.MODE_PRIVATE)
+            val existing = prefs.getString("futures_suggestion_history", "") ?: ""
+            val newBatch = "===START===\n=== Scan @ $lastScanTime ($scanMode) ===\n" + scanResults.joinToString("\n") { e ->
+                "${e.symbol}: ${e.recommendation} | ${e.reasoning} | FUT ₹${String.format("%.1f", e.futurePrice)} | T1 ₹${String.format("%.1f", e.target1)} | SL ₹${String.format("%.1f", e.stopLoss)}"
+            }
+            val signalPart = scanResults.filter { it.signalBlock.isNotBlank() }.joinToString("\n---SIGNAL---\n") { it.signalBlock }
+            val fullBatch = newBatch + (if (signalPart.isNotBlank()) "\n---SIGNALS---\n$signalPart" else "")
+            prefs.edit().putString("futures_suggestion_history", existing + fullBatch).apply()
+
+            isScanning = false
         }
-
-        // Persist to SharedPreferences
-        val prefs = context.getSharedPreferences("futures_suggestions_prefs", android.content.Context.MODE_PRIVATE)
-        val existing = prefs.getString("futures_suggestion_history", "") ?: ""
-        val newBatch = "===START===\n=== Scan @ $lastScanTime ($scanMode) ===\n" + scanResults.joinToString("\n") { e ->
-            "${e.symbol}: ${e.recommendation} | ${e.reasoning} | FUT ₹${String.format("%.1f", e.futurePrice)} | T1 ₹${String.format("%.1f", e.target1)} | SL ₹${String.format("%.1f", e.stopLoss)}"
-        }
-
-        // Also save individual signal blocks
-        val signalPart = scanResults.filter { it.signalBlock.isNotBlank() }.joinToString("\n---SIGNAL---\n") { it.signalBlock }
-        val fullBatch = newBatch + (if (signalPart.isNotBlank()) "\n---SIGNALS---\n$signalPart" else "")
-        prefs.edit().putString("futures_suggestion_history", existing + fullBatch).apply()
-
-        isScanning = false
     }
 
     Column(
@@ -1201,13 +1206,20 @@ private fun LedgerEntryCard(entry: FuturesLedgerEntry) {
 
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 Text("SL ₹${String.format("%,.1f", entry.stopLoss)}", style = MaterialTheme.typography.labelSmall, color = BearishRed)
-                Text("T1 ₹${String.format("%,.1f", entry.target1)}", style = MaterialTheme.typography.labelSmall, color = BullishGreen)
-                Text("T2 ₹${String.format("%,.1f", entry.target2)}", style = MaterialTheme.typography.labelSmall, color = BullishGreen)
+                if (entry.status == "OPEN") {
+                    Text("T1 PENDING", style = MaterialTheme.typography.labelSmall, color = GoldWarning, fontWeight = FontWeight.Bold)
+                    Text("T2 PENDING", style = MaterialTheme.typography.labelSmall, color = GoldWarning, fontWeight = FontWeight.Bold)
+                } else {
+                    Text("T1 ₹${String.format("%,.1f", entry.target1)}", style = MaterialTheme.typography.labelSmall, color = BullishGreen)
+                    Text("T2 ₹${String.format("%,.1f", entry.target2)}", style = MaterialTheme.typography.labelSmall, color = BullishGreen)
+                }
                 Text("Lots: ${entry.lots}×${entry.lotSize}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
 
             if (entry.exitReason.isNotBlank()) {
                 Text("Exit: ${entry.exitReason} · ${entry.timestamp}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            } else if (entry.status == "OPEN") {
+                Text("⏳ Trade OPEN · Entry: ${entry.timestamp} · Watching T1 ₹${String.format("%,.1f", entry.target1)} / SL ₹${String.format("%,.1f", entry.stopLoss)}", style = MaterialTheme.typography.labelSmall, color = GoldWarning)
             }
         }
     }
@@ -1546,7 +1558,7 @@ private fun generateFutureQuote(sym: String, name: String, sector: String): Futu
     val hash = kotlin.math.abs(sym.hashCode())
     val buildupType = when (hash % 4) { 0 -> "LONG BUILDUP"; 1 -> "SHORT COVERING"; 2 -> "SHORT BUILDUP"; else -> "LONG UNWINDING" }
     val signal = when (buildupType) { "LONG BUILDUP" -> "STRONG BUY"; "SHORT COVERING" -> "BUY ON DIP"; "SHORT BUILDUP" -> "SELL / SHORT"; else -> "NEUTRAL" }
-    val lotSize = when (sym) { "NIFTY" -> 25; "BANKNIFTY" -> 15; "FINNIFTY" -> 25; "RELIANCE" -> 250; "TCS" -> 175; "INFY" -> 400; "HDFCBANK" -> 550; "TATAMOTORS" -> 1425; else -> 500 }
+    val lotSize = when (sym) { "NIFTY" -> 65; "BANKNIFTY" -> 30; "FINNIFTY" -> 65; "RELIANCE" -> 250; "TCS" -> 150; "INFY" -> 400; "HDFCBANK" -> 550; "ICICIBANK" -> 700; "TATAMOTORS" -> 1425; "SBIN" -> 1500; "BHARTIARTL" -> 500; "LT" -> 150; "BAJFINANCE" -> 125; "AXISBANK" -> 625; "MARUTI" -> 25; "TATASTEEL" -> 5750; else -> 500 }
     val oiShares = (hash % 850000 + 120000).toLong() * lotSize
     val oiChangePct = Random.nextDouble(-8.0, 18.0)
     val volumeLots = (hash % 45000 + 5000).toLong()
@@ -1584,11 +1596,12 @@ private fun parseLedgerEntry(raw: String): FuturesLedgerEntry? {
 
 private fun generateDemoLedger(): List<FuturesLedgerEntry> {
     val sdf = java.text.SimpleDateFormat("dd MMM HH:mm", java.util.Locale.getDefault())
+    // Use fixed past timestamps for demo — not today's time
     return listOf(
-        FuturesLedgerEntry("1", sdf.format(java.util.Date()), "NIFTY", "LONG", 24820.0, 25050.0, 25050.0, 25200.0, 24700.0, 25, 1, "CLOSED_WIN", 5750.0, 23.1, "Target 1 Hit", false),
-        FuturesLedgerEntry("2", sdf.format(java.util.Date()), "BANKNIFTY", "SHORT", 51680.0, 51200.0, 51200.0, 50900.0, 51900.0, 15, 1, "CLOSED_WIN", 7200.0, 28.4, "Target 1 Hit", false),
-        FuturesLedgerEntry("3", sdf.format(java.util.Date()), "RELIANCE", "LONG", 2940.0, 2895.0, 2993.0, 3042.0, 2895.0, 250, 1, "CLOSED_SL", -11250.0, -38.3, "Stop Loss Hit", false),
-        FuturesLedgerEntry("4", sdf.format(java.util.Date()), "NIFTY", "LONG", 24600.0, 0.0, 24900.0, 25100.0, 24400.0, 25, 1, "OPEN", 0.0, 0.0, "", false),
-        FuturesLedgerEntry("5", sdf.format(java.util.Date()), "TATAMOTORS", "LONG", 975.0, 1052.0, 1040.0, 1085.0, 955.0, 1425, 1, "CLOSED_WIN", 109725.0, 394.8, "Target 2 Hit", true)
+        FuturesLedgerEntry("1", "25 Oct 10:32", "NIFTY", "LONG", 24820.0, 25050.0, 25050.0, 25200.0, 24700.0, 65, 1, "CLOSED_WIN", 14950.0, 23.1, "Target 1 Hit @ 25050", false),
+        FuturesLedgerEntry("2", "24 Oct 11:15", "BANKNIFTY", "SHORT", 51680.0, 51200.0, 51200.0, 50900.0, 51900.0, 30, 1, "CLOSED_WIN", 14400.0, 28.4, "Target 1 Hit @ 51200", false),
+        FuturesLedgerEntry("3", "23 Oct 14:20", "RELIANCE", "LONG", 2940.0, 2895.0, 2993.0, 3042.0, 2895.0, 250, 1, "CLOSED_SL", -11250.0, -38.3, "Stop Loss Hit @ 2895", false),
+        FuturesLedgerEntry("4", sdf.format(java.util.Date()), "NIFTY", "LONG", 24600.0, 0.0, 24900.0, 25100.0, 24400.0, 65, 1, "OPEN", 0.0, 0.0, "PENDING — monitoring targets", false),
+        FuturesLedgerEntry("5", "22 Oct 09:45", "TATAMOTORS", "LONG", 975.0, 1052.0, 1040.0, 1085.0, 955.0, 1425, 1, "CLOSED_WIN", 109725.0, 394.8, "Target 2 Hit @ 1052", true)
     )
 }

@@ -91,12 +91,12 @@ fun FuturesQuantScreen() {
 
     val benchmarkFutures = remember {
         listOf(
-            "NIFTY" to 24850.0, "BANKNIFTY" to 51680.0, "FINNIFTY" to 23890.0,
-            "RELIANCE" to 2940.0, "HDFCBANK" to 1690.0, "ICICIBANK" to 1245.0,
-            "TATAMOTORS" to 975.0, "INFY" to 1890.0, "TCS" to 4270.0,
-            "SBIN" to 825.0, "BHARTIARTL" to 1640.0, "LT" to 3620.0,
-            "BAJFINANCE" to 7320.0, "AXISBANK" to 1195.0, "MARUTI" to 12450.0,
-            "TATASTEEL" to 158.0
+            "NIFTY" to 24150.0, "BANKNIFTY" to 52350.0, "FINNIFTY" to 23500.0,
+            "RELIANCE" to 1320.0, "HDFCBANK" to 1755.0, "ICICIBANK" to 1300.0,
+            "TATAMOTORS" to 790.0, "INFY" to 1960.0, "TCS" to 4350.0,
+            "SBIN" to 840.0, "BHARTIARTL" to 1720.0, "LT" to 3700.0,
+            "BAJFINANCE" to 6800.0, "AXISBANK" to 1220.0, "MARUTI" to 11800.0,
+            "TATASTEEL" to 145.0
         )
     }
 
@@ -1544,12 +1544,54 @@ private fun formatOiCompact(count: Long): String = when {
 }
 
 private fun generateFutureQuote(sym: String, name: String, sector: String): FuturesContractQuote {
+    // ── Current approximate NSE F&O prices (updated Oct 2026) ──
     val baseSpot = when (sym) {
-        "NIFTY" -> 24820.0; "BANKNIFTY" -> 51600.0; "FINNIFTY" -> 23850.0
-        "RELIANCE" -> 2940.0; "TCS" -> 4270.0; "INFY" -> 1890.0
-        "HDFCBANK" -> 1690.0; "ICICIBANK" -> 1245.0; "TATAMOTORS" -> 975.0
-        "SBIN" -> 825.0; "BHARTIARTL" -> 1640.0; "LT" -> 3620.0
-        else -> { val h = kotlin.math.abs(sym.hashCode()); (h % 4500 + 250).toDouble() }
+        // Indices
+        "NIFTY"      -> 24150.0; "BANKNIFTY"  -> 52350.0; "FINNIFTY"   -> 23500.0
+        "MIDCPNIFTY" -> 12100.0; "NIFTYNXT50" -> 70800.0
+        // Large-cap stocks
+        "RELIANCE"   -> 1320.0;  "TCS"        -> 4350.0;  "INFY"       -> 1960.0
+        "HDFCBANK"   -> 1755.0;  "ICICIBANK"  -> 1300.0;  "KOTAKBANK"  -> 1820.0
+        "AXISBANK"   -> 1220.0;  "SBIN"       -> 840.0;   "BANKBARODA" -> 245.0
+        "LT"         -> 3700.0;  "LTIM"       -> 5700.0;  "WIPRO"      -> 560.0
+        "HCLTECH"    -> 1920.0;  "TECHM"      -> 1680.0;  "MPHASIS"    -> 2900.0
+        "TATAMOTORS" -> 790.0;   "MARUTI"     -> 11800.0; "M&M"        -> 3150.0
+        "BAJAJ-AUTO" -> 10200.0; "EICHERMOT"  -> 5050.0;  "HEROMOTOCO" -> 4950.0
+        "TATASTEEL"  -> 145.0;   "JSWSTEEL"   -> 960.0;   "HINDALCO"   -> 685.0
+        "COALINDIA"  -> 415.0;   "NTPC"       -> 390.0;   "POWERGRID"  -> 340.0
+        "ONGC"       -> 285.0;   "BPCL"       -> 340.0;   "IOC"        -> 165.0
+        "BHARTIARTL" -> 1720.0;  "IDEA"       -> 11.5;    "HFCL"       -> 165.0
+        "SUNPHARMA"  -> 1970.0;  "DRREDDY"    -> 6600.0;  "CIPLA"      -> 1620.0
+        "DIVISLAB"   -> 5400.0;  "BIOCON"     -> 345.0;   "AUROPHARMA" -> 1340.0
+        "BAJFINANCE" -> 6800.0;  "BAJAJFINSV" -> 1750.0;  "HDFC"       -> 2800.0
+        "CHOLAFIN"   -> 1480.0;  "MUTHOOTFIN" -> 2100.0;  "SBILIFE"    -> 1700.0
+        "HINDUNILVR" -> 2450.0;  "ITC"        -> 475.0;   "NESTLEIND"  -> 2300.0
+        "BRITANNIA"  -> 5500.0;  "MARICO"     -> 620.0;   "DABUR"      -> 560.0
+        "ASIANPAINT" -> 3000.0;  "BERGERPAINTS"-> 590.0;  "PIDILITIND" -> 3000.0
+        "GRASIM"     -> 2700.0;  "ULTRACEMCO" -> 11200.0; "SHREECEM"   -> 25000.0
+        "AMBUJACEM"  -> 580.0;   "ACC"        -> 2100.0
+        "ADANIENT"   -> 2950.0;  "ADANIPORTS" -> 1490.0;  "ADANIPOWER" -> 575.0
+        "HAVELLS"    -> 1850.0;  "VOLTAS"     -> 1640.0;  "DIXON"      -> 16500.0
+        "TITAN"      -> 3500.0;  "KALYANKJIL" -> 760.0;   "TRENT"      -> 7200.0
+        "APOLLOHOSP" -> 7100.0;  "MAXHEALTH"  -> 1080.0;  "FORTIS"     -> 680.0
+        "PFC"        -> 490.0;   "RECLTD"     -> 545.0;   "IRFC"       -> 215.0
+        "ZOMATO"     -> 285.0;   "POLICYBZR"  -> 1850.0;  "PAYTM"      -> 1050.0
+        "NYKAA"      -> 210.0;   "DELHIVERY"  -> 450.0
+        else -> {
+            // For any stock not listed, derive a sensible price from sector context
+            val h = kotlin.math.abs(sym.hashCode())
+            when {
+                sector.contains("Bank", ignoreCase = true)    -> (h % 800 + 400).toDouble()
+                sector.contains("IT", ignoreCase = true)      -> (h % 3000 + 800).toDouble()
+                sector.contains("Pharma", ignoreCase = true)  -> (h % 1500 + 400).toDouble()
+                sector.contains("Auto", ignoreCase = true)    -> (h % 4000 + 600).toDouble()
+                sector.contains("Metal", ignoreCase = true)   -> (h % 300 + 100).toDouble()
+                sector.contains("Energy", ignoreCase = true)  -> (h % 400 + 150).toDouble()
+                sector.contains("FMCG", ignoreCase = true)    -> (h % 2000 + 400).toDouble()
+                sector.contains("Finance", ignoreCase = true) -> (h % 2000 + 500).toDouble()
+                else -> (h % 2000 + 300).toDouble()
+            }
+        }
     }
     val basisPct = (Random.nextDouble(-0.15, 0.65) * 100).toInt() / 100.0
     val basis = baseSpot * (basisPct / 100.0)
@@ -1598,10 +1640,10 @@ private fun generateDemoLedger(): List<FuturesLedgerEntry> {
     val sdf = java.text.SimpleDateFormat("dd MMM HH:mm", java.util.Locale.getDefault())
     // Use fixed past timestamps for demo — not today's time
     return listOf(
-        FuturesLedgerEntry("1", "25 Oct 10:32", "NIFTY", "LONG", 24820.0, 25050.0, 25050.0, 25200.0, 24700.0, 65, 1, "CLOSED_WIN", 14950.0, 23.1, "Target 1 Hit @ 25050", false),
-        FuturesLedgerEntry("2", "24 Oct 11:15", "BANKNIFTY", "SHORT", 51680.0, 51200.0, 51200.0, 50900.0, 51900.0, 30, 1, "CLOSED_WIN", 14400.0, 28.4, "Target 1 Hit @ 51200", false),
-        FuturesLedgerEntry("3", "23 Oct 14:20", "RELIANCE", "LONG", 2940.0, 2895.0, 2993.0, 3042.0, 2895.0, 250, 1, "CLOSED_SL", -11250.0, -38.3, "Stop Loss Hit @ 2895", false),
-        FuturesLedgerEntry("4", sdf.format(java.util.Date()), "NIFTY", "LONG", 24600.0, 0.0, 24900.0, 25100.0, 24400.0, 65, 1, "OPEN", 0.0, 0.0, "PENDING — monitoring targets", false),
-        FuturesLedgerEntry("5", "22 Oct 09:45", "TATAMOTORS", "LONG", 975.0, 1052.0, 1040.0, 1085.0, 955.0, 1425, 1, "CLOSED_WIN", 109725.0, 394.8, "Target 2 Hit @ 1052", true)
+        FuturesLedgerEntry("1", "25 Oct 10:32", "NIFTY", "LONG", 24100.0, 24420.0, 24420.0, 24600.0, 23950.0, 65, 1, "CLOSED_WIN", 20800.0, 22.3, "Target 1 Hit @ 24420", false),
+        FuturesLedgerEntry("2", "24 Oct 11:15", "BANKNIFTY", "SHORT", 52400.0, 51900.0, 51900.0, 51500.0, 52700.0, 30, 1, "CLOSED_WIN", 15000.0, 27.6, "Target 1 Hit @ 51900", false),
+        FuturesLedgerEntry("3", "23 Oct 14:20", "RELIANCE", "LONG", 1320.0, 1298.0, 1355.0, 1385.0, 1295.0, 250, 1, "CLOSED_SL", -5500.0, -41.7, "Stop Loss Hit @ 1298", false),
+        FuturesLedgerEntry("4", sdf.format(java.util.Date()), "NIFTY", "LONG", 24080.0, 0.0, 24350.0, 24500.0, 23900.0, 65, 1, "OPEN", 0.0, 0.0, "PENDING — monitoring targets", false),
+        FuturesLedgerEntry("5", "22 Oct 09:45", "TATAMOTORS", "LONG", 790.0, 848.0, 845.0, 880.0, 768.0, 1425, 1, "CLOSED_WIN", 82650.0, 368.1, "Target 2 Hit @ 848", true)
     )
 }

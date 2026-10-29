@@ -1,4 +1,4 @@
-package com.Kunal.stock.ui
+﻿package com.Kunal.stock.ui
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.BorderStroke
@@ -58,6 +58,12 @@ fun OptionSentimentScreen(
             liveChartTicks.add(com.Kunal.stock.data.ChartPoint((quote.tickAtEpoch * 1000).toLong(), quote.spotPrice))
             while (liveChartTicks.size > 10000) liveChartTicks.removeAt(0)
         }
+    }
+    // Yahoo Finance live fallback when Firestore quote is stale
+    var yahooSpot by remember { mutableStateOf(0.0) }
+    LaunchedEffect(selectedSymbol) {
+        val price = LivePriceFetcher.fetchPrice(selectedSymbol)
+        if (price != null && price > 0) yahooSpot = price
     }
 
     val snackbarHostState = remember { SnackbarHostState() }
@@ -241,11 +247,12 @@ fun OptionSentimentScreen(
                 } else Long.MAX_VALUE
                 val quoteIsFresh = quote != null && quoteAge <= 5
                 val liveData = state.data.copy(
-                    spotPrice = quote?.spotPrice ?: state.data.spotPrice,
+                    spotPrice = quote?.spotPrice?.takeIf { it > 0 } ?: (if (yahooSpot > 0) yahooSpot else state.data.spotPrice),
                     spotHistory = (state.data.spotHistory + (quote?.spotHistory ?: emptyList()) + liveChartTicks)
                         .distinctBy { it.time }.sortedBy { it.time }.takeLast(10000),
                     marketStatusStr = when {
-                        quote == null -> "LIVE QUOTE NOT RECEIVED · Check Angel One feed"
+                        quote == null && yahooSpot > 0 -> "YAHOO LIVE \u25cf Spot \u20b9${String.format(\"%,.2f\", yahooSpot)} \u00b7 Angel One offline"
+                        quote == null -> "LIVE QUOTE NOT RECEIVED \u00b7 Check Angel One feed"
                         quoteIsFresh -> "ANGEL ONE LIVE · ${quoteAge}s · ${quote.updatedAt}"
                         else -> "STALE QUOTE · Last tick ${quoteAge}s ago · ${quote.updatedAt}"
                     },

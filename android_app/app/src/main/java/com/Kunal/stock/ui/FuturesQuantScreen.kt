@@ -30,6 +30,7 @@ import com.Kunal.stock.data.FnoUniverseProvider
 import com.Kunal.stock.ui.theme.*
 import kotlin.random.Random
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
 
 // ────────────────────────────────────────────────────────────────────
 // DATA MODELS
@@ -83,21 +84,56 @@ fun FuturesQuantScreen() {
     var searchQuery by remember { mutableStateOf("") }
     var selectedFuturesTab by remember { mutableIntStateOf(0) }
 
+    // ── Live price state map ──────────────────────────────────────────────────
+    var livePrices by remember { mutableStateOf<Map<String, Double>>(LivePriceFetcher.fallbackPrices) }
+    var priceLoadStatus by remember { mutableStateOf("⏳ Loading live prices…") }
+    var lastPriceRefresh by remember { mutableStateOf(0L) }
+
     LaunchedEffect(Unit) {
         val list = FnoUniverseProvider.loadFnoAsync(context)
         fnoList = list
         segments = FnoUniverseProvider.getCachedSegments()
     }
 
-    val benchmarkFutures = remember {
-        listOf(
-            "NIFTY" to 24150.0, "BANKNIFTY" to 52350.0, "FINNIFTY" to 23500.0,
-            "RELIANCE" to 1320.0, "HDFCBANK" to 1755.0, "ICICIBANK" to 1300.0,
-            "TATAMOTORS" to 790.0, "INFY" to 1960.0, "TCS" to 4350.0,
-            "SBIN" to 840.0, "BHARTIARTL" to 1720.0, "LT" to 3700.0,
-            "BAJFINANCE" to 6800.0, "AXISBANK" to 1220.0, "MARUTI" to 11800.0,
-            "TATASTEEL" to 145.0
+    // Auto-refresh live prices every 60 seconds
+    LaunchedEffect(Unit) {
+        val watchSymbols = listOf(
+            "NIFTY", "BANKNIFTY", "FINNIFTY", "MIDCPNIFTY",
+            "RELIANCE", "TCS", "INFY", "HDFCBANK", "ICICIBANK", "KOTAKBANK",
+            "AXISBANK", "SBIN", "LT", "WIPRO", "HCLTECH", "TECHM",
+            "TATAMOTORS", "MARUTI", "M&M", "BAJAJ-AUTO", "EICHERMOT",
+            "TATASTEEL", "JSWSTEEL", "HINDALCO", "COALINDIA", "NTPC",
+            "ONGC", "BPCL", "BHARTIARTL", "SUNPHARMA", "DRREDDY", "CIPLA",
+            "BAJFINANCE", "BAJAJFINSV", "CHOLAFIN", "HINDUNILVR", "ITC",
+            "ASIANPAINT", "GRASIM", "ULTRACEMCO", "ADANIENT", "ADANIPORTS",
+            "TITAN", "APOLLOHOSP", "ZOMATO", "POWERGRID", "RECLTD", "PFC"
         )
+        while (true) {
+            try {
+                val fetched = LivePriceFetcher.fetchPrices(watchSymbols)
+                if (fetched.isNotEmpty()) {
+                    livePrices = LivePriceFetcher.fallbackPrices + fetched
+                    val now = java.util.Calendar.getInstance()
+                    priceLoadStatus = "🟢 Live • ${String.format("%02d:%02d:%02d", now.get(java.util.Calendar.HOUR_OF_DAY), now.get(java.util.Calendar.MINUTE), now.get(java.util.Calendar.SECOND))}"
+                    lastPriceRefresh = System.currentTimeMillis()
+                } else {
+                    priceLoadStatus = "📡 Using cached prices"
+                }
+            } catch (_: Exception) {
+                priceLoadStatus = "⚠️ Offline — cached prices"
+            }
+            delay(60_000L) // refresh every 60 seconds
+        }
+    }
+
+    val benchmarkFutures = remember(livePrices) {
+        listOf(
+            "NIFTY", "BANKNIFTY", "FINNIFTY",
+            "RELIANCE", "HDFCBANK", "ICICIBANK",
+            "TATAMOTORS", "INFY", "TCS",
+            "SBIN", "BHARTIARTL", "LT",
+            "BAJFINANCE", "AXISBANK", "MARUTI", "TATASTEEL"
+        ).map { sym -> sym to (livePrices[sym] ?: LivePriceFetcher.getBestPrice(sym)) }
     }
 
     var selectedFutureSymbol by remember { mutableStateOf("NIFTY") }
@@ -105,8 +141,9 @@ fun FuturesQuantScreen() {
     var selectedFutureSector by remember { mutableStateOf("Index") }
     var showStockBrowserModal by remember { mutableStateOf(false) }
 
-    val currentQuote = remember(selectedFutureSymbol) {
-        generateFutureQuote(selectedFutureSymbol, selectedFutureName, selectedFutureSector)
+    val currentQuote = remember(selectedFutureSymbol, livePrices) {
+        val liveSpot = livePrices[selectedFutureSymbol]
+        generateFutureQuote(selectedFutureSymbol, selectedFutureName, selectedFutureSector, liveSpot)
     }
 
     Column(
@@ -114,6 +151,25 @@ fun FuturesQuantScreen() {
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
     ) {
+        // ── Live price status banner ──────────────────────────────────────────
+        val statusColor = when {
+            priceLoadStatus.startsWith("🟢") -> Color(0xFF1B5E20)
+            priceLoadStatus.startsWith("⚠️") -> Color(0xFF7F6000)
+            else -> Color(0xFF1A237E)
+        }
+        Surface(
+            color = statusColor.copy(alpha = 0.15f),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text(
+                text = priceLoadStatus,
+                color = statusColor,
+                fontSize = 10.sp,
+                modifier = Modifier
+                    .padding(horizontal = 12.dp, vertical = 3.dp)
+                    .fillMaxWidth()
+            )
+        }
         TabRow(
             selectedTabIndex = selectedFuturesTab,
             containerColor = MaterialTheme.colorScheme.surface,
@@ -1543,27 +1599,27 @@ private fun formatOiCompact(count: Long): String = when {
     else -> count.toString()
 }
 
-private fun generateFutureQuote(sym: String, name: String, sector: String): FuturesContractQuote {
-    // ── Current approximate NSE F&O prices (updated Oct 2026) ──
-    val baseSpot = when (sym) {
+private fun generateFutureQuote(sym: String, name: String, sector: String, overrideSpot: Double? = null): FuturesContractQuote {
+    // ── Use live price if available, else fallback table ──
+    val baseSpot = overrideSpot ?: when (sym) {
         // Indices
-        "NIFTY"      -> 24150.0; "BANKNIFTY"  -> 52350.0; "FINNIFTY"   -> 23500.0
+        "NIFTY"      -> 22699.0; "BANKNIFTY"  -> 54267.0; "FINNIFTY"   -> 23100.0
         "MIDCPNIFTY" -> 12100.0; "NIFTYNXT50" -> 70800.0
         // Large-cap stocks
-        "RELIANCE"   -> 1320.0;  "TCS"        -> 4350.0;  "INFY"       -> 1960.0
-        "HDFCBANK"   -> 1755.0;  "ICICIBANK"  -> 1300.0;  "KOTAKBANK"  -> 1820.0
-        "AXISBANK"   -> 1220.0;  "SBIN"       -> 840.0;   "BANKBARODA" -> 245.0
-        "LT"         -> 3700.0;  "LTIM"       -> 5700.0;  "WIPRO"      -> 560.0
+        "RELIANCE"   -> 1158.0;  "TCS"        -> 4180.0;  "INFY"       -> 1820.0
+        "HDFCBANK"   -> 1780.0;  "ICICIBANK"  -> 1350.0;  "KOTAKBANK"  -> 1820.0
+        "AXISBANK"   -> 1180.0;  "SBIN"       -> 820.0;   "BANKBARODA" -> 245.0
+        "LT"         -> 3610.0;  "LTIM"       -> 5700.0;  "WIPRO"      -> 560.0
         "HCLTECH"    -> 1920.0;  "TECHM"      -> 1680.0;  "MPHASIS"    -> 2900.0
-        "TATAMOTORS" -> 790.0;   "MARUTI"     -> 11800.0; "M&M"        -> 3150.0
+        "TATAMOTORS" -> 414.0;   "MARUTI"     -> 11579.0; "M&M"        -> 3150.0
         "BAJAJ-AUTO" -> 10200.0; "EICHERMOT"  -> 5050.0;  "HEROMOTOCO" -> 4950.0
-        "TATASTEEL"  -> 145.0;   "JSWSTEEL"   -> 960.0;   "HINDALCO"   -> 685.0
+        "TATASTEEL"  -> 142.0;   "JSWSTEEL"   -> 960.0;   "HINDALCO"   -> 685.0
         "COALINDIA"  -> 415.0;   "NTPC"       -> 390.0;   "POWERGRID"  -> 340.0
         "ONGC"       -> 285.0;   "BPCL"       -> 340.0;   "IOC"        -> 165.0
-        "BHARTIARTL" -> 1720.0;  "IDEA"       -> 11.5;    "HFCL"       -> 165.0
+        "BHARTIARTL" -> 1650.0;  "IDEA"       -> 11.5;    "HFCL"       -> 165.0
         "SUNPHARMA"  -> 1970.0;  "DRREDDY"    -> 6600.0;  "CIPLA"      -> 1620.0
         "DIVISLAB"   -> 5400.0;  "BIOCON"     -> 345.0;   "AUROPHARMA" -> 1340.0
-        "BAJFINANCE" -> 6800.0;  "BAJAJFINSV" -> 1750.0;  "HDFC"       -> 2800.0
+        "BAJFINANCE" -> 917.0;   "BAJAJFINSV" -> 1750.0;  "HDFC"       -> 2800.0
         "CHOLAFIN"   -> 1480.0;  "MUTHOOTFIN" -> 2100.0;  "SBILIFE"    -> 1700.0
         "HINDUNILVR" -> 2450.0;  "ITC"        -> 475.0;   "NESTLEIND"  -> 2300.0
         "BRITANNIA"  -> 5500.0;  "MARICO"     -> 620.0;   "DABUR"      -> 560.0

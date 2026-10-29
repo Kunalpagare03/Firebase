@@ -251,8 +251,8 @@ fun OptionSentimentScreen(
                     spotHistory = (state.data.spotHistory + (quote?.spotHistory ?: emptyList()) + liveChartTicks)
                         .distinctBy { it.time }.sortedBy { it.time }.takeLast(10000),
                     marketStatusStr = when {
-                        quote == null && yahooSpot > 0 -> "YAHOO LIVE \u25cf Spot \u20b9${String.format(\"%,.2f\", yahooSpot)} \u00b7 Angel One offline"
-                        quote == null -> "LIVE QUOTE NOT RECEIVED \u00b7 Check Angel One feed"
+                        quote == null && yahooSpot > 0 -> "YAHOO LIVE ● Spot ₹${String.format("%,.2f", yahooSpot)} · Angel One offline"
+                        quote == null -> "LIVE QUOTE NOT RECEIVED · Check Angel One feed"
                         quoteIsFresh -> "ANGEL ONE LIVE · ${quoteAge}s · ${quote.updatedAt}"
                         else -> "STALE QUOTE · Last tick ${quoteAge}s ago · ${quote.updatedAt}"
                     },

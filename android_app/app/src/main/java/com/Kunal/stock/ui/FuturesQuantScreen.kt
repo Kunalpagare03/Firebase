@@ -141,6 +141,24 @@ fun FuturesQuantScreen() {
     var selectedFutureSector by remember { mutableStateOf("Index") }
     var showStockBrowserModal by remember { mutableStateOf(false) }
 
+    // On-demand price fetch — fires whenever selected symbol changes and price not already cached
+    LaunchedEffect(selectedFutureSymbol) {
+        if (livePrices[selectedFutureSymbol] == null) {
+            priceLoadStatus = "⏳ Fetching ${selectedFutureSymbol}…"
+            try {
+                val price = LivePriceFetcher.fetchPrice(selectedFutureSymbol)
+                if (price != null && price > 0) {
+                    livePrices = livePrices + (selectedFutureSymbol to price)
+                    priceLoadStatus = "🟢 Live · ${selectedFutureSymbol} ₹${String.format("%.2f", price)}"
+                } else {
+                    priceLoadStatus = "⚠️ ${selectedFutureSymbol} — using estimated price"
+                }
+            } catch (_: Exception) {
+                priceLoadStatus = "⚠️ Offline — estimated price for ${selectedFutureSymbol}"
+            }
+        }
+    }
+
     val currentQuote = remember(selectedFutureSymbol, livePrices) {
         val liveSpot = livePrices[selectedFutureSymbol]
         generateFutureQuote(selectedFutureSymbol, selectedFutureName, selectedFutureSector, liveSpot)

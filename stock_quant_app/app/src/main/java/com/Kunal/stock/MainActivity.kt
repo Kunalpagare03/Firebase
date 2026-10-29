@@ -1,4 +1,4 @@
-package com.Kunal.stock
+﻿package com.Kunal.stock
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -25,6 +25,7 @@ import com.Kunal.stock.ui.LoginScreen
 import com.Kunal.stock.ui.OptionSentimentScreen
 import com.Kunal.stock.ui.StockScanScreen
 import com.Kunal.stock.ui.BacktestScreen
+import com.Kunal.stock.ui.ChartLinkScreen
 import com.Kunal.stock.ui.theme.StockAnalysisTheme
 import com.google.firebase.auth.FirebaseAuth
 
@@ -69,6 +70,7 @@ fun MainScreen(
 
     val navItems = listOf(
         NavigationItem("Stock Scanner", "stocks", Icons.Default.FilterList),
+        NavigationItem("ChartLink", "chartlink", Icons.Default.AutoGraph),
         NavigationItem("Stock Lab", "backtest", Icons.Default.Science)
     )
 
@@ -197,6 +199,7 @@ fun MainScreen(
             modifier = Modifier.padding(innerPadding)
         ) {
             composable("stocks") { StockScanScreen() }
+            composable("chartlink") { ChartLinkScreen() }
             composable("backtest") { BacktestScreen() }
         }
     }

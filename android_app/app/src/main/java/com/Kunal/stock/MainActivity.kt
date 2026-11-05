@@ -26,6 +26,7 @@ import com.Kunal.stock.ui.OptionSentimentScreen
 import com.Kunal.stock.ui.FuturesQuantScreen
 import com.Kunal.stock.ui.StockScanScreen
 import com.Kunal.stock.ui.BacktestScreen
+import com.Kunal.stock.ui.SimpleSetupScreen
 import com.Kunal.stock.ui.theme.StockAnalysisTheme
 import com.google.firebase.auth.FirebaseAuth
 
@@ -71,7 +72,8 @@ fun MainScreen(
     val navItems = listOf(
         NavigationItem("Options", "options", Icons.Default.ShowChart),
         NavigationItem("Futures", "futures", Icons.Default.TrendingUp),
-        NavigationItem("Option Lab", "backtest", Icons.Default.Science)
+        NavigationItem("Option Lab", "backtest", Icons.Default.Science),
+        NavigationItem("Setup Guide", "setup", Icons.Default.MenuBook)
     )
 
     if (showLogoutDialog) {
@@ -201,6 +203,7 @@ fun MainScreen(
             composable("options") { OptionSentimentScreen() }
             composable("futures") { FuturesQuantScreen() }
             composable("backtest") { BacktestScreen() }
+            composable("setup") { SimpleSetupScreen() }
         }
     }
 }

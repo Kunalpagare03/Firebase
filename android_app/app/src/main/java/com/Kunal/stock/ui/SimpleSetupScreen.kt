@@ -1,4 +1,4 @@
-package com.Kunal.stock.ui
+﻿package com.Kunal.stock.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -214,7 +214,7 @@ data class JournalEntry(
 @Composable
 fun SimpleSetupScreen() {
     var selectedTab by remember { mutableIntStateOf(0) }
-    val tabs = listOf("Signal", "AI Agent", "Day Plan", "Setups", "Hero Zero", "Journal", "Risk Calc")
+    val tabs = listOf("Signal", "AI Agent", "Day Plan", "Setups", "Hero Zero", "Journal", "Risk Calc", "Checklist")
 
     Column(
         modifier = Modifier
@@ -251,6 +251,7 @@ fun SimpleSetupScreen() {
             4 -> HeroZeroTab()
             5 -> JournalTab()
             6 -> RiskCalcTab()
+            7 -> ChecklistTab()
         }
     }
 }
@@ -1708,5 +1709,210 @@ fun HZVariantRow(variant: String, time: String, strike: String, exp: String, zer
         Text(zeroP,   color = RedBear,          fontSize = 10.sp, modifier = Modifier.weight(0.6f))
         Text(avg,     color = AmberWarn,        fontSize = 10.sp, modifier = Modifier.weight(0.7f))
         Text(max,     color = GreenBull,        fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(0.6f))
+    }
+}
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// TAB 7 â€” PRE-TRADE CHECKLIST (SECTION 8)
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+@Composable
+fun ChecklistTab() {
+    val questions = listOf(
+        "Is the market in a clear trend (not sideways/choppy)?",
+        "Is today NOT expiry day for Nifty (avoid Tuesday if unsure)?",
+        "Did you wait for the 9:15â€“9:30 candle to fully close?",
+        "Is the setup matching one of your 5 defined setups (no random trades)?",
+        "Is your max loss within 1R (single trade risk as per capital rule)?",
+        "Have you checked the VIX â€” is it below 20 (not in panic zone)?"
+    )
+
+    val checks = remember { mutableStateListOf(*Array(questions.size) { false }) }
+    var resetKey by remember { mutableStateOf(0) }
+
+    val allYes = checks.all { it }
+    val anyNo  = checks.any { !it }
+
+    LazyColumn(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(SurfaceDark)
+            .padding(12.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        item {
+            Text(
+                "âœ… Pre-Trade Checklist",
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold,
+                color = GreenBull
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                "Answer ALL 6 questions YES before entering any trade",
+                fontSize = 12.sp,
+                color = Color.Gray
+            )
+            Spacer(Modifier.height(8.dp))
+        }
+
+        itemsIndexed(questions) { idx, q ->
+            Card(
+                colors = CardDefaults.cardColors(
+                    containerColor = if (checks[idx]) Color(0xFF0A3D0A) else CardDark
+                ),
+                shape = RoundedCornerShape(10.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Checkbox(
+                        checked = checks[idx],
+                        onCheckedChange = { checks[idx] = it },
+                        colors = CheckboxDefaults.colors(
+                            checkedColor = GreenBull,
+                            uncheckedColor = Color.Gray
+                        )
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(
+                            "Q${idx + 1}",
+                            fontSize = 10.sp,
+                            color = AmberWarn,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(q, fontSize = 13.sp, color = Color.White)
+                    }
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        if (checks[idx]) "YES" else "NO",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = if (checks[idx]) GreenBull else RedBear
+                    )
+                }
+            }
+        }
+
+        item {
+            Spacer(Modifier.height(8.dp))
+            // â”€â”€ Verdict card â”€â”€
+            Card(
+                colors = CardDefaults.cardColors(
+                    containerColor = if (allYes) Color(0xFF003300) else Color(0xFF330000)
+                ),
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(
+                    Modifier.padding(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        if (allYes) "ðŸŸ¢ TAKE THE TRADE" else "ðŸ”´ NOT READY",
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = if (allYes) GreenBull else RedBear
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        if (allYes) "All conditions met â€” proceed with discipline"
+                        else "Fix the NO answers before entering",
+                        fontSize = 12.sp,
+                        color = Color.White,
+                        textAlign = TextAlign.Center
+                    )
+                }
+            }
+            Spacer(Modifier.height(10.dp))
+        }
+
+        // â”€â”€ Risk rules â”€â”€
+        item {
+            Card(
+                colors = CardDefaults.cardColors(containerColor = CardDark2),
+                shape = RoundedCornerShape(10.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(Modifier.padding(14.dp)) {
+                    Text(
+                        "â›” Daily / Weekly Stop Rules",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = AmberWarn
+                    )
+                    Spacer(Modifier.height(6.dp))
+                    Text("â€¢ Daily Stop: 2Ã— per-trade risk â†’ STOP for the day", fontSize = 12.sp, color = Color.White)
+                    Text("â€¢ Weekly Stop: 5Ã— per-trade risk â†’ no more trades that week", fontSize = 12.sp, color = Color.White)
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        "ðŸ“Š Review Rule",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = BlueCool
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        "After 30 Setup-1 trades:\n  Avg loss > 0.25R? â†’ Back to paper trading\n  Avg win > 0.5R?  â†’ Scale up 1 lot",
+                        fontSize = 12.sp,
+                        color = Color.White
+                    )
+                }
+            }
+            Spacer(Modifier.height(10.dp))
+        }
+
+        // â”€â”€ Never Do card â”€â”€
+        item {
+            Card(
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF2A0000)),
+                shape = RoundedCornerShape(10.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(Modifier.padding(14.dp)) {
+                    Text(
+                        "ðŸš« Never Do",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = RedBear
+                    )
+                    Spacer(Modifier.height(6.dp))
+                    listOf(
+                        "Never average down on a losing option",
+                        "Never trade on result / RBI days",
+                        "Never hold through 3:15 PM",
+                        "Never buy OTM just because it's cheap",
+                        "Never increase size after 2 consecutive losses"
+                    ).forEach { rule ->
+                        Row(Modifier.padding(vertical = 2.dp)) {
+                            Text("âœ— ", fontSize = 12.sp, color = RedBear, fontWeight = FontWeight.Bold)
+                            Text(rule, fontSize = 12.sp, color = Color.White)
+                        }
+                    }
+                }
+            }
+            Spacer(Modifier.height(10.dp))
+        }
+
+        // â”€â”€ Reset button â”€â”€
+        item {
+            Button(
+                onClick = {
+                    for (i in checks.indices) checks[i] = false
+                    resetKey++
+                },
+                colors = ButtonDefaults.buttonColors(containerColor = CardDark2),
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(8.dp)
+            ) {
+                Icon(Icons.Default.Refresh, contentDescription = null, tint = AmberWarn)
+                Spacer(Modifier.width(6.dp))
+                Text("Reset Checklist", color = AmberWarn, fontWeight = FontWeight.Bold)
+            }
+            Spacer(Modifier.height(24.dp))
+        }
     }
 }

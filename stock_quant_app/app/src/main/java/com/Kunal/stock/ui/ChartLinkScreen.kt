@@ -551,8 +551,23 @@ private fun PlaybookSignalCard(signal: PlaybookSignal, expanded: Boolean, onClic
             // Header row
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
-                    Text(signal.symbol, fontWeight = FontWeight.ExtraBold, color = Color.White, fontSize = 16.sp)
-                    Text(signal.sector, color = Color.Gray, fontSize = 11.sp)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(signal.symbol, fontWeight = FontWeight.ExtraBold, color = Color.White, fontSize = 16.sp)
+                        Spacer(Modifier.width(6.dp))
+                        Surface(
+                            color = if (signal.horizon == "SWING") GreenNeon.copy(0.18f) else BluePill.copy(0.18f),
+                            shape = RoundedCornerShape(4.dp)
+                        ) {
+                            Text(
+                                signal.horizon,
+                                color = if (signal.horizon == "SWING") GreenNeon else BluePill,
+                                fontSize = 9.sp,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
+                            )
+                        }
+                    }
+                    Text("${signal.sector} • Tech Score: ${signal.techScore.toInt()}/100", color = Color.Gray, fontSize = 11.sp)
                 }
                 Column(horizontalAlignment = Alignment.End) {
                     Surface(color = setupColor.copy(0.18f), shape = RoundedCornerShape(8.dp)) {

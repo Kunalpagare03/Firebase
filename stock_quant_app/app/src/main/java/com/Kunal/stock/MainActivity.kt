@@ -24,7 +24,8 @@ import androidx.navigation.compose.rememberNavController
 import com.Kunal.stock.ui.LoginScreen
 import com.Kunal.stock.ui.StockLabScreen
 import com.Kunal.stock.ui.StockScannerHubScreen
-import com.Kunal.stock.ui.V4StockPdfSpecificationScreen
+import com.Kunal.stock.ui.MarketTrafficAndPlannerScreen
+import com.Kunal.stock.ui.LongTermCompounderScreen
 import com.Kunal.stock.ui.theme.StockAnalysisTheme
 import com.google.firebase.auth.FirebaseAuth
 
@@ -69,8 +70,9 @@ fun MainScreen(
 
     val navItems = listOf(
         NavigationItem("Scanner", "stocks", Icons.Default.FilterList),
-        NavigationItem("Stock Lab", "stocklab", Icons.Default.Science),
-        NavigationItem("v4 PDF Spec", "v4_spec", Icons.Default.MenuBook)
+        NavigationItem("Traffic & Planner", "planner", Icons.Default.Traffic),
+        NavigationItem("Long-Term", "longterm", Icons.Default.Diamond),
+        NavigationItem("Stock Lab", "stocklab", Icons.Default.Science)
     )
 
     if (showLogoutDialog) {
@@ -205,8 +207,9 @@ fun MainScreen(
             modifier = Modifier.padding(innerPadding)
         ) {
             composable("stocks") { StockScannerHubScreen() }
+            composable("planner") { MarketTrafficAndPlannerScreen() }
+            composable("longterm") { LongTermCompounderScreen() }
             composable("stocklab") { StockLabScreen() }
-            composable("v4_spec") { V4StockPdfSpecificationScreen() }
         }
     }
 }

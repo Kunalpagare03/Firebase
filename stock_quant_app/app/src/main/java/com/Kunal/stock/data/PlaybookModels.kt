@@ -22,6 +22,8 @@ data class PlaybookSignal(
     val symbol: String = "",
     val sector: String = "",
     val setup: PlaybookSetup = PlaybookSetup.A,
+    val horizon: String = "POSITIONAL",
+    val techScore: Double = 75.0,
     val signalDate: String = "",           // date of signal bar (close)
     val signalClose: Double = 0.0,         // close on signal day
     val entryPrice: Double = 0.0,          // next-day open (estimated = signalClose * 1.003)

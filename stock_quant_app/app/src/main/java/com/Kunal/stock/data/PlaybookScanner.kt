@@ -196,6 +196,114 @@ object PlaybookScanner {
                vol * c >= 50_000_000 && c >= 50
     }
 
+    // ── Setup N01: Bollinger Stretch Z20 <= -2.0 ────────────────────────────
+    private fun checkSetupN01(candles: List<StockCandle>, idx: Int): Boolean {
+        if (idx < 200) return false
+        val closes = candles.map { it.close }
+        val c = closes[idx]
+        val sma200 = sma(closes, 200, idx)
+        val sma20 = sma(closes, 20, idx)
+        val vol = vol20avg(candles.map { it.volume }, idx)
+        if (c <= sma200 || vol * c < 50_000_000 || c < 50) return false
+        val sub = closes.subList(idx - 19, idx + 1)
+        val variance = sub.map { (it - sma20).pow(2) }.average()
+        val std = sqrt(variance)
+        if (std == 0.0) return false
+        val z20 = (c - sma20) / std
+        return z20 <= -2.0
+    }
+
+    // ── Setup N03: 2-day RSI panic (sum < 10.0) ─────────────────────────────
+    private fun checkSetupN03(candles: List<StockCandle>, idx: Int): Boolean {
+        if (idx < 200) return false
+        val closes = candles.map { it.close }
+        val c = closes[idx]
+        val sma200 = sma(closes, 200, idx)
+        val vol = vol20avg(candles.map { it.volume }, idx)
+        if (c <= sma200 || vol * c < 50_000_000 || c < 50) return false
+        val rsiToday = rsi2(closes, idx)
+        val rsiYesterday = rsi2(closes, idx - 1)
+        return (rsiToday + rsiYesterday) < 10.0
+    }
+
+    // ── Setup N04: 4 consecutive lower closes ────────────────────────────────
+    private fun checkSetupN04(candles: List<StockCandle>, idx: Int): Boolean {
+        if (idx < 204) return false
+        val closes = candles.map { it.close }
+        val c = closes[idx]
+        val sma200 = sma(closes, 200, idx)
+        val vol = vol20avg(candles.map { it.volume }, idx)
+        if (c <= sma200 || vol * c < 50_000_000 || c < 50) return false
+        return (closes[idx] < closes[idx - 1]) &&
+               (closes[idx - 1] < closes[idx - 2]) &&
+               (closes[idx - 2] < closes[idx - 3]) &&
+               (closes[idx - 3] < closes[idx - 4]) &&
+               (rsi2(closes, idx) < 15.0)
+    }
+
+    // ── Setup N08: Leader in panic dip (RAM >= 80, RSI2 < 10) ────────────────
+    private fun checkSetupN08(candles: List<StockCandle>, idx: Int, ramRank: Int): Boolean {
+        if (idx < 200) return false
+        val closes = candles.map { it.close }
+        val c = closes[idx]
+        val sma200 = sma(closes, 200, idx)
+        val vol = vol20avg(candles.map { it.volume }, idx)
+        if (c <= sma200 || vol * c < 50_000_000 || c < 50) return false
+        return ramRank >= 80 && rsi2(closes, idx) < 10.0
+    }
+
+    // ── Setup N09: Leader bounces at EMA20 (RAM >= 70) ───────────────────────
+    private fun checkSetupN09(candles: List<StockCandle>, idx: Int, ramRank: Int): Boolean {
+        if (idx < 200) return false
+        val closes = candles.map { it.close }
+        val c = closes[idx]
+        val l = candles[idx].low
+        val ema20 = ema(closes, 20, idx)
+        val sma200 = sma(closes, 200, idx)
+        val vol = vol20avg(candles.map { it.volume }, idx)
+        if (c <= sma200 || vol * c < 50_000_000 || c < 50) return false
+        return ramRank >= 70 && l <= ema20 * 1.01 && c > ema20
+    }
+
+    // ── Setup N18: Hammer at 10-day low ─────────────────────────────────────
+    private fun checkSetupN18(candles: List<StockCandle>, idx: Int): Boolean {
+        if (idx < 200) return false
+        val closes = candles.map { it.close }
+        val c = closes[idx]
+        val o = candles[idx].open
+        val l = candles[idx].low
+        val sma200 = sma(closes, 200, idx)
+        val vol = vol20avg(candles.map { it.volume }, idx)
+        if (c <= sma200 || vol * c < 50_000_000 || c < 50) return false
+        val low10 = (idx - 10 until idx).map { candles[it].low }.minOrNull() ?: l
+        val body = abs(c - o)
+        val lowerShadow = min(o, c) - l
+        return (lowerShadow >= 2.0 * max(body, 0.5)) && (l <= low10 * 1.005)
+    }
+
+    // ── v4 Swing Setup 1: Crash Dip in Uptrend ──────────────────────────────
+    private fun checkSwing1(candles: List<StockCandle>, idx: Int, ramRank: Int): Boolean {
+        if (idx < 203) return false
+        val closes = candles.map { it.close }
+        val c = closes[idx]
+        val close3ago = closes[idx - 3]
+        val sma200 = sma(closes, 200, idx)
+        return c > sma200 && (c <= close3ago * 0.92) && ramRank >= 50
+    }
+
+    // ── v4 Swing Setup 2: Panic Dip in Leader ───────────────────────────────
+    private fun checkSwing2(candles: List<StockCandle>, idx: Int, techScore: Double, ramRank: Int): Boolean {
+        if (idx < 200) return false
+        val closes = candles.map { it.close }
+        val c = closes[idx]
+        val sma200 = sma(closes, 200, idx)
+        if (c <= sma200) return false
+        val rsiToday = rsi2(closes, idx)
+        val rsiYest = rsi2(closes, idx - 1)
+        val panic = (rsiToday < 5.0) || ((rsiToday + rsiYest) < 10.0) || (ramRank >= 80 && rsiToday < 10.0)
+        return techScore >= 70.0 && panic
+    }
+
     // ── 3-month strength rank (vs benchmark average) ─────────────────────────
     private fun strengthRank(candles: List<StockCandle>, idx: Int): Int {
         if (idx < 63) return 50
@@ -302,32 +410,57 @@ object PlaybookScanner {
             }
             val day22 = sdf.format(cal.time)
 
-            val entry = close * 1.003   // estimated next-day open (+0.3% gap)
-            val sl    = close * 0.96    // 4% disciplined stop below signal close
+            val entry = close
+            val sl    = close * 0.92    // v4 8% hard stop loss below signal close
 
-            // Check each setup
+            // 6-Factor Technical Score (0 to 100)
+            val ret5 = if (idx >= 5) (close / closes[idx - 5] - 1.0) else 0.0
+            val dipScore = when {
+                ret5 <= -0.08 -> 95.0
+                ret5 <= -0.05 -> 80.0
+                ret5 <= -0.02 -> 65.0
+                else -> 40.0
+            }
+            val sma200Prev20 = sma(closes, 200, maxOf(0, idx - 20))
+            val slopeScore = if (sma200 > sma200Prev20) 80.0 else 40.0
+            val calculatedTechScore = (strRank * 0.35 + dipScore * 0.35 + slopeScore * 0.30).coerceIn(10.0, 99.0)
+
+            // Check each setup (10 Positional setups + 2 v4 Swing setups)
             listOf(
                 PlaybookSetup.A to checkSetupA(candles, idx),
                 PlaybookSetup.B to checkSetupB(candles, idx),
                 PlaybookSetup.C to checkSetupC(candles, idx),
-                PlaybookSetup.D to checkSetupD(candles, idx, niftyAbove200)
+                PlaybookSetup.D to checkSetupD(candles, idx, niftyAbove200),
+                PlaybookSetup.N01 to checkSetupN01(candles, idx),
+                PlaybookSetup.N03 to checkSetupN03(candles, idx),
+                PlaybookSetup.N04 to checkSetupN04(candles, idx),
+                PlaybookSetup.N08 to checkSetupN08(candles, idx, strRank),
+                PlaybookSetup.N09 to checkSetupN09(candles, idx, strRank),
+                PlaybookSetup.N18 to checkSetupN18(candles, idx),
+                PlaybookSetup.SWING_1 to checkSwing1(candles, idx, strRank),
+                PlaybookSetup.SWING_2 to checkSwing2(candles, idx, calculatedTechScore, strRank)
             ).filter { it.second }.forEach { (setup, _) ->
                 val (action, reason, note) = ruleBasedAnalyze(
                     stock.symbol, stock.sector, setup,
                     close, sma200, rsi14val, strRank, niftyAbove200, dailyValueCr
                 )
+                val isSwing = setup == PlaybookSetup.SWING_1 || setup == PlaybookSetup.SWING_2
+                val horizonStr = if (isSwing) "SWING" else "POSITIONAL"
+                val exitD = if (isSwing) "Day 5 / Close > Prev High" else day22
                 results.add(PlaybookSignal(
                     id              = "${stock.symbol}_${setup.code}_${signalDate.replace("-", "")}",
                     symbol          = stock.symbol,
                     sector          = stock.sector,
                     setup           = setup,
+                    horizon         = horizonStr,
+                    techScore       = calculatedTechScore,
                     signalDate      = signalDate,
                     signalClose     = close,
                     entryPrice      = entry,
                     stopLoss        = sl,
-                    day22ExitDate   = day22,
-                    refTarget1      = entry * 1.04,  // +4% high-probability target (50%+ win-rate edge)
-                    refTarget2      = entry * 1.08,  // +8% runner target
+                    day22ExitDate   = exitD,
+                    refTarget1      = entry * 1.08,  // +8% swing/positional target
+                    refTarget2      = entry * 1.15,  // +15% runner target
                     aiAction        = action,
                     aiReason        = reason,
                     aiNote          = note,

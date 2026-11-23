@@ -54,16 +54,19 @@ fun MarketTrafficAndPlannerScreen() {
     var halPrice by remember { mutableDoubleStateOf(LivePriceFetcher.getBestPrice("HAL")) }
 
     LaunchedEffect(Unit) {
-        val prices = LivePriceFetcher.fetchPrices(listOf("NIFTY", "INDIAVIX", "TRENT", "BEL", "HAL"))
-        prices["NIFTY"]?.let { 
-            niftyPrice = it 
-            niftySma50 = it * 0.985
-            niftySma200 = it * 0.955
+        while (true) {
+            val prices = LivePriceFetcher.fetchPrices(listOf("NIFTY", "INDIAVIX", "TRENT", "BEL", "HAL"))
+            prices["NIFTY"]?.let { 
+                niftyPrice = it 
+                niftySma50 = it * 0.985
+                niftySma200 = it * 0.955
+            }
+            prices["INDIAVIX"]?.let { vixValue = it }
+            prices["TRENT"]?.let { trentPrice = it }
+            prices["BEL"]?.let { belPrice = it }
+            prices["HAL"]?.let { halPrice = it }
+            kotlinx.coroutines.delay(15_000)
         }
-        prices["INDIAVIX"]?.let { vixValue = it }
-        prices["TRENT"]?.let { trentPrice = it }
-        prices["BEL"]?.let { belPrice = it }
-        prices["HAL"]?.let { halPrice = it }
     }
 
     // Planned slots with real dynamic prices

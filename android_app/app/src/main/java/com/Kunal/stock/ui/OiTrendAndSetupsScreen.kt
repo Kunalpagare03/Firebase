@@ -20,6 +20,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.delay
 
 private val BgDeep     = Color(0xFF0F081D)
 private val BgCard     = Color(0xFF18102B)
@@ -67,52 +68,66 @@ fun OiTrendAndSetupsScreen() {
     var selectedTab by remember { mutableIntStateOf(0) } // 0: 11 OI Formulas (oi_trend.py), 1: Option Setups Catalog
     var selectedIndex by remember { mutableStateOf("NIFTY") }
 
+    var liveSpots by remember {
+        mutableStateOf(mapOf("NIFTY" to 25518.0, "BANKNIFTY" to 63260.0, "SENSEX" to 82970.0))
+    }
+
+    LaunchedEffect(Unit) {
+        while (true) {
+            val fetched = LivePriceFetcher.fetchPrices(listOf("NIFTY", "BANKNIFTY", "SENSEX"))
+            if (fetched.isNotEmpty()) {
+                liveSpots = liveSpots + fetched
+            }
+            delay(15_000)
+        }
+    }
+
     val oiReadings = remember {
         mapOf(
             "NIFTY" to OiReading(
                 symbol = "NIFTY",
-                spot = 24150.0,
+                spot = 25518.0,
                 futurePriceChg = 0.95,
                 futureOiChg = 4.08,
                 buildupClass = "LONG BUILD-UP (+1)",
                 pcr = 1.53,
                 freshPosRatio = 1.0,
                 writerBias = 0.51,
-                callWall = 24500.0,
-                putWall = 23800.0,
-                maxPain = 24100.0,
+                callWall = 25800.0,
+                putWall = 25200.0,
+                maxPain = 25500.0,
                 expectedMove = 232.60,
                 trendScore = 2,
                 verdict = "BULLISH (CE Side Bias)"
             ),
             "BANKNIFTY" to OiReading(
                 symbol = "BANKNIFTY",
-                spot = 51850.0,
+                spot = 63260.0,
                 futurePriceChg = 2.34,
                 futureOiChg = -2.05,
                 buildupClass = "SHORT COVERING (+1)",
                 pcr = 1.20,
                 freshPosRatio = 0.28,
                 writerBias = 0.41,
-                callWall = 52500.0,
-                putWall = 51000.0,
-                maxPain = 51500.0,
+                callWall = 64000.0,
+                putWall = 62500.0,
+                maxPain = 63000.0,
                 expectedMove = 834.80,
                 trendScore = 2,
                 verdict = "BULLISH (CE Side Bias)"
             ),
             "SENSEX" to OiReading(
                 symbol = "SENSEX",
-                spot = 79450.0,
+                spot = 82970.0,
                 futurePriceChg = 0.82,
                 futureOiChg = 3.12,
                 buildupClass = "LONG BUILD-UP (+1)",
                 pcr = 1.35,
                 freshPosRatio = 0.45,
                 writerBias = 0.38,
-                callWall = 80000.0,
-                putWall = 78500.0,
-                maxPain = 79200.0,
+                callWall = 84000.0,
+                putWall = 82000.0,
+                maxPain = 83000.0,
                 expectedMove = 680.0,
                 trendScore = 1,
                 verdict = "MILD BULLISH (CE Bias)"
@@ -120,7 +135,15 @@ fun OiTrendAndSetupsScreen() {
         )
     }
 
-    val currentReading = oiReadings[selectedIndex] ?: oiReadings["NIFTY"]!!
+    val baseReading = oiReadings[selectedIndex] ?: oiReadings["NIFTY"]!!
+    val dynamicSpot = liveSpots[selectedIndex] ?: baseReading.spot
+    val currentReading = baseReading.copy(
+        spot = dynamicSpot,
+        maxPain = kotlin.math.round(dynamicSpot / 50.0) * 50.0,
+        callWall = kotlin.math.round((dynamicSpot * 1.012) / 100.0) * 100.0,
+        putWall = kotlin.math.round((dynamicSpot * 0.988) / 100.0) * 100.0,
+        expectedMove = kotlin.math.round(dynamicSpot * 0.009 * 10.0) / 10.0
+    )
 
     val setupCatalog = remember {
         listOf(

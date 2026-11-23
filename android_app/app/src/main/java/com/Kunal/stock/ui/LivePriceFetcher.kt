@@ -6,39 +6,82 @@ import java.net.HttpURLConnection
 import java.net.URL
 
 /**
- * LivePriceFetcher — fetches real-time NSE prices via Yahoo Finance (no API key needed).
+ * LivePriceFetcher — fetches real-time NSE prices via Yahoo Finance v8 chart endpoint.
  *
  * Yahoo Finance symbol mapping:
  *  NIFTY      -> ^NSEI
  *  BANKNIFTY  -> ^NSEBANK
+ *  SENSEX     -> ^BSESN
+ *  INDIAVIX   -> ^INDIAVIX
  *  FINNIFTY   -> ^CNXFIN
  *  MIDCPNIFTY -> ^NSEMDCP50
  *  Stocks     -> SYMBOL.NS  (e.g. RELIANCE.NS)
  */
 object LivePriceFetcher {
 
-    private const val BASE_URL =
-        "https://query1.finance.yahoo.com/v7/finance/quote?symbols="
-
     // Cache: symbol -> (price, fetchTimeMs)
     private val priceCache = mutableMapOf<String, Pair<Double, Long>>()
-    private const val CACHE_TTL_MS = 60_000L   // 1 minute cache
+    private const val CACHE_TTL_MS = 30_000L   // 30 seconds cache
 
     /** Maps our internal symbol to Yahoo Finance ticker */
-    fun toYahooSymbol(sym: String): String = when (sym) {
-        "NIFTY"      -> "^NSEI"
-        "BANKNIFTY"  -> "^NSEBANK"
-        "SENSEX"     -> "^BSESN"
-        "FINNIFTY"   -> "^CNXFIN"
-        "MIDCPNIFTY" -> "^NSEMDCP50"
-        "NIFTYNXT50" -> "^NSMIDCP100"
-        else         -> "$sym.NS"
+    fun toYahooSymbol(sym: String): String {
+        val clean = sym.trim().removeSuffix(".NS")
+        return when (clean.uppercase()) {
+            "NIFTY", "^NSEI"            -> "^NSEI"
+            "BANKNIFTY", "^NSEBANK"     -> "^NSEBANK"
+            "SENSEX", "^BSESN"          -> "^BSESN"
+            "INDIAVIX", "INDIA_VIX", "VIX", "^INDIAVIX" -> "^INDIAVIX"
+            "FINNIFTY", "CNXFIN"        -> "^CNXFIN"
+            "MIDCPNIFTY", "^NSEMDCP50"  -> "^NSEMDCP50"
+            "NIFTYNXT50"                -> "^NSMIDCP100"
+            else                        -> "$clean.NS"
+        }
+    }
+
+    private fun fetchSingleSymbolLive(symbol: String): Double? {
+        val yahooSym = toYahooSymbol(symbol)
+        val endpoints = listOf(
+            "https://query1.finance.yahoo.com/v8/finance/chart/$yahooSym?interval=1m&range=1d",
+            "https://query2.finance.yahoo.com/v8/finance/chart/$yahooSym?interval=1m&range=1d"
+        )
+        for (urlStr in endpoints) {
+            try {
+                val conn = (URL(urlStr).openConnection() as HttpURLConnection).apply {
+                    connectTimeout = 4000
+                    readTimeout    = 4000
+                    requestMethod  = "GET"
+                    setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+                    setRequestProperty("Accept", "application/json")
+                }
+                if (conn.responseCode == 200) {
+                    val body = conn.inputStream.bufferedReader().readText()
+                    conn.disconnect()
+                    val root = JSONObject(body)
+                    val resultArr = root.optJSONObject("chart")?.optJSONArray("result")
+                    if (resultArr != null && resultArr.length() > 0) {
+                        val meta = resultArr.getJSONObject(0).optJSONObject("meta")
+                        val price = meta?.optDouble("regularMarketPrice", Double.NaN) ?: Double.NaN
+                        if (!price.isNaN() && price > 0.0) {
+                            return price
+                        }
+                        val prevClose = meta?.optDouble("chartPreviousClose", Double.NaN) ?: Double.NaN
+                        if (!prevClose.isNaN() && prevClose > 0.0) {
+                            return prevClose
+                        }
+                    }
+                } else {
+                    conn.disconnect()
+                }
+            } catch (_: Exception) {
+                // Try next endpoint
+            }
+        }
+        return null
     }
 
     /**
-     * Fetch live prices for a list of symbols.
-     * Returns a map of symbol -> live price. Missing symbols are absent from map.
-     * Uses cache to avoid hammering Yahoo.
+     * Fetch live prices for a list of symbols in parallel using coroutines.
+     * Returns a map of symbol -> live price.
      */
     suspend fun fetchPrices(symbols: List<String>): Map<String, Double> =
         withContext(Dispatchers.IO) {
@@ -46,7 +89,6 @@ object LivePriceFetcher {
             val result = mutableMapOf<String, Double>()
             val toFetch = mutableListOf<String>()
 
-            // Serve from cache where fresh
             for (sym in symbols) {
                 val cached = priceCache[sym]
                 if (cached != null && (now - cached.second) < CACHE_TTL_MS) {
@@ -58,41 +100,18 @@ object LivePriceFetcher {
 
             if (toFetch.isEmpty()) return@withContext result
 
-            // Build Yahoo symbols string (batch up to 10 at a time)
-            toFetch.chunked(10).forEach { batch ->
-                try {
-                    val yahooSymbols = batch.joinToString(",") { toYahooSymbol(it) }
-                    val urlStr = "$BASE_URL$yahooSymbols&fields=regularMarketPrice,shortName"
-                    val conn = (URL(urlStr).openConnection() as HttpURLConnection).apply {
-                        connectTimeout = 6000
-                        readTimeout    = 6000
-                        requestMethod  = "GET"
-                        setRequestProperty("User-Agent",
-                            "Mozilla/5.0 (Android; Mobile; rv:109.0) Gecko/109.0 Firefox/109.0")
-                        setRequestProperty("Accept", "application/json")
-                    }
-                    if (conn.responseCode == 200) {
-                        val body = conn.inputStream.bufferedReader().readText()
-                        val quotes = JSONObject(body)
-                            .getJSONObject("quoteResponse")
-                            .getJSONArray("result")
-                        for (i in 0 until quotes.length()) {
-                            val q = quotes.getJSONObject(i)
-                            val yahooTicker = q.optString("symbol", "")
-                            // Reverse map yahoo -> our symbol
-                            val ourSym = batch.firstOrNull { toYahooSymbol(it) == yahooTicker }
-                                ?: continue
-                            val price = q.optDouble("regularMarketPrice", Double.NaN)
-                            if (!price.isNaN() && price > 0) {
-                                result[ourSym] = price
-                                priceCache[ourSym] = price to System.currentTimeMillis()
-                            }
-                        }
-                    }
-                    conn.disconnect()
-                } catch (_: Exception) {
-                    // Network unavailable — return whatever we have (cache or fallback)
+            // Parallel async requests
+            val deferreds = toFetch.map { sym ->
+                async {
+                    val price = fetchSingleSymbolLive(sym)
+                    if (price != null && price > 0.0) {
+                        sym to price
+                    } else null
                 }
+            }
+            deferreds.awaitAll().filterNotNull().forEach { (sym, price) ->
+                result[sym] = price
+                priceCache[sym] = price to System.currentTimeMillis()
             }
             result
         }
@@ -104,52 +123,53 @@ object LivePriceFetcher {
     /** Clear price cache (call on app resume to force refresh). */
     fun clearCache() = priceCache.clear()
 
-    // ── Fallback hardcoded prices (used when network unavailable) ──────────────
+    // ── Fallback 2026 realistic baseline prices (used when completely offline) ──────────────
     val fallbackPrices: Map<String, Double> = mapOf(
-        "NIFTY"      to 22699.0, "BANKNIFTY"  to 54267.0, "FINNIFTY"   to 23100.0,
-        "MIDCPNIFTY" to 12100.0, "NIFTYNXT50" to 70800.0,
-        "RELIANCE"   to 1158.0,  "TCS"        to 4180.0,  "INFY"       to 1820.0,
-        "HDFCBANK"   to 1780.0,  "ICICIBANK"  to 1350.0,  "KOTAKBANK"  to 1820.0,
-        "AXISBANK"   to 1180.0,  "SBIN"       to 820.0,   "BANKBARODA" to 245.0,
-        "LT"         to 3610.0,  "LTIM"       to 5700.0,  "WIPRO"      to 560.0,
-        "HCLTECH"    to 1920.0,  "TECHM"      to 1680.0,  "MPHASIS"    to 2900.0,
-        "TATAMOTORS" to 414.0,   "MARUTI"     to 11579.0, "M&M"        to 3150.0,
-        "BAJAJ-AUTO" to 10200.0, "EICHERMOT"  to 5050.0,  "HEROMOTOCO" to 4950.0,
-        "TATASTEEL"  to 142.0,   "JSWSTEEL"   to 960.0,   "HINDALCO"   to 685.0,
-        "COALINDIA"  to 415.0,   "NTPC"       to 390.0,   "POWERGRID"  to 340.0,
-        "ONGC"       to 285.0,   "BPCL"       to 340.0,   "IOC"        to 165.0,
-        "BHARTIARTL" to 1650.0,  "IDEA"       to 11.5,    "HFCL"       to 165.0,
-        "SUNPHARMA"  to 1970.0,  "DRREDDY"    to 6600.0,  "CIPLA"      to 1620.0,
-        "DIVISLAB"   to 5400.0,  "BIOCON"     to 345.0,   "AUROPHARMA" to 1340.0,
-        "BAJFINANCE" to 917.0,   "BAJAJFINSV" to 1750.0,  "HDFC"       to 2800.0,
-        "CHOLAFIN"   to 1480.0,  "MUTHOOTFIN" to 2100.0,  "SBILIFE"    to 1700.0,
-        "HINDUNILVR" to 2450.0,  "ITC"        to 475.0,   "NESTLEIND"  to 2300.0,
-        "BRITANNIA"  to 5500.0,  "MARICO"     to 620.0,   "DABUR"      to 560.0,
-        "ASIANPAINT" to 3000.0,  "BERGERPAINTS" to 590.0, "PIDILITIND" to 3000.0,
-        "GRASIM"     to 2700.0,  "ULTRACEMCO" to 11200.0, "SHREECEM"   to 25000.0,
-        "AMBUJACEM"  to 580.0,   "ACC"        to 2100.0,
-        "ADANIENT"   to 2950.0,  "ADANIPORTS" to 1490.0,  "ADANIPOWER" to 575.0,
-        "HAVELLS"    to 1850.0,  "VOLTAS"     to 1640.0,  "DIXON"      to 16500.0,
-        "TITAN"      to 3500.0,  "KALYANKJIL" to 760.0,   "TRENT"      to 7200.0,
-        "APOLLOHOSP" to 7100.0,  "MAXHEALTH"  to 1080.0,  "FORTIS"     to 680.0,
-        "PFC"        to 490.0,   "RECLTD"     to 545.0,   "IRFC"       to 215.0,
-        "ZOMATO"     to 285.0,   "POLICYBZR"  to 1850.0,  "PAYTM"      to 1050.0,
-        "NYKAA"      to 210.0,   "DELHIVERY"  to 450.0
+        "NIFTY"      to 25518.0, "BANKNIFTY"  to 63260.0, "SENSEX"     to 82970.0,
+        "FINNIFTY"   to 24800.0, "MIDCPNIFTY" to 13400.0, "NIFTYNXT50" to 73200.0,
+        "INDIAVIX"   to 13.8,    "INDIA_VIX"  to 13.8,
+        "RELIANCE"   to 1357.0,  "TCS"        to 2460.0,  "INFY"       to 1106.0,
+        "HDFCBANK"   to 827.0,   "ICICIBANK"  to 1607.0,  "KOTAKBANK"  to 1880.0,
+        "AXISBANK"   to 1190.0,  "SBIN"       to 1140.0,  "BANKBARODA" to 255.0,
+        "LT"         to 3680.0,  "LTIM"       to 5800.0,  "WIPRO"      to 540.0,
+        "HCLTECH"    to 1950.0,  "TECHM"      to 1690.0,  "MPHASIS"    to 2950.0,
+        "TATAMOTORS" to 820.0,   "MARUTI"     to 11600.0, "M&M"        to 3100.0,
+        "BAJAJ-AUTO" to 10100.0, "EICHERMOT"  to 5100.0,  "HEROMOTOCO" to 4980.0,
+        "TATASTEEL"  to 146.0,   "JSWSTEEL"   to 980.0,   "HINDALCO"   to 690.0,
+        "COALINDIA"  to 420.0,   "NTPC"       to 395.0,   "POWERGRID"  to 345.0,
+        "ONGC"       to 290.0,   "BPCL"       to 345.0,   "IOC"        to 168.0,
+        "BHARTIARTL" to 1680.0,  "IDEA"       to 10.5,    "HFCL"       to 160.0,
+        "SUNPHARMA"  to 1980.0,  "DRREDDY"    to 6650.0,  "CIPLA"      to 1630.0,
+        "DIVISLAB"   to 5450.0,  "BIOCON"     to 340.0,   "AUROPHARMA" to 1350.0,
+        "BAJFINANCE" to 925.0,   "BAJAJFINSV" to 1760.0,  "HDFC"       to 2850.0,
+        "CHOLAFIN"   to 1490.0,  "MUTHOOTFIN" to 2150.0,  "SBILIFE"    to 1720.0,
+        "HINDUNILVR" to 2480.0,  "ITC"        to 478.0,   "NESTLEIND"  to 2320.0,
+        "BRITANNIA"  to 5550.0,  "MARICO"     to 630.0,   "DABUR"      to 565.0,
+        "ASIANPAINT" to 3020.0,  "BERGERPAINTS" to 595.0, "PIDILITIND" to 3050.0,
+        "GRASIM"     to 2720.0,  "ULTRACEMCO" to 11300.0, "SHREECEM"   to 25200.0,
+        "AMBUJACEM"  to 590.0,   "ACC"        to 2120.0,
+        "ADANIENT"   to 2980.0,  "ADANIPORTS" to 1510.0,  "ADANIPOWER" to 580.0,
+        "HAVELLS"    to 1870.0,  "VOLTAS"     to 1650.0,  "DIXON"      to 16800.0,
+        "TITAN"      to 3550.0,  "KALYANKJIL" to 770.0,   "TRENT"      to 7300.0,
+        "APOLLOHOSP" to 7150.0,  "MAXHEALTH"  to 1090.0,  "FORTIS"     to 690.0,
+        "PFC"        to 495.0,   "RECLTD"     to 550.0,   "IRFC"       to 220.0,
+        "ZOMATO"     to 290.0,   "POLICYBZR"  to 1880.0,  "PAYTM"      to 1080.0,
+        "NYKAA"      to 215.0,   "DELHIVERY"  to 460.0,   "BEL"        to 310.0,
+        "HAL"        to 4400.0
     )
 
-    /** Get price: live if cached, else null (caller should trigger async fetch). */
     fun getCachedPrice(symbol: String): Double? {
         val now = System.currentTimeMillis()
         val cached = priceCache[symbol]
         return if (cached != null && (now - cached.second) < CACHE_TTL_MS) cached.first else null
     }
 
-    /** Best available price: cached live > fallback hardcoded > hash-based fallback */
     fun getBestPrice(symbol: String, sector: String = ""): Double {
         getCachedPrice(symbol)?.let { return it }
+        val clean = symbol.trim().removeSuffix(".NS").uppercase()
+        fallbackPrices[clean]?.let { return it }
         fallbackPrices[symbol]?.let { return it }
-        // sector hash fallback
-        val h = kotlin.math.abs(symbol.hashCode())
+        val h = kotlin.math.abs(clean.hashCode())
         return when {
             sector.contains("Bank", ignoreCase = true)    -> (h % 800 + 400).toDouble()
             sector.contains("IT", ignoreCase = true)      -> (h % 3000 + 800).toDouble()

@@ -76,7 +76,7 @@ fun OptionSentimentScreen(
                 yahooSpot = price
                 yahooSpotUpdatedAt = System.currentTimeMillis()
             }
-            delay(30_000)
+            delay(10_000)
         }
     }
 
@@ -305,7 +305,7 @@ fun OptionSentimentScreen(
                 val quoteAge = if (quote != null && quote.tickAtEpoch > 0) {
                     quote.tickAgeSeconds + (clockTick - quoteReceivedAt).coerceAtLeast(0)
                 } else Long.MAX_VALUE
-                val quoteIsFresh = quote != null && quoteAge <= 20
+                val quoteIsFresh = quote != null && quoteAge <= 45
                 val yahooSpotIsFresh = yahooSpot > 0.0 &&
                     System.currentTimeMillis() - yahooSpotUpdatedAt <= 90_000L
                 val displaySpot = when {

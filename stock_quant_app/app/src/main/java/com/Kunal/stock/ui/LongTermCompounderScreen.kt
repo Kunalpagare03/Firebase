@@ -44,8 +44,13 @@ fun LongTermCompounderScreen() {
     var livePrices by remember { mutableStateOf<Map<String, Double>>(emptyMap()) }
 
     LaunchedEffect(Unit) {
-        val fetched = LivePriceFetcher.fetchPrices(listOf("TITAN", "TCS", "PIDILITIND", "HAL", "BEL"))
-        livePrices = fetched
+        while (true) {
+            val fetched = LivePriceFetcher.fetchPrices(listOf("TITAN", "TCS", "PIDILITIND", "HAL", "BEL"))
+            if (fetched.isNotEmpty()) {
+                livePrices = livePrices + fetched
+            }
+            kotlinx.coroutines.delay(15_000)
+        }
     }
 
     val compounders = remember(livePrices) {

@@ -37,11 +37,13 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.core.content.ContextCompat
+import com.Kunal.stock.data.UiState
 import com.Kunal.stock.ui.BacktestScreen
 import com.Kunal.stock.ui.ChartSignalScreen
 import com.Kunal.stock.ui.LoginScreen
 import com.Kunal.stock.ui.OptionSentimentScreen
 import com.Kunal.stock.ui.SimpleSetupScreen
+import com.Kunal.stock.ui.V8PdfSpecificationScreen
 import com.Kunal.stock.ui.OptionSentimentViewModel
 import com.Kunal.stock.ui.theme.StockAnalysisTheme
 import com.google.firebase.auth.FirebaseAuth
@@ -158,10 +160,10 @@ fun MainScreen(userEmail: String, onLogout: () -> Unit) {
     )
 
     val tabs = listOf(
-        NavTab("Options",    "options",     Icons.Default.ShowChart, GreenUp),
-        NavTab("Option Lab", "backtest",    Icons.Default.Science,   NeonCyan),
-        NavTab("Signals",    "chartsignal", Icons.Default.BarChart,  NeonViolet),
-        NavTab("Setup",      "setup",       Icons.Default.MenuBook,  NeonGold)
+        NavTab("Options",     "options",     Icons.Default.ShowChart, GreenUp),
+        NavTab("Option Lab",  "backtest",    Icons.Default.Science,   NeonCyan),
+        NavTab("Signals",     "chartsignal", Icons.Default.BarChart,  NeonViolet),
+        NavTab("v8 PDF Spec", "setup",       Icons.Default.MenuBook,  NeonGold)
     )
 
     if (showLogout) {
@@ -314,7 +316,11 @@ fun MainScreen(userEmail: String, onLogout: () -> Unit) {
             composable("options")     { OptionSentimentScreen(optionViewModel) }
             composable("backtest")    { BacktestScreen() }
             composable("chartsignal") { ChartSignalScreen(optionViewModel) }
-            composable("setup")       { SimpleSetupScreen(optionViewModel) }
+            composable("setup")       { 
+                val uiState by optionViewModel.uiState.collectAsState()
+                val currentData = (uiState as? UiState.Success)?.data
+                V8PdfSpecificationScreen(currentData) 
+            }
         }
     }
 }

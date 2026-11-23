@@ -1,0 +1,188 @@
+# ==============================================================================
+# Option App v8 - Configuration (config.yaml)
+# Based strictly on "Build Your Own Option Alert App (v8)" specification
+# ==============================================================================
+
+app:
+  name: "Option Alert App"
+  version: "8.0"
+  timezone: "Asia/Kolkata"
+  log_level: "INFO"
+
+capital:
+  total_inr: 50000.0
+  ladder_stage: 1           # Stage 0: <50k (PAPER only), Stage 1: 50k-3L, Stage 2: 3L+, Stage 3: 5L+, Stage 4: 10L+
+  risk_per_trade_pct: 0.015 # 1.5% max risk per trade
+  daily_loss_limit_pct: 0.03 # 3.0% daily hard stop
+  max_structure_loss_pct: 0.05 # 5.0% max loss per multi-leg structure
+  max_open_trades: 3
+  max_trades_per_day: 3
+  stale_data_timeout_seconds: 60
+
+# Official Nov 2026 contract lot sizes
+lots:
+  NIFTY: 65
+  BANKNIFTY: 30
+  FINNIFTY: 60
+  MIDCPNIFTY: 120
+  SENSEX: 20
+
+strike_steps:
+  NIFTY: 50
+  BANKNIFTY: 100
+  FINNIFTY: 50
+  MIDCPNIFTY: 25
+  SENSEX: 100
+
+# Transaction costs & statutory levies (Part C3 & F2)
+charges:
+  brokerage_per_order: 20.0
+  stt_sell_options_pct: 0.001
+  exchange_txn_bse_pct: 0.0005
+  exchange_txn_nse_pct: 0.00035
+  sebi_turnover_pct: 0.000001
+  stamp_duty_buy_pct: 0.00003
+  gst_pct: 0.18
+  slippage_points: 1.5
+
+# v8 Calm Mode (Part A17)
+calm_mode:
+  enabled: true
+  mask_pnl_until: "15:35"
+  allowed_peek_command: "/peek"
+  log_peeks: true
+
+# v8 Rule-Change Radar (Part A17)
+radar:
+  enabled: true
+  auto_switch_to_paper_on_rule_change: true
+  check_time: "18:30"
+  official_lot_sources:
+    - "NSE_CONTRACT_SPECS"
+    - "BSE_CONTRACT_SPECS"
+
+# v8 Ghost Ledger (Part A17)
+ghost_ledger:
+  enabled: true
+  log_skipped_ready: true
+  mtm_at_eod: true
+  track_reasons:
+    - "LOW_VIX_SKIP"
+    - "DAILY_LOSS_LIMIT"
+    - "CAPITAL_LADDER_RESTRICTION"
+    - "USER_MANUAL_SKIP"
+    - "MAX_OPEN_TRADES_REACHED"
+
+# Data Providers
+provider:
+  primary: "angel"        # Options: angel, dhan, nse, mock
+  fallback: "nse"
+  angel_credentials_file: "../stock_alert_bot/Option/config/credentials.json"
+  dhan_credentials_file: "../stock_alert_bot/Option/config/dhan_config.json"
+
+# Setup Library Configuration (Part A4, C4)
+setups:
+  sensex_condor:
+    enabled: true
+    mode: "LIVE"
+    underlying: "SENSEX"
+    expiry_day: "Thursday"
+    entry_time: "09:16"
+    stop_mult: 3.0
+    inner_pct: 0.005      # 0.5% OTM short legs
+    wing_pct: 0.015       # 1.5% wings long legs
+    vix_min: 13.0
+  nifty_condor_a:
+    enabled: true
+    mode: "LIVE"
+    underlying: "NIFTY"
+    expiry_day: "Tuesday"
+    entry_time: "09:16"
+    stop_mult: 4.0
+    inner_pct: 0.005      # 0.5% OTM short legs
+    wing_pct: 0.015       # 1.5% wings long legs
+    vix_min: 13.0
+  nifty_condor_b:
+    enabled: true
+    mode: "LIVE"
+    underlying: "NIFTY"
+    expiry_day: "Tuesday"
+    entry_time: "09:16"
+    stop_mult: 4.0
+    inner_pct: 0.005
+    wing_pct: 0.020       # 2.0% wings long legs
+    vix_min: 13.0
+  nifty_condor_nostop:
+    enabled: true
+    mode: "PAPER"
+    underlying: "NIFTY"
+    expiry_day: "Tuesday"
+    entry_time: "09:16"
+    inner_pct: 0.005
+    wing_pct: 0.015
+    vix_min: 13.0
+  banknifty_ironfly:
+    enabled: true
+    mode: "PAPER"
+    underlying: "BANKNIFTY"
+    wing_pct: 0.015       # 1.5% wings
+  finnifty_ironfly:
+    enabled: true
+    mode: "PAPER"
+    underlying: "FINNIFTY"
+    wing_pct: 0.010       # 1.0% wings
+  short_straddle_920:
+    enabled: true
+    mode: "PAPER"
+    underlying: "NIFTY"
+    entry_time: "09:20"
+    stop_leg_pct: 0.25    # 25% stop per leg
+  first_hour_bias:
+    enabled: true
+    mode: "BIAS"
+    eval_time: "10:15"
+  expiry_1315_direction:
+    enabled: true
+    mode: "BIAS"
+    eval_time: "13:15"
+  afternoon_hero_zero:
+    enabled: true
+    mode: "PAPER"
+    eval_time: "13:15"
+    max_ask_pct_of_fair: 0.70
+    strike_selection: "ATM_OR_0.25_OTM"
+  trendline_breakout:
+    enabled: true
+    mode: "PAPER"
+    min_touches: 3
+    timeframe: "5m"
+  breakout_retest_spread:
+    enabled: true
+    mode: "PAPER"
+    lookback_bars: 60
+    timeframe: "5m"
+  ema_9_21_cross_15m:
+    enabled: true
+    mode: "PAPER"
+    timeframe: "15m"
+  ema_ribbon_daily:
+    enabled: true
+    mode: "PAPER"
+    timeframe: "1d"
+  big_move_watch:
+    enabled: true
+    mode: "INFO"
+    vix_threshold: 22.0
+    day_range_pct: 0.025  # 2.5%
+    gap_pct: 0.012        # 1.2%
+
+# Notifications
+notify:
+  telegram:
+    enabled: false
+    bot_token: ""
+    chat_id: ""
+  sound:
+    enabled: true
+  desktop_notification:
+    enabled: true

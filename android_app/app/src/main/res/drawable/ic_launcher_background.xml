@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Professional launcher background - deep space violet -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path android:fillColor="#0D0A1E"
+        android:pathData="M0,0L108,0L108,108L0,108Z"/>
+    <path android:fillColor="#00000000"
+        android:pathData="M0,27L108,27M0,54L108,54M0,81L108,81"
+        android:strokeColor="#1A1535"
+        android:strokeWidth="1"/>
+    <path android:fillColor="#00000000"
+        android:pathData="M27,0L27,108M54,0L54,108M81,0L81,108"
+        android:strokeColor="#1A1535"
+        android:strokeWidth="1"/>
+</vector>

@@ -20,19 +20,21 @@ object FnoUniverseProvider {
     @Volatile
     private var cachedSegments: List<String>? = null
 
-    // High-Liquidity Benchmark F&O Assets
+    // High-Liquidity Benchmark F&O Assets (Active Nov-Dec 2026 contract specs)
     val benchmarkFno = listOf(
-        FnoUniverseItem("NIFTY 50 INDEX", "NIFTY", "Index", 25),
-        FnoUniverseItem("BANK NIFTY INDEX", "BANKNIFTY", "Index", 15),
-        FnoUniverseItem("FINANCIAL SERVICES", "FINNIFTY", "Index", 25),
-        FnoUniverseItem("MIDCAP NIFTY", "MIDCPNIFTY", "Index", 50),
-        FnoUniverseItem("Reliance Industries", "RELIANCE", "F&O Stock", 250),
-        FnoUniverseItem("HDFC Bank", "HDFCBANK", "F&O Stock", 550),
+        FnoUniverseItem("NIFTY 50 INDEX", "NIFTY", "Index", 65),
+        FnoUniverseItem("BANK NIFTY INDEX", "BANKNIFTY", "Index", 30),
+        FnoUniverseItem("FINANCIAL SERVICES", "FINNIFTY", "Index", 60),
+        FnoUniverseItem("MIDCAP NIFTY", "MIDCPNIFTY", "Index", 120),
+        FnoUniverseItem("BSE SENSEX 30", "SENSEX", "Index", 20),
+        FnoUniverseItem("Reliance Industries", "RELIANCE", "F&O Stock", 500),
+        FnoUniverseItem("HDFC Bank", "HDFCBANK", "F&O Stock", 650),
         FnoUniverseItem("ICICI Bank", "ICICIBANK", "F&O Stock", 700),
-        FnoUniverseItem("Tata Motors", "TATAMOTORS", "F&O Stock", 1425),
+        FnoUniverseItem("TMPV (Tata Motors)", "TMPV", "F&O Stock", 1600),
+        FnoUniverseItem("Tata Motors", "TATAMOTORS", "F&O Stock", 1600),
         FnoUniverseItem("Infosys", "INFY", "F&O Stock", 400),
-        FnoUniverseItem("Tata Consultancy Services", "TCS", "F&O Stock", 175),
-        FnoUniverseItem("State Bank of India", "SBIN", "F&O Stock", 1500),
+        FnoUniverseItem("Tata Consultancy Services", "TCS", "F&O Stock", 225),
+        FnoUniverseItem("State Bank of India", "SBIN", "F&O Stock", 750),
         FnoUniverseItem("Bharti Airtel", "BHARTIARTL", "F&O Stock", 950),
         FnoUniverseItem("Larsen & Toubro", "LT", "F&O Stock", 300),
         FnoUniverseItem("Bajaj Finance", "BAJFINANCE", "F&O Stock", 125),

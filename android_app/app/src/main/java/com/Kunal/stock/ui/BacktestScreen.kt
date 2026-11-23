@@ -197,7 +197,7 @@ fun BacktestScreen(
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(
-                    text = "Options & Futures Algorithmic Engines • High-Frequency Execution",
+                    text = "Daily OHLCV strategy research • underlying price only",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -248,7 +248,7 @@ fun BacktestScreen(
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        text = "Derivatives Strategy Model & Parameters",
+                        text = "Underlying Strategy Model & Parameters",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface
@@ -265,12 +265,12 @@ fun BacktestScreen(
                 ) {
                     Column {
                         Text(
-                            text = "Underlying Asset (Options / Futures)",
+                            text = "Underlying instrument",
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Text(
-                            text = "219 Official NSE F&O Contracts (Indices & Stocks)",
+                            text = "Historical cash/index prices for F&O underlyings",
                             style = MaterialTheme.typography.labelSmall,
                             color = ElectricBlue
                         )
@@ -326,7 +326,7 @@ fun BacktestScreen(
                                 }
                             }
                             Text(
-                                text = "Sector: $selectedStockSector • Derivatives Option/Future Ready",
+                                text = "Sector: $selectedStockSector • daily price series",
                                 fontSize = 11.sp,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -359,6 +359,7 @@ fun BacktestScreen(
                     val quickPicks = listOf(
                         Triple("NIFTY", "NIFTY 50 INDEX", "Index"),
                         Triple("BANKNIFTY", "BANK NIFTY INDEX", "Index"),
+                        Triple("SENSEX", "BSE SENSEX", "Index"),
                         Triple("FINNIFTY", "FINANCIAL SERVICES", "Index"),
                         Triple("RELIANCE", "Reliance Industries", "Energy"),
                         Triple("HDFCBANK", "HDFC Bank", "Financial services"),
@@ -387,7 +388,7 @@ fun BacktestScreen(
 
                 // Strategy Archetypes
                 Text(
-                    text = "Derivatives Strategy Archetype (Futures & Options)",
+                    text = "Implemented daily-price strategies",
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -399,16 +400,13 @@ fun BacktestScreen(
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     val strategies = listOf(
-                        "FUTURES_LONG_SHORT_BUILDUP" to "📈 Futures Long/Short Buildup & OI Expansion",
-                        "FUTURES_VWAP_INSTITUTIONAL" to "⚡ Futures VWAP Institutional Thrust",
-                        "FUTURES_BASIS_ARBITRAGE_CARRY" to "🔄 Futures Basis & Cost of Carry Arbitrage",
-                        "INTRADAY_TIMING_CANDLE_REVERSAL" to "⏰ Intraday Timing & Candle S&R Reversal",
-                        "MULTI_CONFLUENCE_QUANT" to "🎯 Master Options Confluence Quant",
-                        "OPTION_FLOW_GRAVITY" to "🌊 Option Flow & Expiry Gravity",
-                        "PRICE_ACTION_STRUCTURE" to "🏛️ Price Action (W/M Breakouts)",
-                        "CANDLE_VOLATILITY_SQUEEZE" to "🔮 Harmonic Candlesticks & VCP",
-                        "EMA_CROSS" to "📊 EMA 20/50 Cross",
-                        "RSI_MOMENTUM" to "🚀 RSI Momentum"
+                        "EMA_CROSS" to "EMA 20/50 Cross",
+                        "RSI_REVERSAL" to "RSI Oversold Reversal",
+                        "BREAKOUT" to "20-day Range Breakout",
+                        "RVOL_BREAKOUT" to "Relative-volume Breakout",
+                        "EMA_PULLBACK" to "EMA20 Trend Pullback",
+                        "ATR_SQUEEZE_BREAKOUT" to "ATR Squeeze + Volume Breakout",
+                        "RSI_MOMENTUM" to "RSI 50 Cross in Trend"
                     )
                     strategies.forEach { (type, label) ->
                         val isSelected = strategyType == type
@@ -498,7 +496,7 @@ fun BacktestScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "ATR Dynamic Volatility Trailing",
+                        text = "ATR-Based Initial Stop Component",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurface
                     )
@@ -575,11 +573,11 @@ fun BacktestScreen(
                             strokeWidth = 2.dp
                         )
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("Computing Quantitative Simulation...", fontWeight = FontWeight.Bold)
+                        Text("Loading Yahoo Finance history...", fontWeight = FontWeight.Bold)
                     } else {
                         Icon(imageVector = Icons.Default.PlayArrow, contentDescription = null)
                         Spacer(modifier = Modifier.width(6.dp))
-                        Text("Run Quantitative Backtest", fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                        Text("Run Historical Price Backtest", fontWeight = FontWeight.Bold, fontSize = 15.sp)
                     }
                 }
             }
@@ -600,7 +598,7 @@ fun BacktestScreen(
                         CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            "Streaming quant backtest analytics...",
+                            "Downloading and evaluating historical daily candles...",
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             style = MaterialTheme.typography.bodyMedium
                         )
@@ -631,7 +629,7 @@ fun BacktestScreen(
                         )
                         Spacer(modifier = Modifier.height(12.dp))
                         Button(onClick = { viewModel.runBacktest() }) {
-                            Text("Run Quant Simulation")
+                            Text("Retry Historical Backtest")
                         }
                     }
                 }
@@ -656,8 +654,15 @@ fun QuantBacktestResultView(
 ) {
     val isProfit = result.totalReturn >= 0
     val pnlColor = if (isProfit) BullishGreen else BearishRed
+    val hasEnoughTradesForRatios = result.totalTrades >= 2
 
     Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        Text(
+        "Yahoo Finance daily underlying OHLCV only. These results do not model option premiums, " +
+            "futures, intraday entries, or executable bid-ask fills.",
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            style = MaterialTheme.typography.bodySmall
+        )
         // Hero Performance Card
         Card(
             modifier = Modifier.fillMaxWidth(),
@@ -678,13 +683,13 @@ fun QuantBacktestResultView(
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Text(
-                            text = String.format("%+.2f%%", result.totalReturn),
+                            text = if (result.totalTrades > 0) String.format("%+.2f%%", result.totalReturn) else "N/A",
                             style = MaterialTheme.typography.headlineLarge,
                             fontWeight = FontWeight.ExtraBold,
                             color = pnlColor
                         )
                         Text(
-                            text = "Net Cumulative P&L",
+                            text = "Net Cumulative Underlying Return",
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -692,24 +697,24 @@ fun QuantBacktestResultView(
 
                     // Win Rate Circle Badge
                     Surface(
-                        color = if (result.winRate >= 50.0) BullishGreenContainer else BearishRedContainer,
+                        color = if (result.totalTrades > 0 && result.winRate >= 50.0) BullishGreenContainer else BearishRedContainer,
                         shape = RoundedCornerShape(16.dp),
-                        border = BorderStroke(1.dp, if (result.winRate >= 50.0) BullishGreen else BearishRed)
+                        border = BorderStroke(1.dp, if (result.totalTrades > 0 && result.winRate >= 50.0) BullishGreen else BearishRed)
                     ) {
                         Column(
                             modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
                             Text(
-                                text = "${String.format("%.1f", result.winRate)}%",
+                                text = if (result.totalTrades > 0) "${String.format("%.1f", result.winRate)}%" else "N/A",
                                 fontWeight = FontWeight.ExtraBold,
                                 fontSize = 18.sp,
-                                color = if (result.winRate >= 50.0) BullishGreen else BearishRed
+                                color = if (result.totalTrades > 0 && result.winRate >= 50.0) BullishGreen else BearishRed
                             )
                             Text(
                                 text = "Win Rate",
                                 style = MaterialTheme.typography.labelSmall,
-                                color = if (result.winRate >= 50.0) BullishGreen else BearishRed
+                                color = if (result.totalTrades > 0 && result.winRate >= 50.0) BullishGreen else BearishRed
                             )
                         }
                     }
@@ -771,17 +776,17 @@ fun QuantBacktestResultView(
             horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             MetricCard(
-                title = "Sharpe Ratio",
-                value = String.format("%.2f", result.sharpeRatio),
-                subtitle = if (result.sharpeRatio >= 1.0) "Excellent Alpha" else if (result.sharpeRatio >= 0) "Moderate" else "Sub-optimal",
-                valueColor = if (result.sharpeRatio >= 1.0) BullishGreen else if (result.sharpeRatio >= 0) ElectricBlue else BearishRed,
+                title = "Trade-level Sharpe-like",
+                value = if (hasEnoughTradesForRatios) String.format("%.2f", result.sharpeRatio) else "N/A",
+                subtitle = "Not annualized; descriptive only",
+                valueColor = if (result.sharpeRatio >= 0) ElectricBlue else BearishRed,
                 modifier = Modifier.weight(1f)
             )
             MetricCard(
-                title = "Sortino Ratio",
-                value = String.format("%.2f", result.sortinoRatio),
-                subtitle = "Downside Risk-Adjusted",
-                valueColor = if (result.sortinoRatio >= 1.0) BullishGreen else BearishRed,
+                title = "Trade-level Sortino-like",
+                value = if (hasEnoughTradesForRatios) String.format("%.2f", result.sortinoRatio) else "N/A",
+                subtitle = "Not annualized; descriptive only",
+                valueColor = if (result.sortinoRatio >= 0) ElectricBlue else BearishRed,
                 modifier = Modifier.weight(1f)
             )
         }
@@ -793,9 +798,9 @@ fun QuantBacktestResultView(
         ) {
             MetricCard(
                 title = "Profit Factor",
-                value = String.format("%.2f", result.profitFactor),
-                subtitle = if (result.profitFactor >= 1.2) "Profitable Edge" else "Low Margin",
-                valueColor = if (result.profitFactor >= 1.0) BullishGreen else BearishRed,
+                value = if (result.totalTrades == 0 || result.losses == 0) "N/A" else String.format("%.2f", result.profitFactor),
+                subtitle = "Gross wins / gross losses",
+                valueColor = if (result.profitFactor >= 1.0 && result.losses > 0) BullishGreen else MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.weight(1f)
             )
             MetricCard(
@@ -813,16 +818,16 @@ fun QuantBacktestResultView(
             horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             MetricCard(
-                title = "Calmar Ratio",
-                value = String.format("%.2f", result.calmarRatio),
-                subtitle = "Return / Drawdown",
-                valueColor = if (result.calmarRatio >= 1.0) BullishGreen else MaterialTheme.colorScheme.onSurface,
+                title = "Return / Drawdown",
+                value = if (result.maxDrawdown > 0.0) String.format("%.2f", result.calmarRatio) else "N/A",
+                subtitle = "Not annualized",
+                valueColor = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.weight(1f)
             )
             MetricCard(
                 title = "Trade Expectancy",
-                value = String.format("%+.2f%%", result.expectancy),
-                subtitle = "Math Edge per Trade",
+                value = if (result.totalTrades > 0) String.format("%+.2f%%", result.expectancy) else "N/A",
+                subtitle = "Average net underlying return",
                 valueColor = if (result.expectancy >= 0) BullishGreen else BearishRed,
                 modifier = Modifier.weight(1f)
             )
@@ -851,8 +856,7 @@ fun QuantBacktestResultView(
             }
         }
 
-        // Live Market Regime Recommendation Banner
-        val recColor = if (result.blueprint.isRecommendedLive) BullishGreen else GoldWarning
+        val recColor = GoldWarning
         Card(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(12.dp),
@@ -866,7 +870,7 @@ fun QuantBacktestResultView(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Icon(
-                    imageVector = if (result.blueprint.isRecommendedLive) Icons.Default.CheckCircle else Icons.Default.Warning,
+                    imageVector = Icons.Default.Warning,
                     contentDescription = null,
                     tint = recColor,
                     modifier = Modifier.size(20.dp)
@@ -874,14 +878,14 @@ fun QuantBacktestResultView(
                 Spacer(modifier = Modifier.width(8.dp))
                 Column {
                     Text(
-                        text = if (result.blueprint.isRecommendedLive) "RECOMMENDED FOR LIVE MARKET NOW" else "USE CAUTION IN LIVE MARKET",
+                        text = "HISTORICAL PRICE TEST ONLY",
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.ExtraBold,
                         color = recColor
                     )
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
-                        text = result.blueprint.regimeCommentary,
+                        text = "No strategy result here is validated for live execution or option/futures returns.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurface
                     )
@@ -907,12 +911,12 @@ fun QuantBacktestResultView(
                     Spacer(modifier = Modifier.height(10.dp))
                     SpecRow("Take Profit Target", "+${result.targetPct}%")
                     SpecRow("Stop Loss Threshold", "-${result.stopLossPct}%")
-                    SpecRow("ATR Dynamic Trailing", "${result.atrMultiplier}x Volatility")
+                    SpecRow("ATR stop component", "${result.atrMultiplier}× daily ATR")
                     SpecRow("Risk / Reward Ratio", "1 : ${String.format("%.1f", result.targetPct / maxOf(0.1, result.stopLossPct))}")
                     SpecRow("Max Win Streak", "${result.maxConsecutiveWins} trades")
                     SpecRow("Max Loss Streak", "${result.maxConsecutiveLosses} trades")
                     SpecRow("Backtest Lookback", result.timeframe.uppercase())
-                    SpecRow("Engine Status", "Calibrated (Quant Math V3)")
+                    SpecRow("Engine Status", "Rule-based; not probability-calibrated")
                 }
             }
 
@@ -1075,7 +1079,7 @@ fun FullStrategyBlueprintCard(blueprint: StrategyBlueprint) {
             )
             Spacer(modifier = Modifier.height(6.dp))
             Text(
-                text = blueprint.mathematicalEdge.ifBlank { "Exploits volatility compression and option seller positioning." },
+                text = blueprint.mathematicalEdge.ifBlank { "Underlying price rules only; no statistical edge has been established." },
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )

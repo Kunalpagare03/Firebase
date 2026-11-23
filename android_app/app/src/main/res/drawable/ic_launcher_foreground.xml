@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Professional Options Trading App Icon: OQ Delta Symbol -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Deep gradient background circle -->
+    <path android:fillColor="#0D0A1E" android:pathData="M54,4A50,50 0,1 0,54,104A50,50 0,1 0,54,4"/>
+
+    <!-- Outer glow ring - violet -->
+    <path android:fillColor="#00000000"
+        android:pathData="M54,10A44,44 0,1 0,54,98A44,44 0,1 0,54,10"
+        android:strokeColor="#7B2FBE"
+        android:strokeWidth="2"/>
+
+    <!-- Inner accent ring - cyan -->
+    <path android:fillColor="#00000000"
+        android:pathData="M54,18A36,36 0,1 0,54,90A36,36 0,1 0,54,18"
+        android:strokeColor="#00DFD8"
+        android:strokeWidth="1"/>
+
+    <!-- Bold Delta Δ (Options Greek) - filled cyan -->
+    <path android:fillColor="#00DFD8"
+        android:pathData="M54,26L28,74L80,74Z"/>
+
+    <!-- Inner triangle cutout - dark -->
+    <path android:fillColor="#0D0A1E"
+        android:pathData="M54,36L35,68L73,68Z"/>
+
+    <!-- CE label left side - small green square -->
+    <path android:fillColor="#00E676"
+        android:pathData="M32,55L38,55L38,61L32,61Z"/>
+
+    <!-- PE label right side - small red square -->
+    <path android:fillColor="#FF5252"
+        android:pathData="M70,55L76,55L76,61L70,61Z"/>
+
+    <!-- Upward arrow (CE signal) - bright green -->
+    <path android:fillColor="#00000000"
+        android:pathData="M34,53L35,42L46,52"
+        android:strokeColor="#00E676"
+        android:strokeWidth="3"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"/>
+
+    <!-- Downward arrow (PE signal) - bright red -->
+    <path android:fillColor="#00000000"
+        android:pathData="M74,53L73,64L62,54"
+        android:strokeColor="#FF5252"
+        android:strokeWidth="3"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"/>
+
+    <!-- Gold dot at center top of delta -->
+    <path android:fillColor="#FFD600"
+        android:pathData="M54,26m-3,0a3,3 0,1 0,6,0a3,3 0,1 0,-6,0"/>
+</vector>

@@ -1,8 +1,12 @@
 package com.Kunal.stock.data
 
+import android.os.Handler
+import android.os.Looper
 import com.google.firebase.firestore.DocumentSnapshot
+import com.google.firebase.firestore.DocumentReference
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.FirebaseUser
 import java.text.SimpleDateFormat
 import java.util.Locale
 import kotlinx.coroutines.channels.awaitClose
@@ -107,8 +111,15 @@ class FirestoreRepository(
     fun streamLiveQuote(symbol: String): Flow<LiveQuote?> = callbackFlow {
         val docRef = db.collection("live_quotes").document(symbol)
         val registration = docRef.addSnapshotListener { snapshot, error ->
-            if (error != null || snapshot == null || !snapshot.exists()) {
-                trySend(null)
+            if (error != null) {
+                trySend(LiveQuote(
+                    statusMessage = "Firebase live quote read failed: " +
+                        (error.localizedMessage ?: "permission or network error")
+                ))
+                return@addSnapshotListener
+            }
+            if (snapshot == null || !snapshot.exists()) {
+                trySend(LiveQuote(statusMessage = "No live quote has been published for $symbol."))
                 return@addSnapshotListener
             }
             val price = toDouble(snapshot.get("spot_price"))
@@ -140,7 +151,13 @@ class FirestoreRepository(
                     val value = toDouble(point["value"])
                     if (value > 0) ChartPoint(time, value) else null
                 } ?: emptyList()
-            ) else null)
+            ) else LiveQuote(
+                statusMessage = if (source != "angel_one") {
+                    "Live quote source is missing or not Angel One."
+                } else {
+                    "Angel One quote document has no valid spot price."
+                }
+            ))
         }
         awaitClose { registration.remove() }
     }
@@ -181,6 +198,38 @@ class FirestoreRepository(
         val greeksSummary = deep?.get("greeks_summary")?.toString() ?: "Greeks unavailable"
         val nextCandleOutlook = deep?.get("next_candle_outlook")?.toString()
             ?: "Waiting for live candle data."
+        val rawOiTrend = snapshot.get("oi_trend_reading") as? Map<*, *>
+        fun nullableDouble(key: String): Double? {
+            val value = rawOiTrend?.get(key) as? Number
+            return value?.toDouble()?.takeIf { it.isFinite() }
+        }
+        val oiTrendReading = if (rawOiTrend != null) OiTrendReading(
+            available = rawOiTrend["available"] as? Boolean ?: false,
+            symbol = rawOiTrend["symbol"]?.toString() ?: symbol,
+            exchangeDate = rawOiTrend["exchange_date"]?.toString() ?: "",
+            nearestExpiry = rawOiTrend["nearest_expiry"]?.toString() ?: "",
+            spot = nullableDouble("spot") ?: 0.0,
+            futuresChangePct = nullableDouble("F1_futures_change")?.times(100.0),
+            oiChangePct = nullableDouble("F2_oi_change")?.times(100.0),
+            buildup = rawOiTrend["F3_buildup"]?.toString() ?: "NONE",
+            pcr = nullableDouble("F4_pcr"),
+            dpcr = nullableDouble("F5_dpcr") ?: 0.0,
+            writerBias = nullableDouble("F6_writer_bias") ?: 0.0,
+            putWall = nullableDouble("F7_put_wall"),
+            callWall = nullableDouble("F7_call_wall"),
+            wallPlace = nullableDouble("F7_place") ?: 0.5,
+            maxPain = nullableDouble("F8_max_pain"),
+            maxPainPct = nullableDouble("F8_max_pain_pct"),
+            oiCentre = nullableDouble("F9_oi_centre"),
+            oiCentrePct = nullableDouble("F9_oi_centre_pct"),
+            expectedMove = nullableDouble("F10_expected_move"),
+            expectedMovePct = nullableDouble("F10_expected_move_pct"),
+            trendScore = (rawOiTrend["F11_trend_score"] as? Number)?.toInt() ?: 0,
+            trend = rawOiTrend["F11_trend"]?.toString() ?: "NEUTRAL",
+            testedHitRate = rawOiTrend["tested_hit_rate"]?.toString() ?: "",
+            limitation = rawOiTrend["limitation"]?.toString()
+                ?: "OI context only; no guaranteed next-day direction."
+        ) else OiTrendReading()
         val spotHistory = (snapshot.get("spot_history") as? List<*>)?.mapNotNull { raw ->
             val point = raw as? Map<*, *> ?: return@mapNotNull null
             val time = (point["time"] as? Number)?.toLong() ?: return@mapNotNull null
@@ -204,8 +253,8 @@ class FirestoreRepository(
                 putBuild = row["put_buildup"]?.toString() ?: "", oiSide = row["oi_side"]?.toString() ?: ""
             )
         } ?: emptyList()
-        val topStrikes = parseStrikeRows(snapshot.get("top_strikes")).take(50)
-        val optionChain = parseStrikeRows(snapshot.get("option_chain")).take(100)
+        val topStrikes = parseStrikeRows(snapshot.get("top_strikes"))
+        val optionChain = parseStrikeRows(snapshot.get("option_chain"))
 
         val rawLiveSignal = snapshot.get("live_trade_signal") as? Map<*, *>
         val initialLiveSignal = if (rawLiveSignal != null) {
@@ -220,7 +269,7 @@ class FirestoreRepository(
                 estimatedPremium = toDouble(rawLiveSignal["estimated_premium"]),
                 targetPremium = toDouble(rawLiveSignal["target_premium"]),
                 stopLossPremium = toDouble(rawLiveSignal["stop_loss_premium"]),
-                riskRewardRatio = rawLiveSignal["risk_reward_ratio"]?.toString() ?: "1:2.0",
+                riskRewardRatio = rawLiveSignal["risk_reward_ratio"]?.toString() ?: "N/A",
                 confidenceScore = (rawLiveSignal["confidence_score"] as? Number)?.toInt() ?: 0
             )
         } else LiveTradeSignal()
@@ -284,21 +333,21 @@ class FirestoreRepository(
         val rawQuant = snapshot.get("quant_option_chain") as? Map<*, *>
         val quantOptionChain = if (rawQuant != null) {
             QuantOptionChainAnalysis(
-                ivSkewPct = toDouble(rawQuant["iv_skew_pct"]),
-                ivSkewRead = rawQuant["iv_skew_read"]?.toString() ?: "Neutral Skew",
-                netGexMillion = toDouble(rawQuant["net_gex_million"]),
-                gexRegime = rawQuant["gex_regime"]?.toString() ?: "Neutral GEX",
-                vannaDrag = toDouble(rawQuant["vanna_drag"]),
-                charmDrag = toDouble(rawQuant["charm_drag"]),
-                maxPainStrike = toDouble(rawQuant["max_pain_strike"]),
-                maxPainGravityPct = toDouble(rawQuant["max_pain_gravity_pct"]),
-                callWallStrike = toDouble(rawQuant["call_wall_strike"]),
-                callWallOi = toDouble(rawQuant["call_wall_oi"]).toLong(),
-                putWallStrike = toDouble(rawQuant["put_wall_strike"]),
-                putWallOi = toDouble(rawQuant["put_wall_oi"]).toLong(),
-                pcrOi = toDouble(rawQuant["pcr_oi"]),
-                pcrVolume = toDouble(rawQuant["pcr_volume"]),
-                institutionalRead = rawQuant["institutional_read"]?.toString() ?: "Balanced Flow"
+                ivSkewPct = toFiniteDoubleOrNull(rawQuant["iv_skew_pct"]),
+                ivSkewRead = rawQuant["iv_skew_read"]?.toString() ?: "Unavailable",
+                netGexMillion = toFiniteDoubleOrNull(rawQuant["net_gex_million"]),
+                gexRegime = rawQuant["gex_regime"]?.toString() ?: "Unavailable",
+                vannaDrag = toFiniteDoubleOrNull(rawQuant["vanna_drag"]),
+                charmDrag = toFiniteDoubleOrNull(rawQuant["charm_drag"]),
+                maxPainStrike = toFiniteDoubleOrNull(rawQuant["max_pain_strike"]),
+                maxPainGravityPct = toFiniteDoubleOrNull(rawQuant["max_pain_gravity_pct"]),
+                callWallStrike = toFiniteDoubleOrNull(rawQuant["call_wall_strike"]),
+                callWallOi = toFiniteDoubleOrNull(rawQuant["call_wall_oi"])?.toLong(),
+                putWallStrike = toFiniteDoubleOrNull(rawQuant["put_wall_strike"]),
+                putWallOi = toFiniteDoubleOrNull(rawQuant["put_wall_oi"])?.toLong(),
+                pcrOi = toFiniteDoubleOrNull(rawQuant["pcr_oi"]),
+                pcrVolume = toFiniteDoubleOrNull(rawQuant["pcr_volume"]),
+                institutionalRead = rawQuant["institutional_read"]?.toString() ?: "Unavailable"
             )
         } else QuantOptionChainAnalysis()
 
@@ -394,18 +443,19 @@ class FirestoreRepository(
             vega = toDouble(greeks?.get("vega_per_1pct")), topStrikes = topStrikes,
             optionChain = optionChain,
             chainExpiry = snapshot.getString("chain_expiry") ?: "",
-            chainUpdatedAt = snapshot.getString("chain_updated_at") ?: fetchedAt,
+            chainUpdatedAt = snapshot.getString("chain_updated_at") ?: "",
             liveTradeSignal = liveSignal,
             proofOfEvidence = proof,
             bigMomentumAlert = momentum,
             timeWindowReversal = timeWindow,
             hftBurstAlert = hft,
             quantOptionChain = quantOptionChain,
-            regimeName = snapshot.getString("regime") ?: "Trending (Bullish)",
+            regimeName = snapshot.getString("regime") ?: "Unavailable",
             expectedValue = toDouble(snapshot.get("expected_value")),
             heroZeroAnalysis = heroZeroAnalysis,
             multiHorizonProbabilities = multiHorizonProbabilities,
-            fakeBreakoutAnalysis = fakeBreakoutAnalysis
+            fakeBreakoutAnalysis = fakeBreakoutAnalysis,
+            oiTrendReading = oiTrendReading
         )
     }
 
@@ -719,7 +769,7 @@ class FirestoreRepository(
         val bp = if (rawBp != null) {
             StrategyBlueprint(
                 name = rawBp["name"]?.toString() ?: "Master Confluence Quant",
-                type = rawBp["type"]?.toString() ?: "MULTI_CONFLUENCE_QUANT",
+                type = rawBp["type"]?.toString() ?: "EMA_CROSS",
                 rules = (rawBp["rules"] as? List<*>)?.mapNotNull { it?.toString() } ?: emptyList(),
                 indicators = (rawBp["indicators"] as? List<*>)?.mapNotNull { it?.toString() } ?: emptyList(),
                 mathematicalEdge = rawBp["mathematical_edge"]?.toString() ?: "",
@@ -732,7 +782,7 @@ class FirestoreRepository(
             status = snapshot.getString("status") ?: "ok",
             symbol = snapshot.getString("symbol") ?: "NIFTY",
             strategyName = snapshot.getString("strategy_name") ?: "Master Confluence Quant",
-            strategyType = snapshot.getString("strategy_type") ?: "MULTI_CONFLUENCE_QUANT",
+            strategyType = snapshot.getString("strategy_type") ?: "EMA_CROSS",
             timeframe = snapshot.getString("timeframe") ?: "2y",
             targetPct = toDouble(snapshot.get("target_pct")),
             stopLossPct = toDouble(snapshot.get("stop_loss_pct")),
@@ -761,12 +811,15 @@ class FirestoreRepository(
      * Saves user's custom Strategy configuration to Firestore
      */
     fun saveStrategyConfig(config: StrategyConfig, onResult: (Boolean, String?) -> Unit = { _, _ -> }) {
-        val uid = FirebaseAuth.getInstance().currentUser?.uid
-        val docRef = if (uid != null) {
-            db.collection("users").document(uid).collection("strategies").document(config.id.ifEmpty { "${config.symbol}_${config.strategyType}" })
-        } else {
-            db.collection("strategies").document(config.id.ifEmpty { "${config.symbol}_${config.strategyType}" })
+        val user = FirebaseAuth.getInstance().currentUser
+        val uid = user?.uid
+        if (uid.isNullOrBlank()) {
+            onResult(false, "Sign in before saving a strategy")
+            return
         }
+        val docRef = db.collection("users").document(uid)
+            .collection("option_strategies")
+            .document(config.id.ifEmpty { "${config.symbol}_${config.strategyType}" })
 
         val payload = mapOf(
             "name" to config.name,
@@ -782,9 +835,125 @@ class FirestoreRepository(
             "updated_at" to System.currentTimeMillis()
         )
 
-        docRef.set(payload)
-            .addOnSuccessListener { onResult(true, null) }
-            .addOnFailureListener { onResult(false, it.localizedMessage) }
+        saveToFirestoreAndLocal(
+            user = user,
+            firestoreDocument = docRef,
+            collection = "option_strategies",
+            documentId = config.id.ifEmpty { "${config.symbol}_${config.strategyType}" },
+            payload = payload,
+            onResult = onResult
+        )
+    }
+
+    fun saveBacktestHistory(result: BacktestResult, onResult: (Boolean, String?) -> Unit = { _, _ -> }) {
+        val user = FirebaseAuth.getInstance().currentUser
+        val uid = user?.uid
+        if (uid.isNullOrBlank()) {
+            onResult(false, "Sign in before saving backtest history")
+            return
+        }
+        val trades = result.trades.map { trade ->
+            mapOf(
+                "entry_date" to trade.entryDate,
+                "exit_date" to trade.exitDate,
+                "type" to trade.type,
+                "entry_price" to trade.entryPrice,
+                "exit_price" to trade.exitPrice,
+                "return_pct" to trade.returnPct,
+                "holding_days" to trade.holdingDays,
+                "exit_reason" to trade.exitReason,
+                "pattern_trigger" to trade.patternTrigger,
+                "is_win" to trade.isWin,
+                "r_multiple" to trade.rMultiple
+            )
+        }
+        val payload = mapOf(
+            "symbol" to result.symbol,
+            "strategy_name" to result.strategyName,
+            "strategy_type" to result.strategyType,
+            "timeframe" to result.timeframe,
+            "target_pct" to result.targetPct,
+            "stop_loss_pct" to result.stopLossPct,
+            "atr_multiplier" to result.atrMultiplier,
+            "total_trades" to result.totalTrades,
+            "wins" to result.wins,
+            "losses" to result.losses,
+            "win_rate" to result.winRate,
+            "total_return" to result.totalReturn,
+            "profit_factor" to result.profitFactor,
+            "max_drawdown" to result.maxDrawdown,
+            "sharpe_ratio" to result.sharpeRatio,
+            "sortino_ratio" to result.sortinoRatio,
+            "calmar_ratio" to result.calmarRatio,
+            "expectancy" to result.expectancy,
+            "avg_trade_return" to result.avgTradeReturn,
+            "max_consecutive_wins" to result.maxConsecutiveWins,
+            "max_consecutive_losses" to result.maxConsecutiveLosses,
+            "generated_at" to result.generatedAt,
+            "trades" to trades
+        )
+        val documentId = "${result.symbol}_${result.strategyType}_${System.currentTimeMillis()}"
+            .replace(Regex("[^A-Za-z0-9_-]"), "_")
+        saveToFirestoreAndLocal(
+            user = user,
+            firestoreDocument = db.collection("users").document(uid)
+                .collection("option_backtest_history").document(documentId),
+            collection = "option_backtest_history",
+            documentId = documentId,
+            payload = payload,
+            onResult = onResult
+        )
+    }
+
+    private fun saveToFirestoreAndLocal(
+        user: FirebaseUser,
+        firestoreDocument: DocumentReference,
+        collection: String,
+        documentId: String,
+        payload: Map<String, Any>,
+        onResult: (Boolean, String?) -> Unit
+    ) {
+        val completion = DualWriteCompletion(onResult)
+        try {
+            firestoreDocument.set(payload)
+                .addOnSuccessListener { completion.firestoreResult(null) }
+                .addOnFailureListener {
+                    completion.firestoreResult(it.localizedMessage ?: "Firestore write failed")
+                }
+        } catch (e: Exception) {
+            completion.firestoreResult(e.localizedMessage ?: "Firestore write failed")
+        }
+
+        try {
+            user.getIdToken(false)
+                .addOnSuccessListener { tokenResult ->
+                    val token = tokenResult.token
+                    if (token.isNullOrBlank()) {
+                        completion.localResult("Firebase ID token was empty")
+                    } else {
+                        LocalPostgresSyncClient.post(
+                            context = com.google.firebase.FirebaseApp.getInstance().applicationContext,
+                            idToken = token,
+                            collection = collection,
+                            documentId = documentId,
+                            payload = payload
+                        ) { error ->
+                            completion.localResult(error)
+                        }
+                    }
+                }
+                .addOnFailureListener {
+                    completion.localResult(
+                        "Could not obtain Firebase ID token: " +
+                            (it.localizedMessage ?: "authentication failed")
+                    )
+                }
+        } catch (e: Exception) {
+            completion.localResult(
+                "Could not obtain Firebase ID token: " +
+                    (e.localizedMessage ?: "authentication failed")
+            )
+        }
     }
 
     private fun syncSignalWithOptionChain(
@@ -858,5 +1027,68 @@ class FirestoreRepository(
             else -> 0.0
         }
     }
-}
 
+    private fun toFiniteDoubleOrNull(value: Any?): Double? =
+        when (value) {
+            is Number -> value.toDouble()
+            is String -> value.toDoubleOrNull()
+            else -> null
+        }?.takeIf { it.isFinite() }
+
+    private class DualWriteCompletion(
+        private val callback: (Boolean, String?) -> Unit
+    ) {
+        private val lock = Any()
+        private val mainHandler = Handler(Looper.getMainLooper())
+        private val completionTimeout = Runnable {
+            firestoreResult("Timed out waiting for Firestore confirmation")
+            localResult("Timed out waiting for local PostgreSQL confirmation")
+        }
+        private var firestoreError: String? = null
+        private var localError: String? = null
+        private var firestoreFinished = false
+        private var localFinished = false
+        private var callbackPosted = false
+
+        init {
+            mainHandler.postDelayed(completionTimeout, 30_000)
+        }
+
+        fun firestoreResult(error: String?) {
+            synchronized(lock) {
+                if (firestoreFinished) return
+                firestoreFinished = true
+                firestoreError = error
+                postIfComplete()
+            }
+        }
+
+        fun localResult(error: String?) {
+            synchronized(lock) {
+                if (localFinished) return
+                localFinished = true
+                localError = error
+                postIfComplete()
+            }
+        }
+
+        private fun postIfComplete() {
+            if (!firestoreFinished || !localFinished || callbackPosted) return
+            callbackPosted = true
+            mainHandler.removeCallbacks(completionTimeout)
+            val firestoreSucceeded = firestoreError == null
+            val localSucceeded = localError == null
+            val outcome = when {
+                firestoreSucceeded && localSucceeded -> true to null
+                firestoreSucceeded -> true to
+                    "Saved to Firestore; local PostgreSQL sync failed: ${localError ?: "unknown error"}"
+                localSucceeded -> true to
+                    "Saved to local PostgreSQL API; Firestore save failed: ${firestoreError ?: "unknown error"}"
+                else -> false to
+                    "Firestore save failed: ${firestoreError ?: "unknown error"}; " +
+                    "local API save failed: ${localError ?: "unknown error"}"
+            }
+            mainHandler.post { callback(outcome.first, outcome.second) }
+        }
+    }
+}

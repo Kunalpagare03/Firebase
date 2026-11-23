@@ -1,8 +1,85 @@
 package com.Kunal.stock.ui
 
+import com.Kunal.stock.data.LiveQuote
+import com.Kunal.stock.data.LiveTradeSignal
+import com.Kunal.stock.data.OptionDirectionalConsensus
+import com.Kunal.stock.data.OptionSentimentData
+import com.Kunal.stock.data.OptionSignalConsensus
+import com.Kunal.stock.data.UiState
 import java.util.Calendar
 import java.util.TimeZone
 import kotlin.math.abs
+
+internal data class LiveSetupCheckResult(
+    val symbol: String,
+    val status: String,
+    val message: String,
+    val spotFresh: Boolean,
+    val chainFresh: Boolean,
+    val currentExpiryDay: Boolean = false,
+    val consensus: OptionDirectionalConsensus? = null,
+    val signal: LiveTradeSignal? = null
+)
+
+internal object LiveSetupCheck {
+    fun evaluate(
+        state: UiState<OptionSentimentData>,
+        quote: LiveQuote?,
+        nowMillis: Long = System.currentTimeMillis()
+    ): LiveSetupCheckResult {
+        val source = (state as? UiState.Success)?.data
+        if (source == null) {
+            val message = when (state) {
+                is UiState.Error -> state.message
+                UiState.Loading -> "Waiting for the live option analysis feed."
+                is UiState.Success -> "Live option analysis is unavailable."
+            }
+            return LiveSetupCheckResult("", "WAIT", message, false, false)
+        }
+
+        val tickMillis = quote?.tickAtEpoch
+            ?.takeIf { it.isFinite() && it > 0.0 }
+            ?.let { (it * 1000.0).toLong() }
+        val quoteAgeMillis = tickMillis?.let { nowMillis - it }
+        val spotFresh = quote?.spotPrice?.let { it.isFinite() && it > 0.0 } == true &&
+            quoteAgeMillis != null && quoteAgeMillis in 0..5_000L
+        val chainTimestamp = parseOptionChainUpdatedAt(source.chainUpdatedAt)
+        val chainAgeMillis = chainTimestamp?.let { nowMillis - it }
+        val chainFresh = chainAgeMillis != null && chainAgeMillis in 0..360_000L
+        val india = TimeZone.getTimeZone("Asia/Kolkata")
+        val today = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
+            .apply { timeZone = india }
+            .format(java.util.Date(nowMillis))
+        val currentExpiryDay = source.chainExpiry == today
+        val liveData = source.copy(
+            spotPrice = quote?.spotPrice?.takeIf { it.isFinite() && it > 0.0 } ?: source.spotPrice,
+            spotHistory = (source.spotHistory + (quote?.spotHistory ?: emptyList()))
+                .distinctBy { it.time }
+                .sortedBy { it.time }
+                .takeLast(10_000)
+        )
+        val consensus = OptionSignalConsensus.evaluate(
+            liveData,
+            spotQuoteFresh = spotFresh,
+            optionChainFresh = chainFresh,
+            nowMillis = nowMillis
+        )
+        return LiveSetupCheckResult(
+            symbol = source.symbol,
+            status = if (consensus.tradeEligible) "CONDITIONAL CHECK PASSED" else "WAIT",
+            message = if (consensus.tradeEligible) {
+                "Live price, structure, levels, chain flow and freshness gates currently align. Verify execution risk before acting."
+            } else {
+                consensus.blocker
+            },
+            spotFresh = spotFresh,
+            chainFresh = chainFresh,
+            currentExpiryDay = currentExpiryDay,
+            consensus = consensus,
+            signal = OptionSignalConsensus.buildLiveSignal(liveData, consensus)
+        )
+    }
+}
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // SETUP GUIDE AI AGENT — Multi-Agent Analysis Engine
@@ -34,12 +111,17 @@ data class SetupAgentInput(
     // Setup 3 inputs
     val optionPrice: Double = 0.0,
     val optionStrike: String = "ATM",   // "ATM" or "1-OTM"
-    val index: String = "NIFTY",        // "NIFTY" | "BANKNIFTY" | "SENSEX"
+    val index: String = "NIFTY",        // "NIFTY" | "BANKNIFTY" | "FINNIFTY"
     val priceAboveOpen: Boolean = false,
     val priceAboveVwap: Boolean = false,
+    val priceContextConfirmed: Boolean = false,
     // Capital
     val capital: Double = 0.0,
-    val selectedSetup: Int = 1          // 1-5
+    val lotSize: Int = 0,
+    val maxLossPerLot: Double = 0.0,
+    val dailyPnlRs: Double = 0.0,
+    val weeklyPnlRs: Double = 0.0,
+    val selectedSetup: Int = 1          // 1-3 are checked by the agent
 )
 
 // ─── Sub-agent outputs ────────────────────────────────────────────────────────
@@ -93,28 +175,39 @@ object TimeContextAgent {
         val issues = mutableListOf<String>()
 
         val window = when {
-            h < 915  -> "CLOSED"
-            h < 930  -> { issues.add("9:15-9:30: 1st candle forming. DO NOT enter."); "WATCH" }
-            h < 945  -> { issues.add("9:30-9:45: Check range size. Still waiting."); "WATCH" }
-            h in 945..1030 -> {
-                activeSetups.add(1)
-                activeSetups.add(5)
-                "OPEN"
-            }
-            h in 1015..1030 -> {
-                activeSetups.add(2)
-                "OPEN"
-            }
-            h in 1030..1330 -> {
-                issues.add("10:30-13:30: Manage existing trade only. No new entry.")
+            h >= 1515 -> {
+                issues.add("15:15 reached. Close positions.")
                 "CLOSED"
             }
             expiry && h in 1315..1400 -> {
                 activeSetups.add(3)
                 "OPEN"
             }
-            h >= 1515 -> { issues.add("15:15 reached. Close everything."); "CLOSED" }
-            else -> { issues.add("No new trades after 13:30."); "CLOSED" }
+            h < 915 -> {
+                issues.add("Market is not open yet.")
+                "CLOSED"
+            }
+            h < 930 -> {
+                issues.add("9:15-9:30: first candle forming. Do not enter.")
+                "WATCH"
+            }
+            h < 945 -> {
+                issues.add("9:30-9:45: check opening range and wait.")
+                "WATCH"
+            }
+            h in 945..1030 -> {
+                activeSetups.add(1)
+                if (h >= 1015) activeSetups.add(2)
+                "OPEN"
+            }
+            h < 1330 -> {
+                issues.add("10:30-13:30: manage existing positions; no new entry.")
+                "CLOSED"
+            }
+            else -> {
+                issues.add("No new entries after 13:30.")
+                "CLOSED"
+            }
         }
 
         val timeMsg = when (window) {
@@ -141,8 +234,16 @@ object RuleCheckAgent {
         var s1Met = true
 
         // Setup 1 checks
-        val rangeSize = if (input.niftyLevel > 0 && input.rangeHigh > 0 && input.rangeLow > 0)
-            (input.rangeHigh - input.rangeLow) / input.niftyLevel * 100.0 else -1.0
+        val rangeIsValid = input.rangeHigh.isFinite() && input.rangeLow.isFinite() &&
+            input.niftyLevel.isFinite() && input.rangeHigh > input.rangeLow &&
+            input.rangeLow > 0.0 && input.niftyLevel > 0.0
+        val rangeSize = if (rangeIsValid) {
+            (input.rangeHigh - input.rangeLow) / input.niftyLevel * 100.0
+        } else {
+            s1Met = false
+            s1Issues.add("Enter a valid opening range and underlying price.")
+            -1.0
+        }
 
         if (rangeSize > 0.6) {
             s1Met = false
@@ -151,7 +252,9 @@ object RuleCheckAgent {
             s1Issues.add("Range size %.2f%% < 0.6%% — OK".format(rangeSize))
         }
 
-        if (input.currentPrice > 0 && input.rangeHigh > 0 && input.vwap > 0) {
+        if (rangeIsValid && input.currentPrice.isFinite() && input.currentPrice > 0.0 &&
+            input.vwap.isFinite() && input.vwap > 0.0
+        ) {
             val aboveRange = input.currentPrice > input.rangeHigh
             val belowRange = input.currentPrice < input.rangeLow
             val aboveVwap  = input.currentPrice > input.vwap
@@ -170,20 +273,29 @@ object RuleCheckAgent {
             } else if (belowRange && !aboveVwap) {
                 s1Issues.add("Price below range + below VWAP → PE signal valid")
             }
+        } else {
+            s1Met = false
+            s1Issues.add("Enter current price and VWAP to validate a breakout.")
         }
 
         // Setup 2 — 1-hour direction
         var s2Direction = "N/A"
-        if (input.firstHourClose > 0 && input.firstHourOpen > 0) {
+        val firstHourValid = input.firstHourOpen.isFinite() && input.firstHourClose.isFinite() &&
+            input.firstHourHigh.isFinite() && input.firstHourLow.isFinite() &&
+            input.avgFirstHourSize20d.isFinite() &&
+            input.firstHourOpen > 0.0 && input.firstHourClose > 0.0 &&
+            input.firstHourHigh >= maxOf(input.firstHourOpen, input.firstHourClose) &&
+            input.firstHourLow <= minOf(input.firstHourOpen, input.firstHourClose) &&
+            input.avgFirstHourSize20d > 0.0
+        if (firstHourValid) {
             val body = abs(input.firstHourClose - input.firstHourOpen)
             val size = input.firstHourHigh - input.firstHourLow
             val bodyPct = if (size > 0) body / size * 100.0 else 0.0
-            val sizeRatio = if (input.avgFirstHourSize20d > 0) size / input.avgFirstHourSize20d else 0.0
+            val sizeRatio = size / input.avgFirstHourSize20d
             val isGreen = input.firstHourClose > input.firstHourOpen
 
             s2Direction = when {
                 isGreen && bodyPct >= 60 && sizeRatio >= 1.2 -> "CE_ONLY"
-                !isGreen && bodyPct >= 60 && sizeRatio >= 1.2 -> "PE_ONLY"
                 else -> "NEUTRAL"
             }
         }
@@ -192,28 +304,24 @@ object RuleCheckAgent {
         val s3Issues = mutableListOf<String>()
         var s3Met = true
 
-        val maxPrice = when {
-            input.index == "NIFTY"     && input.optionStrike == "ATM"   -> 24.0
-            input.index == "NIFTY"     && input.optionStrike == "1-OTM" -> 7.0
-            input.index == "BANKNIFTY" && input.optionStrike == "ATM"   -> 36.0
-            input.index == "BANKNIFTY" && input.optionStrike == "1-OTM" -> 11.0
-            input.index == "SENSEX"    && input.optionStrike == "ATM"   -> 84.0
-            input.index == "SENSEX"    && input.optionStrike == "1-OTM" -> 43.0
-            else -> 24.0
-        }
-
-        if (input.optionPrice > maxPrice) {
+        if (!input.optionPrice.isFinite() || input.optionPrice <= 0.0) {
             s3Met = false
-            s3Issues.add("Option price Rs%.0f > max Rs%.0f — NO TRADE".format(input.optionPrice, maxPrice))
-        } else if (input.optionPrice > 0) {
-            s3Issues.add("Option price Rs%.0f ≤ max Rs%.0f — price OK".format(input.optionPrice, maxPrice))
+            s3Issues.add("A live option premium is required.")
+        } else if (input.optionPrice !in 3.0..50.0) {
+            s3Met = false
+            s3Issues.add("Premium is outside the engine's ₹3-₹50 screening range.")
+        } else {
+            s3Issues.add("Premium is inside the engine's screening range; this is not a value or profit check.")
         }
 
         val mixed = input.priceAboveOpen != input.priceAboveVwap
-        if (mixed) {
+        if (!input.priceContextConfirmed) {
+            s3Met = false
+            s3Issues.add("Confirm the current price is checked against both today's open and VWAP.")
+        } else if (mixed) {
             s3Met = false
             s3Issues.add("Mixed signal (open/VWAP disagree) — NO TRADE for Setup 3")
-        } else if (input.optionPrice > 0) {
+        } else {
             s3Issues.add(if (input.priceAboveOpen) "Direction: CE (above open + VWAP)" else "Direction: PE (below open + VWAP)")
         }
 
@@ -240,30 +348,45 @@ object RuleCheckAgent {
 // ═══════════════════════════════════════════════════════════════════════════════
 object RiskGuardAgent {
     fun analyze(input: SetupAgentInput): RiskGuardResult {
-        val maxRisk = input.capital * 0.005
-        val lotSize = if (input.index == "BANKNIFTY") 30 else 65
-        val riskPerLot = if (input.index == "BANKNIFTY") 1500.0 else 1800.0
-        val suggestedLots = if (maxRisk >= riskPerLot) (maxRisk / riskPerLot).toInt() else 0
+        val capitalValid = input.capital.isFinite() && input.capital > 0.0
+        val lotSizeValid = input.lotSize > 0
+        val enteredMaxLoss = input.maxLossPerLot.takeIf { it.isFinite() && it > 0.0 } ?: 0.0
+        val riskPerLot = if (input.selectedSetup == 3 && input.optionPrice.isFinite() &&
+            input.optionPrice > 0.0 && lotSizeValid
+        ) {
+            maxOf(input.optionPrice * input.lotSize, enteredMaxLoss)
+        } else {
+            enteredMaxLoss
+        }
+        val maxRisk = if (capitalValid) input.capital * 0.005 else 0.0
+        val dailyPnl = input.dailyPnlRs.takeIf { it.isFinite() } ?: 0.0
+        val weeklyPnl = input.weeklyPnlRs.takeIf { it.isFinite() } ?: 0.0
+        val dailyLossLimit = if (capitalValid) input.capital * 0.01 else 0.0
+        val weeklyLossLimit = if (capitalValid) input.capital * 0.03 else 0.0
+        val dailyStopBreached = capitalValid && dailyPnl <= -dailyLossLimit
+        val weeklyStopBreached = capitalValid && weeklyPnl <= -weeklyLossLimit
+        val suggestedLots = if (riskPerLot > 0.0) (maxRisk / riskPerLot).toInt() else 0
         val msgs = mutableListOf<String>()
 
-        if (input.capital <= 0) {
-            msgs.add("Capital not entered — cannot validate risk")
-        } else {
-            msgs.add("Max risk per trade: Rs %.0f (0.5%% of Rs %.0f)".format(maxRisk, input.capital))
-            if (suggestedLots == 0) {
-                msgs.add("Capital too small for 1 lot. PAPER TRADE.")
-            } else {
-                msgs.add("Safe lots: $suggestedLots (${suggestedLots * lotSize} qty)")
-            }
-        }
+        if (!capitalValid) msgs.add("Capital is missing or invalid.")
+        else msgs.add("Configured risk budget: ₹%.0f (0.5%% of ₹%.0f).".format(maxRisk, input.capital))
+        if (dailyStopBreached) msgs.add("Daily loss stop reached: journal P&L ₹%.0f; limit is −₹%.0f.".format(dailyPnl, dailyLossLimit))
+        else if (capitalValid) msgs.add("Daily journal P&L: ₹%.0f; daily stop: −₹%.0f (1%% of capital).".format(dailyPnl, dailyLossLimit))
+        if (weeklyStopBreached) msgs.add("Weekly loss stop reached: journal P&L ₹%.0f; limit is −₹%.0f.".format(weeklyPnl, weeklyLossLimit))
+        else if (capitalValid) msgs.add("Weekly journal P&L: ₹%.0f; weekly stop: −₹%.0f (3%% of capital).".format(weeklyPnl, weeklyLossLimit))
+        if (!lotSizeValid) msgs.add("Enter the current exchange lot size; no fixed lot-size assumption is used.")
+        if (riskPerLot <= 0.0) msgs.add("Enter maximum loss per lot to check affordability.")
+        else if (suggestedLots == 0) msgs.add("Configured risk budget does not cover one lot.")
+        else msgs.add("Affordable lots by entered risk: $suggestedLots.")
 
         return RiskGuardResult(
-            capitalSafe = suggestedLots > 0 || input.capital <= 0,
+            capitalSafe = capitalValid && lotSizeValid && riskPerLot > 0.0 &&
+                suggestedLots > 0 && !dailyStopBreached && !weeklyStopBreached,
             maxRiskRs = maxRisk,
             suggestedLots = suggestedLots,
-            lotSize = lotSize,
-            dailyStopBreached = false,
-            weeklyStopBreached = false,
+            lotSize = input.lotSize,
+            dailyStopBreached = dailyStopBreached,
+            weeklyStopBreached = weeklyStopBreached,
             riskMessages = msgs
         )
     }
@@ -320,7 +443,21 @@ object SetupMasterAgent {
         }
 
         // ── Expiry hero zero (Setup 3) ──
-        if (input.isExpiryDay && input.hhmm in 1315..1400) {
+        if (input.selectedSetup == 3) {
+            if (!input.isExpiryDay || input.hhmm !in 1315..1400) {
+                return SetupMasterVerdict(
+                    verdict = "WAIT",
+                    setup = "Setup 3 — Hero Zero",
+                    side = "N/A",
+                    confidence = 0,
+                    entryNote = "Configured expiry window is not active",
+                    stopNote = "Full premium may be lost",
+                    targetNote = "No target is validated",
+                    reasoning = listOf(timeResult.timeMessage),
+                    warnings = listOf("Use the live Hero Zero screen for current expiry and chain checks."),
+                    agentLogs = logs
+                )
+            }
             reasoning.add("Expiry day 13:15 — Setup 3 Hero Zero window")
             reasoning.addAll(ruleResult.setup3Issues)
 
@@ -337,27 +474,64 @@ object SetupMasterAgent {
             }
 
             val side3 = if (input.priceAboveOpen && input.priceAboveVwap) "CE" else "PE"
-            val maxP = when {
-                input.index == "NIFTY"     && input.optionStrike == "ATM"   -> "Rs 24"
-                input.index == "BANKNIFTY" && input.optionStrike == "ATM"   -> "Rs 36"
-                input.index == "SENSEX"    && input.optionStrike == "ATM"   -> "Rs 84"
-                else -> "Rs 7"
-            }
-            reasoning.add("Risk: 0.25-0.5% capital only")
+            reasoning.add("Risk budget is based on entered capital, lot size and full-premium exposure.")
             riskResult.riskMessages.forEach { reasoning.add(it) }
+            if (!riskResult.capitalSafe) {
+                return SetupMasterVerdict(
+                    verdict = "WATCH",
+                    setup = "Setup 3 — Hero Zero",
+                    side = side3,
+                    confidence = 0,
+                    entryNote = "Candidate only — risk capacity is not validated",
+                    stopNote = "Maximum loss can be the full premium",
+                    targetNote = "No target is guaranteed",
+                    reasoning = reasoning,
+                    warnings = listOf("Enter capital and verify current contract risk; no buy instruction is issued."),
+                    agentLogs = logs
+                )
+            }
 
             return SetupMasterVerdict(
                 verdict = "GO", setup = "Setup 3 — Hero Zero", side = side3,
-                confidence = 65,
-                entryNote = "Buy $side3 ATM. Max price: $maxP",
-                stopNote = "No stop loss — whole premium is risk",
-                targetNote = "Sell at 3× buy price OR 15:15",
+                confidence = 0,
+                entryNote = "Entered checks pass; confirm the live chain before any decision",
+                stopNote = "Maximum loss can equal premium × lot size",
+                targetNote = "No target or positive expectancy is validated",
                 reasoning = reasoning, warnings = warnings, agentLogs = logs
             )
         }
 
+        if (input.selectedSetup == 2) {
+            if (2 !in timeResult.activeSetups) {
+                return SetupMasterVerdict(
+                    verdict = "WAIT", setup = "Setup 2 — First-hour filter", side = "N/A",
+                    confidence = 0, entryNote = "Wait until the first-hour candle is complete",
+                    stopNote = "-", targetNote = "Filter only; no entry or target",
+                    reasoning = listOf(timeResult.timeMessage),
+                    warnings = listOf("This filter is not a standalone trade signal."),
+                    agentLogs = logs
+                )
+            }
+            val hasDirection = ruleResult.setup2Direction == "CE_ONLY"
+            return SetupMasterVerdict(
+                verdict = if (hasDirection) "WATCH" else "WAIT",
+                setup = "Setup 2 — First-hour filter",
+                side = if (hasDirection) "CE" else "N/A",
+                confidence = 0,
+                entryNote = if (hasDirection) "Strong green first hour: CE direction filter only" else "No valid bullish filter was confirmed",
+                stopNote = "-",
+                targetNote = "No entry or target from this filter",
+                reasoning = listOf(
+                    if (hasDirection) "First-hour body and range meet the configured filter."
+                    else "Check complete OHLC and 20-day average range inputs."
+                ),
+                warnings = listOf("Not a calibrated statistic or standalone trade signal."),
+                agentLogs = logs
+            )
+        }
+
         // ── Setup 1 ORB ──
-        if (1 in timeResult.activeSetups) {
+        if (input.selectedSetup == 1 && 1 in timeResult.activeSetups) {
             reasoning.add(timeResult.timeMessage)
             reasoning.addAll(ruleResult.setup1Issues)
 
@@ -394,20 +568,30 @@ object SetupMasterAgent {
 
             // All rules met
             riskResult.riskMessages.forEach { reasoning.add(it) }
-            if (riskResult.suggestedLots == 0) {
-                warnings.add("Capital too small for 1 lot — PAPER TRADE this signal")
-            }
             if (s2Filter == "CE_ONLY") reasoning.add("Setup 2 STRONG GREEN confirms: CE only today ✓")
 
             val mid = (input.rangeHigh + input.rangeLow) / 2.0
-            val risk = input.currentPrice - mid
-            val target = input.currentPrice + (2 * risk)
+            val risk = abs(input.currentPrice - mid)
+            val target = if (s1Side == "CE") input.currentPrice + (2 * risk) else input.currentPrice - (2 * risk)
 
             val conf = when {
-                s2Filter == "CE_ONLY" && s1Side == "CE" -> 72
-                s2Filter == "PE_ONLY" && s1Side == "PE" -> 72
-                riskResult.suggestedLots > 0            -> 58
-                else                                     -> 45
+                s2Filter == "CE_ONLY" && s1Side == "CE" -> 0
+                else -> 0
+            }
+
+            if (!riskResult.capitalSafe) {
+                return SetupMasterVerdict(
+                    verdict = "WATCH",
+                    setup = "Setup 1 — ORB",
+                    side = s1Side,
+                    confidence = 0,
+                    entryNote = "Price rules align; risk capacity is not validated",
+                    stopNote = "Index stop at %.1f (mid of range)".format(mid),
+                    targetNote = "Index target at %.1f (2× risk)".format(target),
+                    reasoning = reasoning,
+                    warnings = listOf("Enter capital and verify option premium, lot size, spread, and maximum loss."),
+                    agentLogs = logs
+                )
             }
 
             return SetupMasterVerdict(
@@ -415,11 +599,11 @@ object SetupMasterAgent {
                 setup = "Setup 1 — ORB",
                 side = s1Side,
                 confidence = conf,
-                entryNote = "Buy $s1Side at next candle open (≈ ${input.currentPrice})",
+                entryNote = "Entry rules pass; verify fresh contract and execution risk before any decision",
                 stopNote  = "Index stop at %.1f (mid of range)".format(mid),
                 targetNote = "Index target at %.1f (2× risk)".format(target),
                 reasoning = reasoning,
-                warnings = if (riskResult.suggestedLots == 0) listOf("Paper trade only — capital < 1 lot") else warnings,
+                warnings = listOf("Rule checklist only; option costs, slippage and live contract premium are not modeled."),
                 agentLogs = logs
             )
         }

@@ -14,6 +14,7 @@ android {
         targetSdk 34
         versionCode 4
         versionName "1.0.2026.09.23.3"
+        buildConfigField "String", "LOCAL_SYNC_SPKI_SHA256", "\"05630a19c2d90055d05d78a392c3c2cb581fe06a7344bd413f224a5229e8ca97\""
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -35,6 +36,7 @@ android {
         jvmTarget = '1.8'
     }
     buildFeatures {
+        buildConfig true
         compose true
     }
     composeOptions {
@@ -61,6 +63,8 @@ dependencies {
     implementation platform('com.google.firebase:firebase-bom:32.7.2')
     implementation 'com.google.firebase:firebase-firestore-ktx'
     implementation 'com.google.firebase:firebase-auth-ktx'
+    implementation 'com.google.firebase:firebase-messaging-ktx'
+    implementation 'com.google.firebase:firebase-installations-ktx'
     
     // ViewModel & Icons
     implementation 'androidx.lifecycle:lifecycle-viewmodel-compose:2.7.0'

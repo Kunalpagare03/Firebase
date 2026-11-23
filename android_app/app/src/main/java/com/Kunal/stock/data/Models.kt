@@ -108,11 +108,40 @@ data class OptionSentimentData(
     val timeWindowReversal: TimeWindowReversal = TimeWindowReversal(),
     val hftBurstAlert: HftBurstAlert = HftBurstAlert(),
     val quantOptionChain: QuantOptionChainAnalysis = QuantOptionChainAnalysis(),
-    val regimeName: String = "Trending (Bullish)",
+    val regimeName: String = "Unavailable",
     val expectedValue: Double = 0.0,
     val heroZeroAnalysis: HeroZeroAnalysis = HeroZeroAnalysis(),
     val multiHorizonProbabilities: MultiHorizonProbabilities = MultiHorizonProbabilities(),
-    val fakeBreakoutAnalysis: FakeBreakoutAnalysis = FakeBreakoutAnalysis()
+    val fakeBreakoutAnalysis: FakeBreakoutAnalysis = FakeBreakoutAnalysis(),
+    val directionalConsensus: OptionDirectionalConsensus = OptionDirectionalConsensus(),
+    val oiTrendReading: OiTrendReading = OiTrendReading()
+)
+
+data class OiTrendReading(
+    val available: Boolean = false,
+    val symbol: String = "",
+    val exchangeDate: String = "",
+    val nearestExpiry: String = "",
+    val spot: Double = 0.0,
+    val futuresChangePct: Double? = null,
+    val oiChangePct: Double? = null,
+    val buildup: String = "NONE",
+    val pcr: Double? = null,
+    val dpcr: Double = 0.0,
+    val writerBias: Double = 0.0,
+    val putWall: Double? = null,
+    val callWall: Double? = null,
+    val wallPlace: Double = 0.5,
+    val maxPain: Double? = null,
+    val maxPainPct: Double? = null,
+    val oiCentre: Double? = null,
+    val oiCentrePct: Double? = null,
+    val expectedMove: Double? = null,
+    val expectedMovePct: Double? = null,
+    val trendScore: Int = 0,
+    val trend: String = "NEUTRAL",
+    val testedHitRate: String = "",
+    val limitation: String = "OI context only; no guaranteed next-day direction."
 )
 
 data class MultiHorizonProbabilities(
@@ -166,7 +195,7 @@ data class LiveTradeSignal(
     val estimatedPremium: Double = 0.0,
     val targetPremium: Double = 0.0,
     val stopLossPremium: Double = 0.0,
-    val riskRewardRatio: String = "1:2.0",
+    val riskRewardRatio: String = "N/A",
     val confidenceScore: Int = 0
 )
 
@@ -205,35 +234,34 @@ data class HftBurstAlert(
 )
 
 data class QuantOptionChainAnalysis(
-    val ivSkewPct: Double = 1.2,
-    val ivSkewRead: String = "Neutral / Slight Put Skew (+1.2%)",
-    val netGexMillion: Double = -0.85,
-    val gexRegime: String = "Negative GEX Squeeze (High Volatility Acceleration)",
-    val vannaDrag: Double = 0.042,
-    val charmDrag: Double = -0.018,
-    val maxPainStrike: Double = 0.0,
-    val maxPainGravityPct: Double = 0.0,
-    val callWallStrike: Double = 0.0,
-    val callWallOi: Long = 0,
-    val putWallStrike: Double = 0.0,
-    val putWallOi: Long = 0,
-    val pcrOi: Double = 1.0,
-    val pcrVolume: Double = 1.0,
-    val institutionalRead: String = "Heavy Put Defense at Support. Gamma Squeeze Risk Active."
+    val ivSkewPct: Double? = null,
+    val ivSkewRead: String = "Unavailable",
+    val netGexMillion: Double? = null,
+    val gexRegime: String = "Unavailable",
+    val vannaDrag: Double? = null,
+    val charmDrag: Double? = null,
+    val maxPainStrike: Double? = null,
+    val maxPainGravityPct: Double? = null,
+    val callWallStrike: Double? = null,
+    val callWallOi: Long? = null,
+    val putWallStrike: Double? = null,
+    val putWallOi: Long? = null,
+    val pcrOi: Double? = null,
+    val pcrVolume: Double? = null,
+    val institutionalRead: String = "Unavailable"
 )
 
 data class StrategyBlueprint(
-    val name: String = "Master Confluence Quant",
-    val type: String = "MULTI_CONFLUENCE_QUANT",
+    val name: String = "EMA 20/50 Crossover",
+    val type: String = "EMA_CROSS",
     val rules: List<String> = listOf(
-        "Buy Call when Price > 20 EMA, PCR OI > 1.15, and Bullish Candlestick forms at Support.",
-        "Buy Put when Price < 20 EMA, PCR OI < 0.85, and Bearish Candlestick forms at Resistance.",
-        "Dynamic ATR trailing stop loss at 1.5x ATR."
+        "Long underlying when the 20-day EMA crosses above the 50-day EMA.",
+        "Enter at the next daily open; use configured target, stop and holding limit."
     ),
-    val indicators: List<String> = listOf("20 EMA", "RSI(14)", "PCR OI", "ATM Delta", "ATR(14)"),
-    val mathematicalEdge: String = "Exploits option writer delta squeeze and intraday time-window reversal probability.",
-    val isRecommendedLive: Boolean = true,
-    val regimeCommentary: String = "RECOMMENDED FOR LIVE MARKET: Regime metrics (ATR + PCR + Momentum) align with historical win conditions."
+    val indicators: List<String> = listOf("Daily OHLCV", "EMA 20", "EMA 50", "ATR(14)"),
+    val mathematicalEdge: String = "Rules-based historical test only; no statistical edge or probability is established.",
+    val isRecommendedLive: Boolean = false,
+    val regimeCommentary: String = "Research only. Historical underlying returns do not predict future results."
 )
 
 data class ScanStatus(
@@ -248,6 +276,7 @@ data class ScanStatus(
 
 data class LiveQuote(
     val spotPrice: Double = 0.0,
+    val statusMessage: String = "",
     val updatedAt: String = "",
     val tickAtEpoch: Double = 0.0,
     val tickRate10s: Double = 0.0,
@@ -282,9 +311,9 @@ data class TradeRecord(
 
 data class StrategyConfig(
     val id: String = "",
-    val name: String = "Master Confluence Quant",
+    val name: String = "EMA 20/50 Crossover",
     val symbol: String = "NIFTY",
-    val strategyType: String = "MULTI_CONFLUENCE_QUANT", // OPTION_FLOW_GRAVITY, PRICE_ACTION_STRUCTURE, CANDLE_VOLATILITY_SQUEEZE, MULTI_CONFLUENCE_QUANT, EMA_CROSS, RSI_MOMENTUM, BREAKOUT
+    val strategyType: String = "EMA_CROSS",
     val fastPeriod: Int = 20,
     val slowPeriod: Int = 50,
     val rsiThreshold: Double = 35.0,
@@ -299,8 +328,8 @@ data class StrategyConfig(
 data class BacktestResult(
     val status: String = "ok",
     val symbol: String = "NIFTY",
-    val strategyName: String = "Master Confluence Quant",
-    val strategyType: String = "MULTI_CONFLUENCE_QUANT",
+    val strategyName: String = "EMA 20/50 Crossover",
+    val strategyType: String = "EMA_CROSS",
     val timeframe: String = "2y",
     val targetPct: Double = 2.5,
     val stopLossPct: Double = 1.2,
@@ -323,5 +352,3 @@ data class BacktestResult(
     val trades: List<TradeRecord> = emptyList(),
     val blueprint: StrategyBlueprint = StrategyBlueprint()
 )
-
-

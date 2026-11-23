@@ -1,21 +1,92 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Professional Option Quant Logo: Delta + CE/PE arrows on dark space bg -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <!-- Deep Neon Purple & Violet Derivatives Quant Background -->
-    <path android:fillColor="#1A0B2E" android:pathData="M54,2A52,52 0,1 0,54,106A52,52 0,1 0,54,2" />
-    <!-- Glowing Magenta & Electric Violet Accent Ring -->
-    <path android:fillColor="#00000000" android:pathData="M54,8A46,46 0,1 0,54,100A46,46 0,1 0,54,8" android:strokeColor="#7928CA" android:strokeWidth="3.5" />
-    
-    <!-- Bold 'O' Ring for Options / Derivatives -->
-    <path android:fillColor="#00000000" android:pathData="M40,54A18,18 0,1 0,40,53.9" android:strokeColor="#FF0080" android:strokeWidth="5" />
 
-    <!-- Greek Delta Symbol (Δ) for Options / Quant Greeks -->
-    <path android:fillColor="#00000000" android:pathData="M70,72L55,42L40,72Z" android:strokeColor="#00DFD8" android:strokeWidth="4" android:strokeLineCap="round" android:strokeLineJoin="round" />
+    <!-- Deep space background -->
+    <path android:fillColor="#0D0A1E"
+        android:pathData="M0,0L108,0L108,108L0,108Z"/>
 
-    <!-- Sharp Upward Derivative Call Strike Arrow -->
-    <path android:fillColor="#00000000" android:pathData="M48,64L62,50L72,56L88,34" android:strokeColor="#00F5A0" android:strokeWidth="5.5" android:strokeLineCap="round" android:strokeLineJoin="round" />
-    <!-- Glowing Golden Arrowhead -->
-    <path android:fillColor="#FFD600" android:pathData="M80,31L93,28L91,41L87,36L82,40Z" />
+    <!-- Subtle grid lines (trading terminal feel) -->
+    <path android:fillColor="#00000000"
+        android:pathData="M0,27L108,27M0,54L108,54M0,81L108,81"
+        android:strokeColor="#1A1535"
+        android:strokeWidth="1"/>
+    <path android:fillColor="#00000000"
+        android:pathData="M27,0L27,108M54,0L54,108M81,0L81,108"
+        android:strokeColor="#1A1535"
+        android:strokeWidth="1"/>
+
+    <!-- Rounded corner background card -->
+    <path android:fillColor="#12103A"
+        android:pathData="M10,10Q10,10 10,10L98,10Q98,10 98,10L98,98Q98,98 98,98L10,98Q10,98 10,10Z"/>
+
+    <!-- Outer glow ring gradient simulation - violet -->
+    <path android:fillColor="#00000000"
+        android:pathData="M54,8A46,46 0,1 0,54,100A46,46 0,1 0,54,8"
+        android:strokeColor="#7B2FBE"
+        android:strokeWidth="2.5"/>
+
+    <!-- Inner ring - neon cyan -->
+    <path android:fillColor="#00000000"
+        android:pathData="M54,15A39,39 0,1 0,54,93A39,39 0,1 0,54,15"
+        android:strokeColor="#00DFD8"
+        android:strokeWidth="1.5"/>
+
+    <!-- Main DELTA Δ shape - Violet/Purple filled -->
+    <path android:fillColor="#7B2FBE"
+        android:pathData="M54,22L24,76L84,76Z"/>
+
+    <!-- Delta hollow inner - dark -->
+    <path android:fillColor="#0D0A1E"
+        android:pathData="M54,33L31,70L77,70Z"/>
+
+    <!-- Delta center spine line - gold -->
+    <path android:fillColor="#00000000"
+        android:pathData="M54,33L54,70"
+        android:strokeColor="#FFD600"
+        android:strokeWidth="3"
+        android:strokeLineCap="round"/>
+
+    <!-- Left CE signal - rising pulse line -->
+    <path android:fillColor="#00000000"
+        android:pathData="M20,65L25,55L30,60L35,45L40,50"
+        android:strokeColor="#00E676"
+        android:strokeWidth="3"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"/>
+    <!-- CE arrowhead up -->
+    <path android:fillColor="#00E676"
+        android:pathData="M38,43L42,43L40,48Z"/>
+
+    <!-- Right PE signal - falling pulse line -->
+    <path android:fillColor="#00000000"
+        android:pathData="M68,45L73,55L78,50L83,60L88,55"
+        android:strokeColor="#FF5252"
+        android:strokeWidth="3"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"/>
+    <!-- PE arrowhead down -->
+    <path android:fillColor="#FF5252"
+        android:pathData="M86,57L90,57L88,62Z"/>
+
+    <!-- CE label chip - bottom left -->
+    <path android:fillColor="#003818" android:pathData="M12,80L35,80Q38,80 38,83L38,96Q38,99 35,99L12,99Q9,99 9,96L9,83Q9,80 12,80Z"/>
+
+    <!-- PE label chip - bottom right -->
+    <path android:fillColor="#4A0007" android:pathData="M73,80L96,80Q99,80 99,83L99,96Q99,99 96,99L73,99Q70,99 70,96L70,83Q70,80 73,80Z"/>
+
+    <!-- Gold dot at apex of Delta -->
+    <path android:fillColor="#FFD600"
+        android:pathData="M54,22m-3.5,0a3.5,3.5 0,1 0,7,0a3.5,3.5 0,1 0,-7,0"/>
+
+    <!-- Bottom horizontal divider line - cyan -->
+    <path android:fillColor="#00000000"
+        android:pathData="M15,78L93,78"
+        android:strokeColor="#00DFD8"
+        android:strokeWidth="1"
+        android:strokeLineCap="round"/>
 </vector>

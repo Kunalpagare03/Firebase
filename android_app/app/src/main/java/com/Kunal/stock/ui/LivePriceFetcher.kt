@@ -28,6 +28,7 @@ object LivePriceFetcher {
     fun toYahooSymbol(sym: String): String = when (sym) {
         "NIFTY"      -> "^NSEI"
         "BANKNIFTY"  -> "^NSEBANK"
+        "SENSEX"     -> "^BSESN"
         "FINNIFTY"   -> "^CNXFIN"
         "MIDCPNIFTY" -> "^NSEMDCP50"
         "NIFTYNXT50" -> "^NSMIDCP100"

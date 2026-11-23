@@ -10,6 +10,8 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -23,6 +25,10 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.Kunal.stock.data.HeroZeroAnalysis
+import com.Kunal.stock.data.OptionSentimentData
+import com.Kunal.stock.data.UiState
 import java.util.Calendar
 import java.util.TimeZone
 
@@ -47,12 +53,21 @@ private fun istHHMM(): Int {
 
 private fun fmtHHMM(hhmm: Int): String = "%02d:%02d".format(hhmm / 100, hhmm % 100)
 
-private fun isTuesday(): Boolean =
-    istNow().get(Calendar.DAY_OF_WEEK) == Calendar.TUESDAY
+private fun isCurrentExpiry(expiry: String): Boolean {
+    if (expiry.isBlank()) return false
+    val india = TimeZone.getTimeZone("Asia/Kolkata")
+    val date = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).apply {
+        isLenient = false
+        timeZone = india
+    }
+    val position = java.text.ParsePosition(0)
+    val parsed = date.parse(expiry, position) ?: return false
+    return position.index == expiry.length && date.format(parsed) == date.format(istNow().time)
+}
 
 // ─── Live Signal Model ───────────────────────────────────────────────────────
 data class LiveSignal(
-    val status: String,          // "TRADE", "WATCH", "WAIT", "CLOSED"
+    val status: String,          // "WATCH", "WAIT", "CLOSED"
     val setup: String,
     val headline: String,
     val details: List<String>,
@@ -92,80 +107,46 @@ private fun computeSignal(hhmm: Int, isExpiry: Boolean): LiveSignal {
             AmberWarn
         )
         hhmm < 1000 -> LiveSignal(
-            "TRADE", "Setup 1 — ORB WINDOW OPEN",
-            "9:45-10:00 — BEST TIME. Look for breakout!",
+            "WATCH", "Setup 1 — ORB review window",
+            "Time window open; the app has not validated your opening range.",
             listOf(
-                "BUY CE: 15-min candle closes ABOVE range HIGH + above VWAP",
-                "BUY PE: 15-min candle closes BELOW range LOW + below VWAP",
-                "Entry: next candle open",
-                "Stop: mid of range (High+Low)/2",
-                "Target: Entry + 2×risk"
+                "Check a completed candle against the opening range and VWAP.",
+                "Enter the range, current price and VWAP in Agent checks.",
+                "This time guide is not a live setup signal."
             ),
-            GreenBull
+            AmberWarn
         )
         hhmm < 1015 -> LiveSignal(
-            "TRADE", "Setup 1 — ORB Still Open",
-            "9:45-10:15 — ORB window still active",
+            "WATCH", "Setup 1 — ORB review window",
+            "Time window open; wait for the entered rules to pass.",
             listOf(
-                "Still valid: look for 15-min close outside range + VWAP side",
-                "Entry on next candle open",
-                "Stop: mid of range | Target: 2×risk"
+                "Verify completed candle, range, current price and VWAP.",
+                "No entry is generated from time alone."
             ),
-            GreenBull
+            AmberWarn
         )
         hhmm == 1015 || (hhmm in 1015..1030) -> LiveSignal(
-            "TRADE", "Setup 2 — Check 1-Hour Candle Direction",
-            "10:15 — Decide day direction (Setup 2)",
+            "WATCH", "Setup 2 — First-hour filter window",
+            "Complete and verify the first-hour candle before using this filter.",
             listOf(
-                "STRONG GREEN: Close>Open, body≥60% size, size≥1.2× avg → CE ONLY rest of day",
-                "STRONG RED: No special direction (do NOT short just because of it)",
-                "Any other candle: Follow Setup 1 rules only",
-                "Also: last chance for Setup 1 entry before 10:30"
+                "The filter requires complete OHLC and a 20-day average range.",
+                "A strong-green result is a directional filter, not an entry signal."
             ),
-            BlueCool
-        )
-        hhmm < 1330 -> {
-            val dir = if (hhmm < 1100) "MANAGE OPEN TRADE" else "HOLD — no new trades"
-            LiveSignal(
-                "WAIT", "Manage Trade Only",
-                "10:30-13:30 — $dir",
-                listOf(
-                    "Only manage your existing open trade",
-                    "No new entry unless it matches Setup 2 direction",
-                    "Move stop to breakeven if trade is up 1R",
-                    "Hard stop at 15:15 for all positions"
-                ),
-                Color.Gray
-            )
-        }
-        hhmm < 1315 -> LiveSignal(
-            "WAIT", "No New Trades",
-            "After 13:30 — NO new trades allowed",
-            listOf(
-                "Only exception: Setup 3 Hero Zero on expiry day at 13:15",
-                "Manage existing positions only"
-            ),
-            RedBear
+            AmberWarn
         )
         isExpiry && hhmm in 1315..1400 -> LiveSignal(
-            "TRADE", "Setup 3 — HERO ZERO WINDOW",
-            "13:15 EXPIRY — Hero Zero check NOW!",
+            "WATCH", "Setup 3 — Hero Zero review window",
+            "Expiry window active; wait for the live candidate checks.",
             listOf(
-                "Direction: Price ABOVE open+VWAP → BUY CE",
-                "Direction: Price BELOW open+VWAP → BUY PE",
-                "Mixed signal → NO TRADE",
-                "Strike: ATM or 1-OTM only",
-                "Nifty ATM max price: Rs 24 | BN ATM: Rs 36",
-                "If price above max → NO TRADE",
-                "Risk: 0.25-0.5% capital only",
-                "Exit: 3× buy price OR 15:15"
+                "Verify fresh spot and chain, selected expiry, matching contract and observed premium.",
+                "Candidate status is not a probability or buy recommendation."
             ),
-            RedBear
+            AmberWarn
         )
-        hhmm in 1315..1400 && !isExpiry -> LiveSignal(
-            "WAIT", "No New Trades",
-            "After 13:30 — market day winding down",
-            listOf("No new trades today", "Close everything by 15:15", "Write your journal"),
+        hhmm < 1330 -> LiveSignal(
+            "WAIT", "Manage positions only",
+            "10:30-13:30 — no new entry from the time guide.",
+            listOf("Manage an open position using its planned risk limits.", "Do not treat the first-hour filter as an entry signal."),
             Color.Gray
         )
         hhmm < 1515 -> LiveSignal(
@@ -190,7 +171,7 @@ private fun computeSignal(hhmm: Int, isExpiry: Boolean): LiveSignal {
     }
 }
 
-// ─── Trade Journal Storage (in-memory for session) ────────────────────────────
+// ─── Trade Journal ────────────────────────────────────────────────────────────
 data class JournalEntry(
     val id: Int,
     val date: String,
@@ -212,9 +193,30 @@ data class JournalEntry(
 // MAIN SCREEN
 // ═══════════════════════════════════════════════════════════════════════════════
 @Composable
-fun SimpleSetupScreen() {
+fun SimpleSetupScreen(viewModel: OptionSentimentViewModel = viewModel()) {
     var selectedTab by remember { mutableIntStateOf(0) }
-    val tabs = listOf("Signal", "AI Agent", "Day Plan", "Setups", "Hero Zero", "Journal", "Risk Calc", "Checklist")
+    val uiState by viewModel.uiState.collectAsState()
+    val liveQuote by viewModel.liveQuote.collectAsState()
+    var checkClock by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            kotlinx.coroutines.delay(5_000)
+            checkClock = System.currentTimeMillis()
+        }
+    }
+    val liveCheck = remember(uiState, liveQuote, checkClock) {
+        LiveSetupCheck.evaluate(uiState, liveQuote, checkClock)
+    }
+    val liveData = (uiState as? UiState.Success)?.data?.let { source ->
+        source.copy(
+            spotPrice = liveQuote?.spotPrice?.takeIf { it.isFinite() && it > 0.0 } ?: source.spotPrice,
+            spotHistory = (source.spotHistory + (liveQuote?.spotHistory ?: emptyList()))
+                .distinctBy { it.time }
+                .sortedBy { it.time }
+                .takeLast(10_000)
+        )
+    }
+    val tabs = listOf("Signal", "Agent", "Day Plan", "Setups", "Hero Zero", "Journal", "Risk Calc", "Checklist")
 
     Column(
         modifier = Modifier
@@ -234,7 +236,7 @@ fun SimpleSetupScreen() {
                     text = {
                         Text(
                             t,
-                            fontSize = 12.sp,
+                            fontSize = 11.sp,
                             fontWeight = if (selectedTab == i) FontWeight.Bold else FontWeight.Normal,
                             color = if (selectedTab == i) GreenBull else Color.Gray
                         )
@@ -243,15 +245,17 @@ fun SimpleSetupScreen() {
             }
         }
 
-        when (selectedTab) {
-            0 -> SignalTab()
-            1 -> AiAgentTab()
-            2 -> DayPlanTab()
-            3 -> SetupsTab()
-            4 -> HeroZeroTab()
-            5 -> JournalTab()
-            6 -> RiskCalcTab()
-            7 -> ChecklistTab()
+        Box(modifier = Modifier.weight(1f)) {
+            when (selectedTab) {
+                0 -> SignalTab(liveCheck)
+                1 -> AiAgentTab(liveData)
+                2 -> DayPlanTab(liveData)
+                3 -> SetupsTab()
+                4 -> HeroZeroTab(liveData, liveCheck.spotFresh)
+                5 -> JournalTab()
+                6 -> RiskCalcTab()
+                7 -> ChecklistTab()
+            }
         }
     }
 }
@@ -260,9 +264,9 @@ fun SimpleSetupScreen() {
 // TAB 0 — LIVE SIGNAL (THE MAIN NEW FEATURE)
 // ═══════════════════════════════════════════════════════════════════════════════
 @Composable
-fun SignalTab() {
+private fun SignalTab(liveCheck: LiveSetupCheckResult? = null) {
     var hhmm by remember { mutableStateOf(istHHMM()) }
-    val isExpiry = isTuesday()
+    val isExpiry = liveCheck?.currentExpiryDay == true
 
     LaunchedEffect(Unit) {
         while (true) {
@@ -277,6 +281,10 @@ fun SignalTab() {
         modifier = Modifier.fillMaxSize().padding(10.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
+        item {
+            LiveSetupStatusCard(liveCheck)
+        }
+
         // ── CURRENT TIME ──
         item {
             Card(
@@ -293,7 +301,7 @@ fun SignalTab() {
                             modifier = Modifier
                                 .size(10.dp)
                                 .clip(CircleShape)
-                                .background(if (signal.status == "TRADE") GreenBull else if (signal.status == "WATCH") AmberWarn else Color.Gray)
+                                .background(if (signal.status == "WATCH") AmberWarn else Color.Gray)
                         )
                         Spacer(Modifier.width(8.dp))
                         Text(
@@ -303,6 +311,7 @@ fun SignalTab() {
                             fontSize = 20.sp
                         )
                     }
+
                     if (isExpiry) {
                         Surface(
                             color = RedBear.copy(alpha = 0.25f),
@@ -408,11 +417,10 @@ fun SignalTab() {
                 Column(modifier = Modifier.padding(12.dp)) {
                     Text("Quick Rules", color = AmberWarn, fontWeight = FontWeight.Bold, fontSize = 13.sp)
                     Spacer(Modifier.height(6.dp))
-                    QuickRule("One trade per day max (Setup 1).")
-                    QuickRule("Only CE after STRONG GREEN 1-hour candle (Setup 2).")
-                    QuickRule("Never trade after 13:30 (except expiry Setup 3).")
-                    QuickRule("Max loss per trade: 0.5% of capital.")
-                    QuickRule("Daily stop: 2× per-trade risk. Weekly: 5× risk.")
+                    QuickRule("Use the live evidence card; stale or missing inputs mean WAIT.")
+                    QuickRule("Setup 1 and 2 checks require complete, manually verified inputs.")
+                    QuickRule("Hero Zero requires today's chain expiry and fresh matching contract data.")
+                    QuickRule("Time windows are guides only; they do not produce a trade signal.")
                 }
             }
         }
@@ -429,7 +437,7 @@ fun SignalTab() {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Default.Block, contentDescription = null, tint = RedBear, modifier = Modifier.size(16.dp))
                         Spacer(Modifier.width(6.dp))
-                        Text("NEVER Do These", color = RedBear, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                        Text("Risk reminders", color = RedBear, fontWeight = FontWeight.Bold, fontSize = 13.sp)
                     }
                     Spacer(Modifier.height(6.dp))
                     listOf(
@@ -449,31 +457,63 @@ fun SignalTab() {
             }
         }
 
-        // ── BACKTEST PROOF ──
-        item {
-            Card(
-                colors = CardDefaults.cardColors(containerColor = CardDark),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(modifier = Modifier.padding(12.dp)) {
-                    Text("Backtest Reference (Section 9)", color = PurpleAcc, fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                    Spacer(Modifier.height(6.dp))
-                    BacktestRow("Setup 1 (Nifty ORB original)", "43 trades", "+0.06R", AmberWarn)
-                    BacktestRow("Setup 2 (1-hr STRONG GREEN)", "43 days", "Nifty up 69.8%", GreenBull)
-                    BacktestRow("Setup 3 (Hero Zero ATM)", "94 expiries", "Avg payoff Rs 39.3", BlueCool)
-                    BacktestRow("Setup 4 (Shooting star)", "45 Nifty trades", "+0.86R", Color.Gray)
-                    BacktestRow("Setup 5 (Prev day H/L)", "28 trades", "+0.12R", Color.Gray)
-                    Divider(color = Color.DarkGray, thickness = 0.5.dp, modifier = Modifier.padding(vertical = 6.dp))
-                    Text(
-                        "⚠ No setup has proven profits at 1 lot yet. Paper trade Setup 1 for 3+ months before real money.",
-                        color = Color(0xFFFFCDD2),
-                        fontSize = 11.sp
-                    )
-                }
-            }
-        }
-
         item { Spacer(Modifier.height(16.dp)) }
+    }
+}
+
+@Composable
+private fun LiveSetupStatusCard(result: LiveSetupCheckResult?) {
+    val passed = result?.status == "CONDITIONAL CHECK PASSED"
+    val color = if (passed) GreenBull else AmberWarn
+    Card(
+        colors = CardDefaults.cardColors(containerColor = color.copy(alpha = 0.12f)),
+        modifier = Modifier.fillMaxWidth().border(1.dp, color.copy(alpha = 0.75f), RoundedCornerShape(12.dp))
+    ) {
+        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    if (passed) Icons.Default.Verified else Icons.Default.HourglassTop,
+                    contentDescription = null,
+                    tint = color,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(Modifier.width(6.dp))
+                Text(
+                    result?.status ?: "WAIT",
+                    color = color,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.ExtraBold
+                )
+                Spacer(Modifier.weight(1f))
+                Text(result?.symbol?.ifBlank { "Options" } ?: "Options", color = Color.LightGray, fontSize = 11.sp)
+            }
+            Text(result?.message ?: "Waiting for live option data.", color = Color.White, fontSize = 12.sp)
+            val monitor = result?.signal
+            if (passed && monitor != null && monitor.optionType.isNotBlank()) {
+                Text(
+                    "Evidence bias: ${result.consensus?.direction ?: "N/A"} · near-ATM monitor: ${monitor.recommendedContract} · chain premium ₹${"%.2f".format(monitor.estimatedPremium)}",
+                    color = Color.LightGray,
+                    fontSize = 11.sp
+                )
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text(
+                    "Spot ${if (result?.spotFresh == true) "FRESH" else "STALE / MISSING"}",
+                    color = if (result?.spotFresh == true) GreenBull else RedBear,
+                    fontSize = 10.sp
+                )
+                Text(
+                    "Chain ${if (result?.chainFresh == true) "FRESH" else "STALE / MISSING"}",
+                    color = if (result?.chainFresh == true) GreenBull else RedBear,
+                    fontSize = 10.sp
+                )
+            }
+            Text(
+                "Live evidence gate only—not a probability or order recommendation. It does not check your manual ORB range.",
+                color = Color.Gray,
+                fontSize = 10.sp
+            )
+        }
     }
 }
 
@@ -481,7 +521,7 @@ fun SignalTab() {
 // TAB 1 — DAY PLAN
 // ═══════════════════════════════════════════════════════════════════════════════
 @Composable
-fun DayPlanTab() {
+fun DayPlanTab(data: OptionSentimentData? = null) {
     var currentTime by remember { mutableStateOf(istHHMM()) }
     LaunchedEffect(Unit) {
         while (true) {
@@ -497,11 +537,11 @@ fun DayPlanTab() {
         Slot("Before 9:15",    "Write yesterday H/L/Close. UP or DOWN?",         0,    915,  BlueCool),
         Slot("9:15 – 9:30",   "DO NOTHING. Watch 1st 15-min candle. Mark H/L.", 915,  930,  AmberWarn),
         Slot("9:30 – 9:45",   "Still wait. Check candle size (< 0.6% rule).",   930,  945,  AmberWarn),
-        Slot("9:45 – 10:30",  "BEST TIME → Setup 1 ORB. ONE trade only.",       945,  1030, GreenBull),
-        Slot("10:15",         "Setup 2: 1-hour direction → CE or PE allowed?",  1015, 1016, BlueCool),
+        Slot("9:45 – 10:30",  "Setup 1 ORB review window; verify manual inputs.", 945, 1030, AmberWarn),
+        Slot("10:15",         "Setup 2 first-hour filter; not an entry signal.", 1015, 1016, BlueCool),
         Slot("10:30 – 13:30", "Manage open trade only. No new entry.",          1030, 1330, Color.Gray),
-        Slot("13:15 (expiry)","Hero Zero Setup 3. Nifty ATM ≤ Rs 24.",          1315, 1400, RedBear),
-        Slot("After 13:30",   "NO NEW TRADES. Exception: expiry Setup 3 only.", 1330, 1515, RedBear),
+        Slot("13:15 (expiry)","Hero Zero live-check window; candidate only.",    1315, 1400, RedBear),
+        Slot("After 13:30",   "No new entries; expiry review window closes at 14:00.", 1330, 1515, RedBear),
         Slot("15:15",         "Close all. Write journal.",                       1515, 2359, Color.Gray)
     )
 
@@ -514,9 +554,9 @@ fun DayPlanTab() {
                 Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween) {
                     Text("IST  ${fmtHHMM(hhmm)}", color = GreenBull, fontWeight = FontWeight.ExtraBold, fontSize = 18.sp)
-                    if (isTuesday()) {
+                    if (isCurrentExpiry(data?.chainExpiry.orEmpty())) {
                         Surface(color = RedBear.copy(alpha = 0.2f), shape = RoundedCornerShape(6.dp)) {
-                            Text("  NIFTY EXPIRY (Tue)  ", color = RedBear, fontSize = 11.sp,
+                            Text("  CURRENT CHAIN EXPIRY  ", color = RedBear, fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold, modifier = Modifier.padding(4.dp))
                         }
                     }
@@ -567,12 +607,12 @@ fun SetupsTab() {
 
 @Composable fun SetupCard1() = SetupCardBase(
     "Setup 1 — 15-min Opening Range Breakout (ORB)", "⚠ PAPER TRADE FIRST", AmberWarn,
-    "+0.06R on 43 Nifty trades — NOT profitable yet. Paper trade only.", AmberWarn
+    "Rule description only; no verified backtest result is loaded for this setup.", AmberWarn
 ) {
     RuleRow("When", "9:15-9:30 candle forms. Mark its HIGH and LOW.")
     RuleRow("Range check", "Size must be < 0.6% of Nifty. Skip today if too wide.")
-    RuleRow("BUY CE", "9:45-10:00: 15-min candle CLOSES above HIGH AND above VWAP.")
-    RuleRow("BUY PE", "9:45-10:00: 15-min candle CLOSES below LOW AND below VWAP.")
+    RuleRow("CE condition", "9:45-10:00: 15-min candle closes above HIGH and above VWAP.")
+    RuleRow("PE condition", "9:45-10:00: 15-min candle closes below LOW and below VWAP.")
     RuleRow("Entry", "Next 5-min candle open.")
     RuleRow("Stop", "(High + Low) / 2 — midpoint of the opening range.")
     RuleRow("Target", "Entry + 2× risk (index points).")
@@ -582,49 +622,36 @@ fun SetupsTab() {
 
 @Composable fun SetupCard2() = SetupCardBase(
     "Setup 2 — First-Hour Direction (10:15 Filter)", "🔵 FILTER ONLY — not a trade", BlueCool,
-    "Nifty closed higher 69.8% of time after STRONG GREEN. Use as filter, not buy signal.", BlueCool
+    "A directional filter hypothesis, not a calibrated statistic or standalone trade signal.", BlueCool
 ) {
     RuleRow("When", "At 10:15 — the 9:15-10:15 (1-hour) candle is complete.")
     RuleRow("STRONG GREEN", "Close > Open, body ≥ 60% of size, size ≥ 1.2× 20-day avg → CE only all day.")
     RuleRow("STRONG RED", "No special direction. Red 1st hour ≠ day falls. Do NOT short just for this.")
     RuleRow("Any other", "No direction. Follow Setup 1 rules only.")
-    RuleRow("Note", "Avg move after 10:15 ≈ +40 Nifty pts only. Use as filter, not entry reason.")
+    RuleRow("Note", "No historical performance statistic is provided for this filter.")
 }
 
 @Composable fun SetupCard3() = SetupCardBase(
     "Setup 3 — Expiry Day Hero Zero (13:15 only)", "🔴 EXPIRY ONLY — small money", RedBear,
-    "Nifty ATM avg payoff Rs 33.3. Max price Rs 24 keeps you safe. BN ATM max Rs 36.", RedBear
+    "Use the live Hero Zero tab for current candidate checks; no historical expectancy is claimed.", RedBear
 ) {
-    RuleRow("When", "13:15 IST — EXPIRY DAY only. (Nifty = Tuesday weekly.)")
-    RuleRow("Never", "Buy cheap options at 9:15 on expiry. 62-98% become zero.")
-    RuleRow("Direction", "Price ABOVE open AND VWAP → CE. BELOW open AND VWAP → PE. Mixed → NO TRADE.")
-    RuleRow("Strike", "ATM (nearest) or 1-OTM only. NEVER 2+ strikes away.")
-    RuleRow("Max price", "Nifty ATM ≤ Rs 24 | Nifty 1-OTM ≤ Rs 7 | BN ATM ≤ Rs 36 | BN 1-OTM ≤ Rs 11")
-    RuleRow("Money", "Risk 0.25-0.5% capital only. Expect to lose most of the time.")
-    RuleRow("Exit", "Sell at 3× buy price OR 15:15 — whichever comes first. No stop loss.")
+    RuleRow("Check", "Use the live expiry, fresh spot and chain, and matching contract premium.")
+    RuleRow("Risk", "The full option premium can be lost; a candidate is not an entry instruction.")
+    RuleRow("Evidence", "Auto-archived detections are observations, not a validated options backtest.")
 }
 
 @Composable fun SetupCard4() = SetupCardBase(
     "Setup 4 — Shooting Star on 15-min (after a rise)", "PAPER ONLY", Color.Gray,
-    "+0.86R Nifty (45 trades). Too few trades to trust. Paper trade only.", Color.Gray
+    "Rule description only; no verified backtest result is loaded for this setup.", Color.Gray
 ) {
-    RuleRow("Look for", "Nifty gone UP ≥ 5 candles. 15-min candle has LONG upper wick. Small body.")
-    RuleRow("Entry", "BUY PE at start of NEXT 15-min candle. Best 9:45-10:30. No entry after 14:30.")
-    RuleRow("Stop", "High of the shooting star candle.")
-    RuleRow("Target", "Index goes 30 pts above high of shooting star candle.")
-    RuleRow("Exit", "2× risk (risk = stop − entry). Or 15:15.")
+    RuleRow("Status", "Not supported by the live Setup Agent; no verified backtest is loaded.")
 }
 
 @Composable fun SetupCard5() = SetupCardBase(
     "Setup 5 — Previous Day H/L Breakout (5-min)", "PAPER ONLY — Nifty only", Color.Gray,
-    "+0.12R on 28 trades (Nifty). Bank Nifty lost money — NEVER use on BN.", Color.Gray
+    "Rule description only; no verified backtest result is loaded for this setup.", Color.Gray
 ) {
-    RuleRow("Skip", "If Nifty gaps above yesterday's high or below yesterday's low.")
-    RuleRow("BUY CE", "5-min candle CLOSES above yesterday's high. Window: 9:30-11:00.")
-    RuleRow("BUY PE", "5-min candle CLOSES below yesterday's low.")
-    RuleRow("Entry", "Start of next 5-min candle.")
-    RuleRow("Stop", "0.25% below (CE) or above (PE) the next 5-min candle.")
-    RuleRow("Target", "2× risk. Exit at 15:15 if no target hit.")
+    RuleRow("Status", "Not supported by the live Setup Agent; no verified backtest is loaded.")
 }
 
 @Composable
@@ -637,17 +664,17 @@ fun NeverDoCard() {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Default.Block, contentDescription = null, tint = RedBear, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(6.dp))
-                Text("6. NEVER Do These (data says they lose)", color = RedBear, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                Text("Risk reminders", color = RedBear, fontWeight = FontWeight.Bold, fontSize = 14.sp)
             }
             Spacer(Modifier.height(8.dp))
             listOf(
                 "Buy just because of a 5-min hammer / bullish engulfing candle",
                 "Trade OI walls (call/put OI) as support or resistance",
-                "Expiry: buy to lose at max pain",
+                "Assume cheap expiry options are low-risk",
                 "Buy after a gap-down hoping it fills",
-                "Take Nifty trades after 13:30",
+                "Enter outside a verified setup window",
                 "Trade Bank Nifty midday or end-of-day setups",
-                "Buy cheap options on expiry morning (62-98% become zero)",
+                "Treat OI walls, max pain, or one candle as a trade signal",
                 "Guess the next candle from the last candle (50/50)"
             ).forEach { n ->
                 Row(modifier = Modifier.padding(vertical = 2.dp)) {
@@ -663,96 +690,19 @@ fun NeverDoCard() {
 // TAB 3 — HERO ZERO
 // ═══════════════════════════════════════════════════════════════════════════════
 @Composable
-fun HeroZeroTab() {
-    LazyColumn(
-        modifier = Modifier.fillMaxSize().padding(8.dp),
+fun HeroZeroTab(data: OptionSentimentData? = null, spotQuoteFresh: Boolean = false) {
+    Column(
+        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(8.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        item {
-            Card(colors = CardDefaults.cardColors(containerColor = CardDark2), modifier = Modifier.fillMaxWidth()) {
-                Column(modifier = Modifier.padding(12.dp)) {
-                    Text("12. Hero Zero Deep Dive", color = GreenBull, fontWeight = FontWeight.Bold, fontSize = 15.sp)
-                    Spacer(Modifier.height(4.dp))
-                    Text("OTM CE/PE opened at Rs 1-20 at 9:15 on expiry day. Buy at open + Rs 0.5 spread. Rs 50 charges per trade.", color = Color.LightGray, fontSize = 12.sp)
-                }
+        HeroZeroCard(data?.heroZeroAnalysis ?: HeroZeroAnalysis(), data, spotQuoteFresh)
+        Card(colors = CardDefaults.cardColors(containerColor = CardDark), modifier = Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text("How the screen qualifies a candidate", color = BlueCool, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                Text("Requires a backend candidate, today's selected expiry, fresh spot and option-chain data, a matching live chain contract, premium in the engine's ₹3-₹50 range, and a strike within 1.5% of spot during the configured review window.", color = Color.LightGray, fontSize = 12.sp)
+                Text("The backend's score is not a calibrated probability. Candidate records are observations, not proof of expected return.", color = AmberWarn, fontSize = 11.sp)
             }
         }
-        item {
-            Card(colors = CardDefaults.cardColors(containerColor = CardDark), modifier = Modifier.fillMaxWidth()) {
-                Column(modifier = Modifier.padding(12.dp)) {
-                    Text("Max Price at 13:15 (Section 4)", color = AmberWarn, fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                    Spacer(Modifier.height(6.dp))
-                    HeroTableRow("Index", "Strike", "Avg Payoff", "MAX PAY", true)
-                    HeroTableRow("Nifty",      "ATM",             "Rs 33.3",  "Rs 24")
-                    HeroTableRow("Nifty",      "1 OTM (50 pts)",  "Rs 13.5",  "Rs 7")
-                    HeroTableRow("Bank Nifty", "ATM",             "Rs 78.4",  "Rs 36")
-                    HeroTableRow("Bank Nifty", "1 OTM (100 pts)", "Rs 41.5",  "Rs 11")
-                    Spacer(Modifier.height(6.dp))
-                    Text("If price ABOVE max → NO TRADE (loses money on average)", color = Color(0xFFFFCDD2), fontSize = 11.sp)
-                }
-            }
-        }
-        item {
-            Card(colors = CardDefaults.cardColors(containerColor = CardDark), modifier = Modifier.fillMaxWidth()) {
-                Column(modifier = Modifier.padding(12.dp)) {
-                    Text("12.1 Which Exit is Best? (Rs 10-20 options)", color = BlueCool, fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                    Spacer(Modifier.height(6.dp))
-                    InfoBullet("No exit makes money on any index.", RedBear)
-                    InfoBullet("Least bad: Sensex sell at Rs 200 (−15% avg).", AmberWarn)
-                    InfoBullet("Nifty hold to expiry: −38% avg.", RedBear)
-                    InfoBullet("Bank Nifty sell at Rs 200: −69%. AVOID BN hero zero.", RedBear)
-                    InfoBullet("Sensex least bad → Nifty worse → Bank Nifty worst.", AmberWarn)
-                }
-            }
-        }
-        item {
-            Card(colors = CardDefaults.cardColors(containerColor = CardDark), modifier = Modifier.fillMaxWidth()) {
-                Column(modifier = Modifier.padding(12.dp)) {
-                    Text("12.4 Rules if You Still Want to Buy", color = GreenBull, fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                    Spacer(Modifier.height(6.dp))
-                    RuleRow("NEVER buy", "Rs 0.05-2 options. Almost never reach Rs 100. Lose ~100%.")
-                    RuleRow("Best range", "Rs 5-10, strike 0.5-1.5% away from index.")
-                    RuleRow("Prefer", "Sensex or Nifty. AVOID Bank Nifty.")
-                    RuleRow("Sell order", "PUT Rs 100 or 10× SELL order AS SOON as you buy.")
-                    RuleRow("Timing", "Buy only after market starts trending (see 13:15 rule).")
-                    RuleRow("Max spend", "0.25% capital per expiry. 30-40 losing expiries in a row happen.")
-                    RuleRow("Exit", "3× buy price OR 15:15 — whichever first. No stop loss.")
-                }
-            }
-        }
-        item {
-            Card(colors = CardDefaults.cardColors(containerColor = CardDark), modifier = Modifier.fillMaxWidth()) {
-                Column(modifier = Modifier.padding(12.dp)) {
-                    Text("10. Sensex Special (Section 10 rules)", color = PurpleAcc, fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                    Spacer(Modifier.height(6.dp))
-                    RuleRow("SX-1 (main)", "13:15 Sensex expiry. VWAP side rule. ATM ≤ Rs 84 | 1-OTM ≤ Rs 43.")
-                    RuleRow("SX-2 (early)", "17:15 same side rule. ATM ≤ Rs 119.")
-                    RuleRow("SX-3 (breakout)", "13:15 — top/bottom 15% of day range. ATM ≤ Rs 77.")
-                    RuleRow("SX-5 (straddle)", "13:15 — buy ATM CE+PE together if no direction. Both ≤ Rs 160 total.")
-                    Spacer(Modifier.height(4.dp))
-                    Text("Best entry window Sensex: 10:30-11:30. Entries after 13:30 lose.", color = AmberWarn, fontSize = 11.sp)
-                }
-            }
-        }
-        item {
-            Card(
-                colors = CardDefaults.cardColors(containerColor = RedBear.copy(alpha = 0.1f)),
-                modifier = Modifier.fillMaxWidth().border(1.dp, RedBear, RoundedCornerShape(10.dp))
-            ) {
-                Column(modifier = Modifier.padding(12.dp)) {
-                    Text("Honest Truth (Section 9 Bottom Line)", color = RedBear, fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                    Spacer(Modifier.height(4.dp))
-                    Text(
-                        "No setup in this guide has proven profits yet.\n\n" +
-                        "Paper trade Setup 1 for at least 3 months before real money.\n" +
-                        "Use Setups 2 and 3 only with very small money.\n\n" +
-                        "Hero zero earns only if you get the price AT OR BELOW the max price. At the usual market price it lost Rs 600-870 per expiry.",
-                        color = Color(0xFFFFCDD2), fontSize = 12.sp
-                    )
-                }
-            }
-        }
-        item { Spacer(Modifier.height(16.dp)) }
     }
 }
 
@@ -761,12 +711,18 @@ fun HeroZeroTab() {
 // ═══════════════════════════════════════════════════════════════════════════════
 @Composable
 fun JournalTab() {
-    val entries = remember { mutableStateListOf<JournalEntry>() }
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val entries = remember(context) {
+        mutableStateListOf<JournalEntry>().apply {
+            addAll(OptionTradeJournalStore.load(context))
+        }
+    }
     var showForm by remember { mutableStateOf(false) }
-    var nextId by remember { mutableIntStateOf(1) }
+    var nextId by remember { mutableIntStateOf((entries.maxOfOrNull { it.id } ?: 0) + 1) }
+    var journalError by remember { mutableStateOf<String?>(null) }
 
     // Form fields
-    var fDate      by remember { mutableStateOf("") }
+    var fDate      by remember { mutableStateOf(OptionTradeJournalStore.currentDate()) }
     var fSetup     by remember { mutableStateOf("Setup 1") }
     var fEntryTime by remember { mutableStateOf("") }
     var fSide      by remember { mutableStateOf("CE") }
@@ -818,9 +774,18 @@ fun JournalTab() {
 
                         // Date + Entry Time
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            JournalField("Date (DD/MM)", fDate, { fDate = it }, Modifier.weight(1f))
+                            JournalField(
+                                "Date (YYYY-MM-DD)",
+                                fDate,
+                                {
+                                    fDate = it
+                                    journalError = null
+                                },
+                                Modifier.weight(1f)
+                            )
                             JournalField("Entry Time", fEntryTime, { fEntryTime = it }, Modifier.weight(1f))
                         }
+                        journalError?.let { Text(it, color = RedBear, fontSize = 11.sp) }
 
                         // Setup selector
                         Text("Setup", color = Color.Gray, fontSize = 12.sp)
@@ -877,15 +842,20 @@ fun JournalTab() {
 
                         Button(
                             onClick = {
-                                entries.add(0, JournalEntry(
-                                    nextId++, fDate, fSetup, fEntryTime, fSide, fStrike,
-                                    fBuyPrice, fIdxEntry, fStop, fTarget, fExitTime, fExitReason, fPnl, fRules
-                                ))
-                                // reset
-                                fDate = ""; fEntryTime = ""; fStrike = ""; fBuyPrice = ""
-                                fIdxEntry = ""; fStop = ""; fTarget = ""; fExitTime = ""
-                                fExitReason = ""; fPnl = ""; fRules = true; fSetup = "Setup 1"; fSide = "CE"
-                                showForm = false
+                                if (!OptionTradeJournalStore.isValidDate(fDate)) {
+                                    journalError = "Enter a valid date (YYYY-MM-DD, DD/MM/YYYY, or DD/MM) so risk totals can include this trade."
+                                } else {
+                                    val entry = JournalEntry(
+                                        nextId++, fDate, fSetup, fEntryTime, fSide, fStrike,
+                                        fBuyPrice, fIdxEntry, fStop, fTarget, fExitTime, fExitReason, fPnl, fRules
+                                    )
+                                    entries.add(0, entry)
+                                    OptionTradeJournalStore.save(context, entries)
+                                    fDate = OptionTradeJournalStore.currentDate(); fEntryTime = ""; fStrike = ""; fBuyPrice = ""
+                                    fIdxEntry = ""; fStop = ""; fTarget = ""; fExitTime = ""
+                                    fExitReason = ""; fPnl = ""; fRules = true; fSetup = "Setup 1"; fSide = "CE"
+                                    showForm = false
+                                }
                             },
                             modifier = Modifier.fillMaxWidth(),
                             colors = ButtonDefaults.buttonColors(containerColor = GreenBull)
@@ -989,13 +959,17 @@ fun JournalTab() {
 @Composable
 fun RiskCalcTab() {
     var capitalStr by remember { mutableStateOf("") }
+    var lotSizeStr by remember { mutableStateOf("") }
+    var premiumStr by remember { mutableStateOf("") }
+    var stopPremiumStr by remember { mutableStateOf("") }
     val capital = capitalStr.toDoubleOrNull() ?: 0.0
+    val lotSize = lotSizeStr.toIntOrNull()?.takeIf { it > 0 } ?: 0
+    val premium = premiumStr.toDoubleOrNull() ?: 0.0
+    val stopPremium = stopPremiumStr.toDoubleOrNull() ?: 0.0
     val maxRisk05  = capital * 0.005
     val maxRisk025 = capital * 0.0025
-    val niftyRiskPerLot = 1800.0
-    val bnRiskPerLot    = 1500.0
-    val niftyLots = if (capital > 0) (maxRisk05 / niftyRiskPerLot).toInt().coerceAtLeast(0) else 0
-    val bnLots    = if (capital > 0) (maxRisk05 / bnRiskPerLot).toInt().coerceAtLeast(0) else 0
+    val riskPerLot = (premium - stopPremium).takeIf { it > 0.0 && lotSize > 0 }?.times(lotSize) ?: 0.0
+    val affordableLots = if (riskPerLot > 0.0) (maxRisk05 / riskPerLot).toInt() else 0
 
     LazyColumn(
         modifier = Modifier.fillMaxSize().padding(8.dp),
@@ -1006,7 +980,7 @@ fun RiskCalcTab() {
                 Column(modifier = Modifier.padding(12.dp)) {
                     Text("7. Money Rules — Risk Calculator", color = GreenBull, fontWeight = FontWeight.Bold, fontSize = 15.sp)
                     Text("Max risk: 0.5% per trade. Hero Zero: 0.25% per expiry.", color = Color.LightGray, fontSize = 12.sp)
-                    Text("Nifty lot = 65 qty | Bank Nifty lot = 30 qty", color = Color.LightGray, fontSize = 12.sp)
+                    Text("Uses your entered contract lot size, premium and stop; it does not assume fixed index lot sizes.", color = Color.LightGray, fontSize = 12.sp)
                 }
             }
         }
@@ -1026,6 +1000,13 @@ fun RiskCalcTab() {
                             focusedTextColor = Color.White, unfocusedTextColor = Color.White
                         )
                     )
+                    Spacer(Modifier.height(8.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        JournalField("Current lot size", lotSizeStr, { lotSizeStr = it.filter(Char::isDigit) }, Modifier.weight(1f), KeyboardType.Number)
+                        JournalField("Entry premium", premiumStr, { premiumStr = it.filter { c -> c.isDigit() || c == '.' } }, Modifier.weight(1f), KeyboardType.Decimal)
+                    }
+                    Spacer(Modifier.height(8.dp))
+                    JournalField("Planned stop premium", stopPremiumStr, { stopPremiumStr = it.filter { c -> c.isDigit() || c == '.' } }, Modifier.fillMaxWidth(), KeyboardType.Decimal)
                 }
             }
         }
@@ -1041,10 +1022,11 @@ fun RiskCalcTab() {
                         RiskRow("Capital", "Rs %,.0f".format(capital), Color.White)
                         RiskRow("Max risk per trade (0.5%)", "Rs %,.0f".format(maxRisk05), AmberWarn)
                         RiskRow("Hero Zero budget (0.25%)", "Rs %,.0f".format(maxRisk025), BlueCool)
-                        RiskRow("Nifty lots (≈Rs 1,800/lot)", "$niftyLots lot${if (niftyLots != 1) "s" else ""} (${niftyLots * 65} qty)", GreenBull)
-                        RiskRow("BankNifty lots (≈Rs 1,500/lot)", "$bnLots lot${if (bnLots != 1) "s" else ""} (${bnLots * 30} qty)", GreenBull)
-                        if (niftyLots == 0) {
-                            Text("⚠ Capital too small for 1 Nifty lot. PAPER TRADE until capital grows.", color = RedBear, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        if (riskPerLot > 0.0) {
+                            RiskRow("Maximum loss per lot", "Rs %,.0f".format(riskPerLot), RedBear)
+                            RiskRow("Affordable lots by risk budget", "$affordableLots lot${if (affordableLots != 1) "s" else ""} (${affordableLots * lotSize} qty)", GreenBull)
+                        } else {
+                            Text("Enter a lot size and a stop below the entry premium to calculate contract risk.", color = AmberWarn, fontSize = 12.sp)
                         }
                     }
                 }
@@ -1056,10 +1038,8 @@ fun RiskCalcTab() {
                 Column(modifier = Modifier.padding(12.dp)) {
                     Text("Quick Reference", color = BlueCool, fontWeight = FontWeight.Bold, fontSize = 13.sp)
                     Spacer(Modifier.height(6.dp))
-                    Text("Rs 2,00,000 → Rs 1,000 max → Paper trade only (< 1 lot)", color = Color.LightGray, fontSize = 12.sp)
-                    Text("Rs 4,00,000 → Rs 2,000 max → 1 Nifty lot (book example)", color = Color.LightGray, fontSize = 12.sp)
-                    Text("Rs 8,00,000 → Rs 4,000 max → 2 Nifty lots / 2 BN lots", color = Color.LightGray, fontSize = 12.sp)
-                    Text("Rs 16,00,000 → Rs 8,000 max → 4 Nifty lots / 5 BN lots", color = Color.LightGray, fontSize = 12.sp)
+                    Text("Risk per lot = (entry premium − stop premium) × lot size.", color = Color.LightGray, fontSize = 12.sp)
+                    Text("Lot counts are estimates before slippage, brokerage, taxes and gap risk.", color = AmberWarn, fontSize = 12.sp)
                 }
             }
         }
@@ -1091,7 +1071,7 @@ fun SetupCardBase(
             Spacer(Modifier.height(6.dp))
             Divider(color = Color.DarkGray, thickness = 0.5.dp)
             Spacer(Modifier.height(4.dp))
-            Text("Backtest: $backtest", color = Color.Gray, fontSize = 11.sp)
+            Text("Note: $backtest", color = Color.Gray, fontSize = 11.sp)
         }
     }
 }
@@ -1113,18 +1093,6 @@ fun InfoBullet(text: String, color: Color) {
 }
 
 @Composable
-fun HeroTableRow(c1: String, c2: String, c3: String, c4: String, isHeader: Boolean = false) {
-    val w = if (isHeader) FontWeight.Bold else FontWeight.Normal
-    val col = if (isHeader) AmberWarn else Color.White
-    Row(modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp)) {
-        Text(c1, color = col, fontSize = 11.sp, fontWeight = w, modifier = Modifier.weight(1.2f))
-        Text(c2, color = col, fontSize = 11.sp, fontWeight = w, modifier = Modifier.weight(1.5f))
-        Text(c3, color = col, fontSize = 11.sp, fontWeight = w, modifier = Modifier.weight(1.5f))
-        Text(c4, color = if (isHeader) col else GreenBull, fontSize = 11.sp, fontWeight = w, modifier = Modifier.weight(1f))
-    }
-}
-
-@Composable
 fun RiskRow(label: String, value: String, valueColor: Color) {
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
         Text(label, color = Color.LightGray, fontSize = 12.sp, modifier = Modifier.weight(1f))
@@ -1137,15 +1105,6 @@ fun QuickRule(text: String) {
     Row(modifier = Modifier.padding(vertical = 2.dp)) {
         Text("• ", color = AmberWarn, fontSize = 12.sp)
         Text(text, color = Color.LightGray, fontSize = 12.sp)
-    }
-}
-
-@Composable
-fun BacktestRow(setup: String, sample: String, result: String, color: Color) {
-    Row(modifier = Modifier.padding(vertical = 3.dp)) {
-        Text(setup, color = Color.LightGray, fontSize = 11.sp, modifier = Modifier.weight(2f))
-        Text(sample, color = Color.Gray, fontSize = 11.sp, modifier = Modifier.weight(1.2f))
-        Text(result, color = color, fontSize = 11.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f), textAlign = TextAlign.End)
     }
 }
 
@@ -1186,7 +1145,9 @@ fun StatChip(label: String, value: String, color: Color) {
 // AI AGENT TAB — 3 Sub-Agents + Master Verdict UI
 // ═══════════════════════════════════════════════════════════════════════════════
 @Composable
-fun AiAgentTab() {
+@OptIn(ExperimentalMaterial3Api::class)
+fun AiAgentTab(liveData: OptionSentimentData? = null) {
+    val context = androidx.compose.ui.platform.LocalContext.current
     // ── Inputs ──
     var rangeHigh    by remember { mutableStateOf("") }
     var rangeLow     by remember { mutableStateOf("") }
@@ -1199,19 +1160,30 @@ fun AiAgentTab() {
     var fhLow        by remember { mutableStateOf("") }
     var fhAvg20d     by remember { mutableStateOf("") }
     var optionPrice  by remember { mutableStateOf("") }
+    var lotSize      by remember { mutableStateOf("") }
+    var maxLossPerLot by remember { mutableStateOf("") }
     var optStrike    by remember { mutableStateOf("ATM") }
     var selIndex     by remember { mutableStateOf("NIFTY") }
     var aboveOpen    by remember { mutableStateOf(false) }
     var aboveVwap    by remember { mutableStateOf(false) }
+    var priceContextConfirmed by remember { mutableStateOf(false) }
     var capital      by remember { mutableStateOf("") }
     var selSetup     by remember { mutableIntStateOf(1) }
+    var selectedAgent by remember { mutableIntStateOf(-1) }
 
     var verdict      by remember { mutableStateOf<SetupMasterVerdict?>(null) }
     var isRunning    by remember { mutableStateOf(false) }
     var agentStep    by remember { mutableIntStateOf(0) } // 0=idle,1=A1,2=A2,3=A3,4=master
 
-    val hhmm = remember { istHHMM() }
-    val isExpiry = remember { isTuesday() }
+    var hhmm by remember { mutableIntStateOf(istHHMM()) }
+    var isExpiry by remember { mutableStateOf(false) }
+    LaunchedEffect(liveData?.chainExpiry) {
+        while (true) {
+            hhmm = istHHMM()
+            isExpiry = isCurrentExpiry(liveData?.chainExpiry.orEmpty())
+            kotlinx.coroutines.delay(5_000)
+        }
+    }
 
     LaunchedEffect(isRunning) {
         if (!isRunning) return@LaunchedEffect
@@ -1219,6 +1191,10 @@ fun AiAgentTab() {
         agentStep = 2; kotlinx.coroutines.delay(600)
         agentStep = 3; kotlinx.coroutines.delay(600)
         agentStep = 4; kotlinx.coroutines.delay(400)
+        val journalPnl = OptionTradeJournalStore.pnlSummary(
+            OptionTradeJournalStore.load(context),
+            System.currentTimeMillis()
+        )
         val input = SetupAgentInput(
             hhmm = hhmm, isExpiryDay = isExpiry,
             rangeHigh = rangeHigh.toDoubleOrNull() ?: 0.0,
@@ -1236,7 +1212,12 @@ fun AiAgentTab() {
             index = selIndex,
             priceAboveOpen = aboveOpen,
             priceAboveVwap = aboveVwap,
+            priceContextConfirmed = priceContextConfirmed,
             capital = capital.toDoubleOrNull() ?: 0.0,
+            lotSize = lotSize.toIntOrNull() ?: 0,
+            maxLossPerLot = maxLossPerLot.toDoubleOrNull() ?: 0.0,
+            dailyPnlRs = journalPnl.dailyPnlRs,
+            weeklyPnlRs = journalPnl.weeklyPnlRs,
             selectedSetup = selSetup
         )
         verdict = SetupMasterAgent.analyze(input)
@@ -1258,8 +1239,8 @@ fun AiAgentTab() {
                         Text("Multi-Agent Setup Analyzer", color = PurpleAcc, fontWeight = FontWeight.ExtraBold, fontSize = 16.sp)
                     }
                     Spacer(Modifier.height(4.dp))
-                    Text("3 AI sub-agents analyze your inputs → Master gives GO / WAIT / NO-GO", color = Color.LightGray, fontSize = 12.sp)
-                    Text("IST: ${fmtHHMM(hhmm)}${if (isExpiry) "  |  EXPIRY DAY" else ""}", color = if (isExpiry) RedBear else GreenBull, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    Text("Rule, timing and risk checks run locally; the result is a checklist, not an AI forecast.", color = Color.LightGray, fontSize = 12.sp)
+                    Text("IST: ${fmtHHMM(hhmm)}${if (isExpiry) "  |  CHAIN EXPIRY TODAY" else ""}", color = if (isExpiry) RedBear else GreenBull, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 }
             }
         }
@@ -1267,13 +1248,42 @@ fun AiAgentTab() {
         // ── Agent status row ──
         item {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                AgentStatusCard("Agent 1\nTime Context", agentStep >= 1 && agentStep <= 4, agentStep > 1, BlueCool, Modifier.weight(1f))
-                AgentStatusCard("Agent 2\nRule Check", agentStep >= 2 && agentStep <= 4, agentStep > 2, AmberWarn, Modifier.weight(1f))
-                AgentStatusCard("Agent 3\nRisk Guard", agentStep >= 3 && agentStep <= 4, agentStep > 3, GreenBull, Modifier.weight(1f))
+                AgentStatusCard("Agent 1\nTime Context", agentStep >= 1 && agentStep <= 4, agentStep > 1, BlueCool, selectedAgent == 0, { selectedAgent = 0 }, Modifier.weight(1f))
+                AgentStatusCard("Agent 2\nRule Check", agentStep >= 2 && agentStep <= 4, agentStep > 2, AmberWarn, selectedAgent == 1, { selectedAgent = 1 }, Modifier.weight(1f))
+                AgentStatusCard("Agent 3\nRisk Guard", agentStep >= 3 && agentStep <= 4, agentStep > 3, GreenBull, selectedAgent == 2, { selectedAgent = 2 }, Modifier.weight(1f))
+            }
+        }
+        if (selectedAgent >= 0) {
+            item {
+                val detail = when (selectedAgent) {
+                    0 -> "Time Context checks the current IST window and the expiry date from the live option chain."
+                    1 -> "Rule Check validates entered range, price, VWAP and premium inputs; missing required values block a pass."
+                    else -> "Risk Guard requires positive capital and a calculated affordable lot count. Missing capital is not treated as safe."
+                }
+                Card(colors = CardDefaults.cardColors(containerColor = CardDark), modifier = Modifier.fillMaxWidth()) {
+                    Text(detail, color = Color.LightGray, fontSize = 12.sp, modifier = Modifier.padding(12.dp))
+                }
             }
         }
 
         // ── Input Section ──
+        item {
+            Card(colors = CardDefaults.cardColors(containerColor = CardDark), modifier = Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Select checks to run", color = PurpleAcc, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        listOf(1 to "ORB", 2 to "First-hour filter", 3 to "Hero Zero").forEach { (number, label) ->
+                            FilterChip(
+                                selected = selSetup == number,
+                                onClick = { selSetup = number },
+                                label = { Text(label, fontSize = 11.sp) }
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
         item {
             Card(colors = CardDefaults.cardColors(containerColor = CardDark), modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -1311,10 +1321,10 @@ fun AiAgentTab() {
         item {
             Card(colors = CardDefaults.cardColors(containerColor = CardDark), modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Setup 3 — Hero Zero (expiry 13:15)", color = RedBear, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                    Text("Setup 3 — Hero Zero (configured expiry window)", color = RedBear, fontWeight = FontWeight.Bold, fontSize = 13.sp)
                     // Index selector
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        listOf("NIFTY","BANKNIFTY","SENSEX").forEach { idx ->
+                        listOf("NIFTY","BANKNIFTY","FINNIFTY").forEach { idx ->
                             val sel = selIndex == idx
                             OutlinedButton(
                                 onClick = { selIndex = idx },
@@ -1343,7 +1353,7 @@ fun AiAgentTab() {
                             ) { Text(s, fontSize = 11.sp) }
                         }
                     }
-                    AiField("Option Price (Rs)", optionPrice, { optionPrice = it }, Modifier.fillMaxWidth())
+                    AiField("Observed option premium (₹)", optionPrice, { optionPrice = it }, Modifier.fillMaxWidth())
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Checkbox(checked = aboveOpen, onCheckedChange = { aboveOpen = it },
                             colors = CheckboxDefaults.colors(checkedColor = GreenBull))
@@ -1354,16 +1364,30 @@ fun AiAgentTab() {
                             colors = CheckboxDefaults.colors(checkedColor = GreenBull))
                         Text("Price above VWAP", color = Color.White, fontSize = 12.sp)
                     }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Checkbox(
+                            checked = priceContextConfirmed,
+                            onCheckedChange = { priceContextConfirmed = it },
+                            colors = CheckboxDefaults.colors(checkedColor = GreenBull)
+                        )
+                        Text("I verified both values against live price data", color = Color.White, fontSize = 12.sp)
+                    }
                 }
             }
         }
 
         item {
             Card(colors = CardDefaults.cardColors(containerColor = CardDark), modifier = Modifier.fillMaxWidth()) {
-                Column(modifier = Modifier.padding(12.dp)) {
-                    Text("Capital (Rs) — for Risk Guard Agent", color = GreenBull, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Risk Guard inputs", color = GreenBull, fontWeight = FontWeight.Bold, fontSize = 13.sp)
                     Spacer(Modifier.height(6.dp))
-                    AiField("Your Capital (Rs)", capital, { capital = it.filter { c -> c.isDigit() } }, Modifier.fillMaxWidth(), KeyboardType.Number)
+                    Text("Journal P&L stops new setup checks at a 1% daily loss or 3% weekly loss of entered capital.", color = AmberWarn, fontSize = 11.sp)
+                    AiField("Your capital (₹)", capital, { capital = it.filter { c -> c.isDigit() } }, Modifier.fillMaxWidth(), KeyboardType.Number)
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        AiField("Current lot size", lotSize, { lotSize = it.filter(Char::isDigit) }, Modifier.weight(1f), KeyboardType.Number)
+                        AiField("Max loss / lot (₹; optional for HZ)", maxLossPerLot, { maxLossPerLot = it.filter { c -> c.isDigit() || c == '.' } }, Modifier.weight(1f), KeyboardType.Decimal)
+                    }
+                    Text("Risk Guard uses the entered max loss; Hero Zero defaults to premium × lot size. Verify current exchange lot size, charges and slippage.", color = Color.Gray, fontSize = 10.sp)
                 }
             }
         }
@@ -1383,7 +1407,7 @@ fun AiAgentTab() {
                 } else {
                     Icon(Icons.Default.PlayArrow, contentDescription = null, tint = Color.Black)
                     Spacer(Modifier.width(8.dp))
-                    Text("Run AI Analysis", color = Color.Black, fontWeight = FontWeight.ExtraBold, fontSize = 15.sp)
+                    Text("Run Setup Checks", color = Color.Black, fontWeight = FontWeight.ExtraBold, fontSize = 15.sp)
                 }
             }
         }
@@ -1411,17 +1435,9 @@ fun AiAgentTab() {
                             Spacer(Modifier.width(10.dp))
                             Column {
                                 Text(v.setup, color = vColor, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                                Text("Side: ${v.side}  |  Confidence: ${v.confidence}%", color = Color.LightGray, fontSize = 12.sp)
+                                Text("Side: ${v.side}  |  Rule checklist only (not probability)", color = Color.LightGray, fontSize = 12.sp)
                             }
                         }
-                        Spacer(Modifier.height(10.dp))
-                        // Confidence bar
-                        LinearProgressIndicator(
-                            progress = v.confidence / 100f,
-                            modifier = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)),
-                            color = vColor,
-                            trackColor = Color.DarkGray
-                        )
                         Spacer(Modifier.height(10.dp))
                         // Entry/Stop/Target
                         VerdictRow("Entry", v.entryNote, GreenBull)
@@ -1496,7 +1512,7 @@ fun AiAgentTab() {
             item {
                 Card(colors = CardDefaults.cardColors(containerColor = CardDark), modifier = Modifier.fillMaxWidth()) {
                     Column(modifier = Modifier.padding(12.dp)) {
-                        Text("Book Worked Example — Setup 1 CE Side", color = AmberWarn, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                        Text("Illustrative calculation — not a backtest or recommendation", color = AmberWarn, fontWeight = FontWeight.Bold, fontSize = 13.sp)
                         Spacer(Modifier.height(6.dp))
                         WorkedRow("9:15-9:30 candle", "High / Low", "22,800 / 22,720")
                         WorkedRow("Range size check", "80 pts = 0.35% (less than 0.6%)", "OK, trade allowed")
@@ -1513,103 +1529,32 @@ fun AiAgentTab() {
             }
         }
 
-        // ── Section 9 Backtest Table (always visible) ──
-        item {
-            Card(colors = CardDefaults.cardColors(containerColor = CardDark), modifier = Modifier.fillMaxWidth()) {
-                Column(modifier = Modifier.padding(12.dp)) {
-                    Text("Section 9 — Backtest of Exact Rules (last 60 days)", color = PurpleAcc, fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                    Text("Option profit per lot = 0.5 × index pts × lot size − Rs 2 spread", color = Color.Gray, fontSize = 11.sp)
-                    Spacer(Modifier.height(8.dp))
-                    BacktestTableHeader()
-                    BacktestTableRow("Nifty", "A: original rules (9:45-11:15, no time stop)", "43", "46.5%", "+0.06", "-12,562", "-17,443", AmberWarn)
-                    BacktestTableRow("Nifty", "B: +60-min time stop", "43", "44.2%", "-0.11", "-14,801", "-16,085", RedBear)
-                    BacktestTableRow("Nifty", "C: entry only 9:45-10:30", "35", "43.6%", "-0.11", "-6,811", "-16,885", RedBear)
-                    BacktestTableRow("Nifty", "D: EXACT rules (time window + first-hour filter)", "31", "43.6%", "-0.19", "-5,211", "-16,088", RedBear)
-                    BacktestTableRow("BankNifty", "A: original rules (9:45-11:15, no time stop)", "32", "37.5%", "-0.13", "-13,262", "-23,619", RedBear)
-                    BacktestTableRow("BankNifty", "B: +30-min time stop", "32", "43.8%", "+0.09", "+4,396", "-2,137", AmberWarn)
-                    BacktestTableRow("BankNifty", "C: entry only 9:45-10:30", "26", "42.3%", "+0.16", "+5,789", "-3,517", AmberWarn)
-                    BacktestTableRow("BankNifty", "D: EXACT rules (time window + first-hour filter)", "26", "42.3%", "+0.34", "+5,750", "-7,513", AmberWarn)
-                    Spacer(Modifier.height(8.dp))
-                    Text("Key findings:", color = AmberWarn, fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                    Text("• Setup 1 NOT profitable as written. Adding 60-min time stop made Nifty worse.", color = Color.LightGray, fontSize = 11.sp)
-                    Text("• Bank Nifty looked better WITH time stop (only 26-32 trades, 95% range includes losses).", color = Color.LightGray, fontSize = 11.sp)
-                    Text("• First-hour filter (Setup 2) did not change any trade in these 60 days.", color = Color.LightGray, fontSize = 11.sp)
-                    Text("• Every 95% range crosses zero — no version proven to make/lose money.", color = Color.LightGray, fontSize = 11.sp)
-                    Spacer(Modifier.height(6.dp))
-                    Text("Setup 3 (Hero Zero) with exact open+VWAP rule:", color = BlueCool, fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                    Text("Nifty: 44 expiries traded, 25 skipped (mixed signal), ATM avg payoff Rs 46(90)", color = Color.LightGray, fontSize = 11.sp)
-                    Text("BankNifty: 89 expiries traded, ATM avg payoff Rs 69.7", color = Color.LightGray, fontSize = 11.sp)
-                    Text("Max price stays well below values → price rule is on the safe side.", color = GreenBull, fontSize = 11.sp)
-                }
-            }
-        }
-
-        // ── HZ Variants Table (Section 10.3) ──
-        item {
-            Card(colors = CardDefaults.cardColors(containerColor = CardDark), modifier = Modifier.fillMaxWidth()) {
-                Column(modifier = Modifier.padding(12.dp)) {
-                    Text("Section 10.3 — Sensex Hero Zero Variants", color = Color(0xFFCE93D8), fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                    Text("Max price to pay per unit (lot = 20 for 2024, 10 from 2025)", color = Color.Gray, fontSize = 11.sp)
-                    Spacer(Modifier.height(6.dp))
-                    HZVariantHeader()
-                    HZVariantRow("HZ-1 trend+VWAP hero (main)",   "13:15","ATM",   "118","61.9%","Rs 139","Rs 84")
-                    HZVariantRow("HZ-1 trend+VWAP early",          "17:15","ATM",   "116","50.0%","Rs 86", "Rs 63")
-                    HZVariantRow("HZ-2 ATM hero (no filter)",      "13:15","ATM",   "116","63.0%","Rs 164","Rs 109")
-                    HZVariantRow("HZ-2 ATM hero (more time)",      "12:15","ATM",   "116","63.0%","Rs 184","Rs 109")
-                    HZVariantRow("HZ-3 Breakfast hero (day H/L)",  "10:30","ATM",   "68", "44.8%","Rs 211","Rs 40")
-                    HZVariantRow("HZ-4 late hero (last hour)",      "14:12","ATM",   "123","58.2%","Rs 416","Rs 54")
-                    HZVariantRow("HZ-5 straddle CE+PE",            "13:15","CE+PE", "147","100%", "Rs 141","Rs 160")
-                    HZVariantRow("Against day (red on green)",      "13:15","ATM",   "14", "35.8%","Rs 44", "Rs 48")
-                    HZVariantRow("HZ-5 hero against day",          "17:15","1-OTM", "147","15.8%","Rs 44", "Rs 23")
-                    Spacer(Modifier.height(6.dp))
-                    Text("Simple rules per HZ variant:", color = AmberWarn, fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                    Text("HZ-1(main): 13:15, Rule SX-E1 side, ATM. Buy only if price < Rs 84. 1-OTM if price < Rs 43.", color = Color.LightGray, fontSize = 11.sp)
-                    Text("HZ-1(early): 17:15 same side rule. ATM below Rs 119. More time = higher fair value but costs more.", color = Color.LightGray, fontSize = 11.sp)
-                    Text("HZ-2(breakout): 13:15, within top 15% of day range (CE) or bottom 15% (PE). ATM < Rs 77.", color = Color.LightGray, fontSize = 11.sp)
-                    Text("HZ-4(late): 14:15 ATM only, below Rs 100 for OTM. Only if 2-OTM became mid-OTM 17.2% of time.", color = Color.LightGray, fontSize = 11.sp)
-                    Text("HZ-5(straddle): 13:15, buy ATM CE+PE if no direction. Only if BOTH together cost ≤ Rs 160.", color = Color.LightGray, fontSize = 11.sp)
-                }
-            }
-        }
-
-        // ── Sensex Plan in 5 lines ──
-        item {
-            Card(
-                colors = CardDefaults.cardColors(containerColor = BlueCool.copy(alpha = 0.1f)),
-                modifier = Modifier.fillMaxWidth().border(1.dp, BlueCool.copy(alpha = 0.5f), RoundedCornerShape(10.dp))
-            ) {
-                Column(modifier = Modifier.padding(12.dp)) {
-                    Text("Sensex Plan in 5 Lines (Section 10)", color = BlueCool, fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                    Spacer(Modifier.height(6.dp))
-                    listOf(
-                        "1. On non-expiry days: treat Sensex like Nifty — first-hour direction; paper-trade the ORB; best entries 10:30-13:30.",
-                        "2. On expiry day: do nothing until 13:15.",
-                        "3. At 13:15 use Rule SX-E1 to pick the side.",
-                        "4. Buy the ATM option ONLY if it is below Rs 84; otherwise no trade.",
-                        "5. Exit at 3× or 15:15."
-                    ).forEachIndexed { i, s ->
-                        Row(modifier = Modifier.padding(vertical = 3.dp)) {
-                            Text("${i+1}. ", color = BlueCool, fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.width(20.dp))
-                            Text(s, color = Color.LightGray, fontSize = 12.sp)
-                        }
-                    }
-                }
-            }
-        }
-
         item { Spacer(Modifier.height(16.dp)) }
     }
 }
 
 // ─── AI Agent helper composables ──────────────────────────────────────────────
 @Composable
-fun AgentStatusCard(label: String, isActive: Boolean, isDone: Boolean, color: Color, modifier: Modifier) {
+fun AgentStatusCard(
+    label: String,
+    isActive: Boolean,
+    isDone: Boolean,
+    color: Color,
+    isSelected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier
+) {
     val bg = when {
         isDone   -> color.copy(alpha = 0.2f)
         isActive -> color.copy(alpha = 0.1f)
         else     -> CardDark
     }
-    Card(colors = CardDefaults.cardColors(containerColor = bg), modifier = modifier) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = if (isSelected) color.copy(alpha = 0.24f) else bg),
+        modifier = modifier
+            .heightIn(min = 72.dp)
+            .clickable(onClick = onClick)
+    ) {
         Column(modifier = Modifier.padding(8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             if (isActive && !isDone) {
                 CircularProgressIndicator(color = color, modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
@@ -1660,57 +1605,6 @@ fun WorkedRow(item: String, calc: String, result: String) {
     }
 }
 
-@Composable
-fun BacktestTableHeader() {
-    Row(modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp)) {
-        Text("Index",   color = AmberWarn, fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-        Text("Version", color = AmberWarn, fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(2.5f))
-        Text("Trd",     color = AmberWarn, fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(0.5f))
-        Text("Win%",    color = AmberWarn, fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(0.7f))
-        Text("AvgR",    color = AmberWarn, fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(0.6f))
-        Text("Rs/lot",  color = AmberWarn, fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(0.9f))
-    }
-    Divider(color = Color.DarkGray, thickness = 0.5.dp)
-}
-
-@Composable
-fun BacktestTableRow(index: String, ver: String, trades: String, win: String, avgR: String, rsLot: String, drawdown: String, color: Color) {
-    Row(modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp)) {
-        Text(index,  color = Color.LightGray, fontSize = 10.sp, modifier = Modifier.weight(1f))
-        Text(ver,    color = Color.LightGray, fontSize = 10.sp, modifier = Modifier.weight(2.5f))
-        Text(trades, color = Color.LightGray, fontSize = 10.sp, modifier = Modifier.weight(0.5f))
-        Text(win,    color = Color.LightGray, fontSize = 10.sp, modifier = Modifier.weight(0.7f))
-        Text(avgR,   color = color,           fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(0.6f))
-        Text(rsLot,  color = color,           fontSize = 10.sp, modifier = Modifier.weight(0.9f))
-    }
-}
-
-@Composable
-fun HZVariantHeader() {
-    Row(modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp)) {
-        Text("Variant", color = PurpleAcc, fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(2.5f))
-        Text("Time",    color = PurpleAcc, fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(0.6f))
-        Text("Strike",  color = PurpleAcc, fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(0.6f))
-        Text("Exp",     color = PurpleAcc, fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(0.5f))
-        Text("0%",      color = PurpleAcc, fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(0.6f))
-        Text("AvgVal",  color = PurpleAcc, fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(0.7f))
-        Text("MAX",     color = PurpleAcc, fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(0.6f))
-    }
-    Divider(color = Color.DarkGray, thickness = 0.5.dp)
-}
-
-@Composable
-fun HZVariantRow(variant: String, time: String, strike: String, exp: String, zeroP: String, avg: String, max: String) {
-    Row(modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp)) {
-        Text(variant, color = Color.LightGray, fontSize = 10.sp, modifier = Modifier.weight(2.5f))
-        Text(time,    color = Color.Gray,       fontSize = 10.sp, modifier = Modifier.weight(0.6f))
-        Text(strike,  color = Color.Gray,       fontSize = 10.sp, modifier = Modifier.weight(0.6f))
-        Text(exp,     color = Color.Gray,       fontSize = 10.sp, modifier = Modifier.weight(0.5f))
-        Text(zeroP,   color = RedBear,          fontSize = 10.sp, modifier = Modifier.weight(0.6f))
-        Text(avg,     color = AmberWarn,        fontSize = 10.sp, modifier = Modifier.weight(0.7f))
-        Text(max,     color = GreenBull,        fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(0.6f))
-    }
-}
 // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 // TAB 7 â€” PRE-TRADE CHECKLIST (SECTION 8)
 // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•

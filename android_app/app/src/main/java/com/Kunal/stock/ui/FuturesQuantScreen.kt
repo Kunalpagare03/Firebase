@@ -1329,7 +1329,7 @@ private fun ScanHistoryListTab(batches: List<String>, context: android.content.C
             }
         } else {
             Text("${batches.size} saved scans (most recent first)", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            batches.take(20).forEachIndexed { i, batch ->
+            batches.forEachIndexed { i, batch ->
                 var isExpanded by remember { mutableStateOf(i == 0) }
                 Card(
                     modifier = Modifier.fillMaxWidth(),

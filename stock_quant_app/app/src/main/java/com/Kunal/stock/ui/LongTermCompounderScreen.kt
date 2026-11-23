@@ -41,8 +41,14 @@ data class LongTermStockItem(
 @Composable
 fun LongTermCompounderScreen() {
     var selectedFilter by remember { mutableStateOf("ALL") } // ALL, QUALIFIED, TRANCHE_1
+    var livePrices by remember { mutableStateOf<Map<String, Double>>(emptyMap()) }
 
-    val compounders = remember {
+    LaunchedEffect(Unit) {
+        val fetched = LivePriceFetcher.fetchPrices(listOf("TITAN", "TCS", "PIDILITIND", "HAL", "BEL"))
+        livePrices = fetched
+    }
+
+    val compounders = remember(livePrices) {
         listOf(
             LongTermStockItem(
                 symbol = "TITAN",
@@ -56,7 +62,7 @@ fun LongTermCompounderScreen() {
                 cfoPat = 0.88,
                 qualityPassed = true,
                 trancheTiming = "BUY TRANCHE 1",
-                currentPrice = 3380.0,
+                currentPrice = livePrices["TITAN"] ?: LivePriceFetcher.getBestPrice("TITAN"),
                 bullCase = "Dominant organized jewelry market share expansion (Tanishq), strong pricing power, superior ROCE > 25%, and multi-category growth (watches, eyewear).",
                 bearCase = "Gold price volatility can cause short-term margin compressions; high valuation multiples require sustained 15%+ revenue growth.",
                 forensicNote = "Clean audit history, zero promoter pledge, working capital funded via gold metal loans (hedged), cash conversion remains > 80%."
@@ -73,7 +79,7 @@ fun LongTermCompounderScreen() {
                 cfoPat = 0.98,
                 qualityPassed = true,
                 trancheTiming = "BUY TRANCHE 1",
-                currentPrice = 4120.0,
+                currentPrice = livePrices["TCS"] ?: LivePriceFetcher.getBestPrice("TCS"),
                 bullCase = "Unrivaled scale, debt-free fortress balance sheet, 50%+ ROCE, robust free cash flow conversion (>95%), and high recurring cloud transformation contracts.",
                 bearCase = "Global enterprise tech budget slowdowns and macro uncertainty in US/European banking sector could extend client decision cycles.",
                 forensicNote = "Zero debt, impeccable governance standards (Tata Group parentage), zero auditor concerns, and 100% of profits converted to cash."
@@ -90,7 +96,7 @@ fun LongTermCompounderScreen() {
                 cfoPat = 0.92,
                 qualityPassed = true,
                 trancheTiming = "ACCUMULATE TRANCHE 2",
-                currentPrice = 3050.0,
+                currentPrice = livePrices["PIDILITIND"] ?: LivePriceFetcher.getBestPrice("PIDILITIND"),
                 bullCase = "Monopoly-like moat in adhesives & construction chemicals (Fevicol, M-Seal, Dr. Fixit), extensive distribution network across India reaching tier-3 towns.",
                 bearCase = "VAM (Vinyl Acetate Monomer) crude-linked raw material price volatility can create gross margin fluctuations.",
                 forensicNote = "Conservative capital structure, working capital days steady at 55 days, robust cash flow generation covering all capex."
@@ -107,7 +113,7 @@ fun LongTermCompounderScreen() {
                 cfoPat = 0.85,
                 qualityPassed = true,
                 trancheTiming = "BUY TRANCHE 1",
-                currentPrice = 4420.0,
+                currentPrice = livePrices["HAL"] ?: LivePriceFetcher.getBestPrice("HAL"),
                 bullCase = "Massive order book (> ₹90,000 Cr) providing multi-year revenue visibility (Tejas Mk1A, Prachand LCH), indigenous defence manufacturing mandate.",
                 bearCase = "Supply chain delivery delays for foreign components (e.g. GE engines) can impact execution schedules.",
                 forensicNote = "Negative working capital, negative net debt (cash rich PSU balance sheet), zero forensic red flags."
@@ -124,7 +130,7 @@ fun LongTermCompounderScreen() {
                 cfoPat = 0.90,
                 qualityPassed = true,
                 trancheTiming = "BUY TRANCHE 1",
-                currentPrice = 288.5,
+                currentPrice = livePrices["BEL"] ?: LivePriceFetcher.getBestPrice("BEL"),
                 bullCase = "Dominant electronic warfare, radar, and avionics provider; consistent 20%+ operating margins; strong export pipeline expanding beyond domestic MoD.",
                 bearCase = "Execution bottlenecks or government budgetary reallocation during mid-year fiscal reviews.",
                 forensicNote = "Debt-free, high dividend payout ratio, zero promoter pledge, high return on incremental capital invested."

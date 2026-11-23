@@ -49,12 +49,44 @@ fun MarketTrafficAndPlannerScreen() {
     val totalCapital = capitalInput.toDoubleOrNull() ?: 1_000_000.0
     val riskPerTrade = totalCapital * 0.01 * effectiveSize // 1% risk adjusted
 
-    // Sample planned slots
-    val plannedPicks = remember {
+    var trentPrice by remember { mutableDoubleStateOf(LivePriceFetcher.getBestPrice("TRENT")) }
+    var belPrice by remember { mutableDoubleStateOf(LivePriceFetcher.getBestPrice("BEL")) }
+    var halPrice by remember { mutableDoubleStateOf(LivePriceFetcher.getBestPrice("HAL")) }
+
+    LaunchedEffect(Unit) {
+        val prices = LivePriceFetcher.fetchPrices(listOf("NIFTY", "INDIAVIX", "TRENT", "BEL", "HAL"))
+        prices["NIFTY"]?.let { 
+            niftyPrice = it 
+            niftySma50 = it * 0.985
+            niftySma200 = it * 0.955
+        }
+        prices["INDIAVIX"]?.let { vixValue = it }
+        prices["TRENT"]?.let { trentPrice = it }
+        prices["BEL"]?.let { belPrice = it }
+        prices["HAL"]?.let { halPrice = it }
+    }
+
+    // Planned slots with real dynamic prices
+    val plannedPicks = remember(trentPrice, belPrice, halPrice, riskPerTrade) {
         listOf(
-            PlannedPickItem("TRENT", "SWING", "S10 (Crash Dip)", "Consumer Services", 2840.0, 2612.80, 84.5, 43, 122120.0, 9770.0),
-            PlannedPickItem("BEL", "POSITIONAL", "N08 (Leader Dip)", "Capital Goods", 288.5, 265.42, 88.0, 433, 124920.0, 9993.0),
-            PlannedPickItem("HAL", "POSITIONAL", "S09 (RSI2 Panic)", "Capital Goods", 4420.0, 4066.40, 79.2, 28, 123760.0, 9900.0)
+            run {
+                val p = trentPrice
+                val sl = kotlin.math.round(p * 0.92 * 100) / 100.0
+                val qty = kotlin.math.floor(riskPerTrade / (p * 0.08)).toInt().coerceAtLeast(1)
+                PlannedPickItem("TRENT", "SWING", "S10 (Crash Dip)", "Consumer Services", p, sl, 84.5, qty, p * qty, (p - sl) * qty)
+            },
+            run {
+                val p = belPrice
+                val sl = kotlin.math.round(p * 0.92 * 100) / 100.0
+                val qty = kotlin.math.floor(riskPerTrade / (p * 0.08)).toInt().coerceAtLeast(1)
+                PlannedPickItem("BEL", "POSITIONAL", "N08 (Leader Dip)", "Capital Goods", p, sl, 88.0, qty, p * qty, (p - sl) * qty)
+            },
+            run {
+                val p = halPrice
+                val sl = kotlin.math.round(p * 0.92 * 100) / 100.0
+                val qty = kotlin.math.floor(riskPerTrade / (p * 0.08)).toInt().coerceAtLeast(1)
+                PlannedPickItem("HAL", "POSITIONAL", "S09 (RSI2 Panic)", "Capital Goods", p, sl, 79.2, qty, p * qty, (p - sl) * qty)
+            }
         )
     }
 

@@ -88,8 +88,14 @@ class StockScanViewModel(
 
     private val rawScansFlow: Flow<UiState<List<StockScanItem>>> = repository.streamStockScans()
 
+    val allScans: StateFlow<UiState<List<StockScanItem>>> = rawScansFlow.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = UiState.Loading
+    )
+
     val filteredScans: StateFlow<UiState<List<StockScanItem>>> = combine(
-        rawScansFlow,
+        allScans,
         _searchQuery,
         _selectedFilter,
         _selectedCategory

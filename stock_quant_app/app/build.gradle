@@ -15,6 +15,8 @@ android {
         versionCode 4
         versionName "1.0.2026.09.23.3"
 
+        buildConfigField "String", "LOCAL_API_SPKI_SHA256", "\"${project.findProperty('LOCAL_API_SPKI_SHA256') ?: 'bf840b1662493cf6d0946b3c38c03bf598e74923970fd21926cdbe3ef7eb132a'}\""
+
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
             useSupportLibrary true
@@ -36,6 +38,7 @@ android {
     }
     buildFeatures {
         compose true
+        buildConfig true
     }
     composeOptions {
         kotlinCompilerExtensionVersion '1.5.8'

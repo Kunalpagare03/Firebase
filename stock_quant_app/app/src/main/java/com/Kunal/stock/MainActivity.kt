@@ -22,10 +22,9 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.Kunal.stock.ui.LoginScreen
-import com.Kunal.stock.ui.OptionSentimentScreen
-import com.Kunal.stock.ui.StockScanScreen
-import com.Kunal.stock.ui.BacktestScreen
-import com.Kunal.stock.ui.ChartLinkScreen
+import com.Kunal.stock.ui.StockLabScreen
+import com.Kunal.stock.ui.StockScannerHubScreen
+import com.Kunal.stock.ui.V4StockPdfSpecificationScreen
 import com.Kunal.stock.ui.theme.StockAnalysisTheme
 import com.google.firebase.auth.FirebaseAuth
 
@@ -69,9 +68,9 @@ fun MainScreen(
     var showLogoutDialog by remember { mutableStateOf(false) }
 
     val navItems = listOf(
-        NavigationItem("Stock Scanner", "stocks", Icons.Default.FilterList),
-        NavigationItem("ChartLink", "chartlink", Icons.Default.AutoGraph),
-        NavigationItem("Stock Lab", "backtest", Icons.Default.Science)
+        NavigationItem("Scanner", "stocks", Icons.Default.FilterList),
+        NavigationItem("Stock Lab", "stocklab", Icons.Default.Science),
+        NavigationItem("v4 PDF Spec", "v4_spec", Icons.Default.MenuBook)
     )
 
     if (showLogoutDialog) {
@@ -102,8 +101,15 @@ fun MainScreen(
             TopAppBar(
                 title = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Default.AutoGraph,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.secondary,
+                            modifier = Modifier.size(22.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = "Kunal Stock Quant Terminal",
+                            text = "Kunal Stock",
                             fontWeight = FontWeight.ExtraBold,
                             fontSize = 19.sp,
                             color = MaterialTheme.colorScheme.onSurface
@@ -198,9 +204,9 @@ fun MainScreen(
             startDestination = "stocks",
             modifier = Modifier.padding(innerPadding)
         ) {
-            composable("stocks") { StockScanScreen() }
-            composable("chartlink") { ChartLinkScreen() }
-            composable("backtest") { BacktestScreen() }
+            composable("stocks") { StockScannerHubScreen() }
+            composable("stocklab") { StockLabScreen() }
+            composable("v4_spec") { V4StockPdfSpecificationScreen() }
         }
     }
 }

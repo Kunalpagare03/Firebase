@@ -1,5 +1,8 @@
 package com.Kunal.stock.data
 
+import android.os.Handler
+import android.os.Looper
+import com.google.firebase.FirebaseApp
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.auth.FirebaseAuth
@@ -9,6 +12,7 @@ import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
+import java.util.concurrent.Executors
 
 class FirestoreRepository(
     private val db: FirebaseFirestore = FirebaseFirestore.getInstance()
@@ -737,11 +741,13 @@ class FirestoreRepository(
      */
     fun saveStrategyConfig(config: StrategyConfig, onResult: (Boolean, String?) -> Unit = { _, _ -> }) {
         val uid = FirebaseAuth.getInstance().currentUser?.uid
-        val docRef = if (uid != null) {
-            db.collection("users").document(uid).collection("strategies").document(config.id.ifEmpty { "${config.symbol}_${config.strategyType}" })
-        } else {
-            db.collection("strategies").document(config.id.ifEmpty { "${config.symbol}_${config.strategyType}" })
+        if (uid.isNullOrBlank()) {
+            onResult(false, "Sign in before saving a strategy")
+            return
         }
+        val docRef = db.collection("users").document(uid)
+            .collection("stock_strategies")
+            .document(config.id.ifEmpty { "${config.symbol}_${config.strategyType}" })
 
         val payload = mapOf(
             "name" to config.name,
@@ -757,9 +763,217 @@ class FirestoreRepository(
             "updated_at" to System.currentTimeMillis()
         )
 
-        docRef.set(payload)
-            .addOnSuccessListener { onResult(true, null) }
-            .addOnFailureListener { onResult(false, it.localizedMessage) }
+        saveToFirestoreAndLocalApi(
+            uid = uid,
+            collection = "stock_strategies",
+            documentId = config.id.ifEmpty { "${config.symbol}_${config.strategyType}" },
+            payload = payload,
+            onResult = onResult
+        ) { onSuccess, onFailure ->
+            docRef.set(payload)
+                .addOnSuccessListener { onSuccess() }
+                .addOnFailureListener { onFailure(it.localizedMessage) }
+        }
+    }
+
+    fun saveBacktestHistory(result: BacktestResult, onResult: (Boolean, String?) -> Unit = { _, _ -> }) {
+        val uid = FirebaseAuth.getInstance().currentUser?.uid
+        if (uid.isNullOrBlank()) {
+            onResult(false, "Sign in before saving backtest history")
+            return
+        }
+        val trades = result.trades.map { trade ->
+            mapOf(
+                "entry_date" to trade.entryDate,
+                "exit_date" to trade.exitDate,
+                "type" to trade.type,
+                "entry_price" to trade.entryPrice,
+                "exit_price" to trade.exitPrice,
+                "return_pct" to trade.returnPct,
+                "holding_days" to trade.holdingDays,
+                "exit_reason" to trade.exitReason,
+                "pattern_trigger" to trade.patternTrigger,
+                "is_win" to trade.isWin,
+                "r_multiple" to trade.rMultiple
+            )
+        }
+        val payload = mapOf(
+            "symbol" to result.symbol,
+            "strategy_name" to result.strategyName,
+            "strategy_type" to result.strategyType,
+            "timeframe" to result.timeframe,
+            "target_pct" to result.targetPct,
+            "stop_loss_pct" to result.stopLossPct,
+            "atr_multiplier" to result.atrMultiplier,
+            "total_trades" to result.totalTrades,
+            "wins" to result.wins,
+            "losses" to result.losses,
+            "win_rate" to result.winRate,
+            "total_return" to result.totalReturn,
+            "profit_factor" to result.profitFactor,
+            "max_drawdown" to result.maxDrawdown,
+            "sharpe_ratio" to result.sharpeRatio,
+            "sortino_ratio" to result.sortinoRatio,
+            "calmar_ratio" to result.calmarRatio,
+            "expectancy" to result.expectancy,
+            "avg_trade_return" to result.avgTradeReturn,
+            "max_consecutive_wins" to result.maxConsecutiveWins,
+            "max_consecutive_losses" to result.maxConsecutiveLosses,
+            "generated_at" to result.generatedAt,
+            "trades" to trades
+        )
+        val documentId = "${result.symbol}_${result.strategyType}_${System.currentTimeMillis()}"
+            .replace(Regex("[^A-Za-z0-9_-]"), "_")
+        db.collection("users").document(uid).collection("stock_backtest_history")
+            .document(documentId)
+            .let { docRef ->
+                saveToFirestoreAndLocalApi(
+                    uid = uid,
+                    collection = "stock_backtest_history",
+                    documentId = documentId,
+                    payload = payload,
+                    onResult = onResult
+                ) { onSuccess, onFailure ->
+                    docRef.set(payload)
+                        .addOnSuccessListener { onSuccess() }
+                        .addOnFailureListener { onFailure(it.localizedMessage) }
+                }
+            }
+    }
+
+    private fun saveToFirestoreAndLocalApi(
+        uid: String,
+        collection: String,
+        documentId: String,
+        payload: Map<String, Any?>,
+        onResult: (Boolean, String?) -> Unit,
+        saveFirestore: (onSuccess: () -> Unit, onFailure: (String?) -> Unit) -> Unit
+    ) {
+        val outcomes = SaveOutcomes(onResult)
+        try {
+            saveFirestore(
+                { outcomes.complete(firestoreSucceeded = true) },
+                { error -> outcomes.complete(firestoreSucceeded = false, error = error) }
+            )
+        } catch (e: Exception) {
+            outcomes.complete(
+                firestoreSucceeded = false,
+                error = e.localizedMessage ?: "Firestore save failed"
+            )
+        }
+
+        val user = FirebaseAuth.getInstance().currentUser
+        if (user == null || user.uid != uid) {
+            outcomes.complete(
+                firestoreSucceeded = null,
+                error = "Local API save failed: signed-in user is no longer available"
+            )
+            return
+        }
+        try {
+            user.getIdToken(false)
+                .addOnSuccessListener { tokenResult ->
+                    val token = tokenResult.token
+                    if (token.isNullOrBlank()) {
+                        outcomes.complete(
+                            firestoreSucceeded = null,
+                            error = "Local API save failed: Firebase did not return an ID token"
+                        )
+                    } else {
+                        localSyncExecutor.execute {
+                            try {
+                                LocalPostgresSyncClient.postDocument(
+                                    FirebaseApp.getInstance().applicationContext,
+                                    collection,
+                                    documentId,
+                                    payload,
+                                    token
+                                )
+                                outcomes.complete(localSucceeded = true)
+                            } catch (e: Exception) {
+                                outcomes.complete(
+                                    localSucceeded = false,
+                                    error = e.localizedMessage ?: e.javaClass.simpleName
+                                )
+                            }
+                        }
+                    }
+                }
+                .addOnFailureListener {
+                    outcomes.complete(
+                        firestoreSucceeded = null,
+                        error = "Local API authentication failed: ${it.localizedMessage ?: "could not get Firebase ID token"}"
+                    )
+                }
+        } catch (e: Exception) {
+            outcomes.complete(
+                firestoreSucceeded = null,
+                error = "Local API authentication failed: ${e.localizedMessage ?: "could not get Firebase ID token"}"
+            )
+        }
+    }
+
+    private class SaveOutcomes(private val callback: (Boolean, String?) -> Unit) {
+        private val mainHandler = Handler(Looper.getMainLooper())
+        private val completionTimeout = Runnable {
+            complete(
+                firestoreSucceeded = false,
+                error = "Timed out waiting for Firestore confirmation"
+            )
+            complete(
+                localSucceeded = false,
+                error = "Timed out waiting for local PostgreSQL confirmation"
+            )
+        }
+        private var firestoreResult: Boolean? = null
+        private var localResult: Boolean? = null
+        private var firestoreError: String? = null
+        private var localError: String? = null
+        private var delivered = false
+
+        init {
+            mainHandler.postDelayed(completionTimeout, 30_000)
+        }
+
+        @Synchronized
+        fun complete(
+            firestoreSucceeded: Boolean? = null,
+            localSucceeded: Boolean? = null,
+            error: String? = null
+        ) {
+            if (delivered) return
+            if (firestoreSucceeded != null) {
+                firestoreResult = firestoreSucceeded
+                if (!firestoreSucceeded) firestoreError = error ?: "Unknown Firestore error"
+            }
+            if (localSucceeded != null) {
+                localResult = localSucceeded
+                if (!localSucceeded) localError = error ?: "Unknown local API error"
+            }
+            if (firestoreSucceeded == null && localSucceeded == null) {
+                localResult = false
+                localError = error ?: "Local API save failed"
+            }
+            if (firestoreResult == null || localResult == null) return
+
+            delivered = true
+            mainHandler.removeCallbacks(completionTimeout)
+            val succeeded = firestoreResult == true || localResult == true
+            val message = when {
+                firestoreResult == true && localResult == true -> null
+                firestoreResult == true ->
+                    "Warning: Firestore save succeeded, but local API save failed: $localError"
+                localResult == true ->
+                    "Warning: local API save succeeded, but Firestore save failed: $firestoreError"
+                else ->
+                    "Firestore save failed: $firestoreError; local API save failed: $localError"
+            }
+            mainHandler.post { callback(succeeded, message) }
+        }
+    }
+
+    private companion object {
+        val localSyncExecutor = Executors.newCachedThreadPool()
     }
 
     private fun toDouble(value: Any?): Double {
@@ -770,4 +984,3 @@ class FirestoreRepository(
         }
     }
 }
-

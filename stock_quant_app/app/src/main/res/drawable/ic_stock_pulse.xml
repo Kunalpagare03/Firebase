@@ -3,9 +3,28 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <path android:fillColor="#102A43" android:pathData="M54,2A52,52 0,1 0,54,106A52,52 0,1 0,54,2" />
-    <path android:fillColor="#00000000" android:pathData="M54,8A46,46 0,1 0,54,100A46,46 0,1 0,54,8" android:strokeColor="#31546C" android:strokeWidth="2" />
-    <path android:fillColor="#00000000" android:pathData="M27,30L27,78M28,54L47,32M28,54L47,76" android:strokeColor="#E8F1F6" android:strokeWidth="6" android:strokeLineCap="round" android:strokeLineJoin="round" />
-    <path android:fillColor="#00000000" android:pathData="M47,69L59,57L68,63L84,42" android:strokeColor="#35D08A" android:strokeWidth="5" android:strokeLineCap="round" android:strokeLineJoin="round" />
-    <path android:fillColor="#F6C453" android:pathData="M76,39L89,36L87,49L83,44L78,48Z" />
+    <path
+        android:fillColor="#09131B"
+        android:pathData="M22,4L86,4A18,18 0,0 1,104 22L104,86A18,18 0,0 1,86 104L22,104A18,18 0,0 1,4 86L4,22A18,18 0,0 1,22 4Z" />
+    <path
+        android:fillColor="#101D27"
+        android:pathData="M22,12L86,12A10,10 0,0 1,96 22L96,86A10,10 0,0 1,86 96L22,96A10,10 0,0 1,12 86L12,22A10,10 0,0 1,22 12Z" />
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M22,12L86,12A10,10 0,0 1,96 22L96,86A10,10 0,0 1,86 96L22,96A10,10 0,0 1,12 86L12,22A10,10 0,0 1,22 12Z"
+        android:strokeColor="#29404C"
+        android:strokeWidth="2" />
+    <path
+        android:fillColor="#35C9D0"
+        android:pathData="M25,71L31,71L31,84L25,84ZM39,57L45,57L45,84L39,84ZM53,63L59,63L59,84L53,84ZM67,43L73,43L73,84L67,84Z" />
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M22,52L39,43L52,49L76,27"
+        android:strokeColor="#EAF4F6"
+        android:strokeWidth="4"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <path
+        android:fillColor="#00E676"
+        android:pathData="M70,26L83,22L80,35L76,30L72,34Z" />
 </vector>

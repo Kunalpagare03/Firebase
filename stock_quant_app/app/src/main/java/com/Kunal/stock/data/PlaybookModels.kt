@@ -1,11 +1,19 @@
 package com.Kunal.stock.data
 
 // ── Playbook Setup Types ─────────────────────────────────────────────────────
-enum class PlaybookSetup(val code: String, val label: String, val proven: Boolean, val winRate: Double, val avgPct: Double) {
-    A("A", "RSI-2 Dip (Uptrend)", true, 47.0, 1.13),
-    B("B", "50-DMA Pullback (52wk High)", true, 47.2, 1.02),
-    C("C", "10-EMA Strength Leader", true, 43.0, 1.22),
-    D("D", "Sharp 3-Day Fall (>8%)", false, 45.0, 1.76)
+enum class PlaybookSetup(val code: String, val label: String, val proven: Boolean) {
+    A("A", "RSI-2 Dip (Uptrend)", false),
+    B("B", "50-DMA Pullback (52wk High)", false),
+    C("C", "10-EMA Strength Leader", false),
+    D("D", "Sharp 3-Day Fall (>8%)", false),
+    N01("N01", "Bollinger Stretch (Z20 <= -2)", true),
+    N03("N03", "2-Day RSI Panic (Sum < 10)", true),
+    N04("N04", "4 Lower Closes (Dip)", true),
+    N08("N08", "Leader Panic Dip (RAM>=80, RSI2<10)", true),
+    N09("N09", "Leader Bounces at EMA20", true),
+    N18("N18", "Hammer at 10-Day Low", true),
+    SWING_1("SWING_1", "v4 Swing 1: Crash Dip (>=8% in 3d)", true),
+    SWING_2("SWING_2", "v4 Swing 2: Panic Dip in Leader", true)
 }
 
 // ── A single signal hit from the scanner ────────────────────────────────────

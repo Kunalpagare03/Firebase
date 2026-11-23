@@ -261,13 +261,13 @@ fun BacktestScreen(
         ) {
             Column {
                 Text(
-                    text = "Quantitative Strategy Lab",
+                    text = "Historical Strategy Lab",
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.ExtraBold,
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(
-                    text = "Equity Price Action • Volume Breakouts • Swing Trading Strategies",
+                    text = "Yahoo Finance history • Configurable rules • Measured results",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -667,11 +667,11 @@ fun BacktestScreen(
                             strokeWidth = 2.dp
                         )
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("Computing Quantitative Simulation...", fontWeight = FontWeight.Bold)
+                        Text("Loading Yahoo Finance history...", fontWeight = FontWeight.Bold)
                     } else {
                         Icon(imageVector = Icons.Default.PlayArrow, contentDescription = null)
                         Spacer(modifier = Modifier.width(6.dp))
-                        Text("Run Quantitative Backtest", fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                        Text("Run Historical Price Backtest", fontWeight = FontWeight.Bold, fontSize = 15.sp)
                     }
                 }
             }
@@ -692,7 +692,7 @@ fun BacktestScreen(
                         CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            "Streaming quant backtest analytics...",
+                            "Downloading and evaluating historical daily candles...",
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             style = MaterialTheme.typography.bodyMedium
                         )
@@ -723,7 +723,7 @@ fun BacktestScreen(
                         )
                         Spacer(modifier = Modifier.height(12.dp))
                         Button(onClick = { viewModel.runBacktest() }) {
-                            Text("Run Quant Simulation")
+                            Text("Retry Historical Backtest")
                         }
                     }
                 }
@@ -750,6 +750,12 @@ fun QuantBacktestResultView(
     val pnlColor = if (isProfit) BullishGreen else BearishRed
 
     Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        Text(
+            "Yahoo Finance daily OHLCV data; assumed 0.1% round-trip costs. Results are historical " +
+                "price tests, not predictions or guaranteed live performance.",
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            style = MaterialTheme.typography.bodySmall
+        )
         // Hero Performance Card
         Card(
             modifier = Modifier.fillMaxWidth(),
